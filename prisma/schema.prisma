@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id              String              @id @default(cuid())
+  name            String
+  type            String
+  platform        String
+  credentialsJson String
+  isActive        Boolean             @default(true)
+  lastSynced      DateTime?
+  createdAt       DateTime            @default(now())
+  snapshots       PortfolioSnapshot[]
+  transactions    Transaction[]
+}
+
+model PortfolioSnapshot {
+  id            String   @id @default(cuid())
+  accountId     String?
+  account       Account? @relation(fields: [accountId], references: [id])
+  date          DateTime
+  totalValue    Float
+  breakdownJson String
+  createdAt     DateTime @default(now())
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id])
+  asset     String
+  type      String
+  amount    Float
+  price     Float?
+  fee       Float    @default(0)
+  currency  String   @default("USD")
+  timestamp DateTime
+  createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id          String   @id @default(cuid())
+  name        String
+  amount      Float
+  currency    String   @default("USD")
+  cadence     String
+  category    String
+  nextBilling DateTime
+  logoUrl     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model BudgetCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  limit     Float
+  color     String   @default("#3B82F6")
+  createdAt DateTime @default(now())
+}
+
+model Alert {
+  id          String    @id @default(cuid())
+  type        String
+  asset       String?
+  threshold   Float
+  isActive    Boolean   @default(true)
+  triggered   Boolean   @default(false)
+  triggeredAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  role      String
+  content   String
+  timestamp DateTime @default(now())
+}
+
+model MarketCache {
+  id        String   @id @default(cuid())
+  cacheKey  String   @unique
+  dataJson  String
+  expiresAt DateTime
+}
+
+model UserSettings {
+  id                String   @id @default("singleton")
+  baseCurrency      String   @default("USD")
+  riskProfile       String   @default("moderate")
+  theme             String   @default("dark")
+  alertPreferences  String   @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
