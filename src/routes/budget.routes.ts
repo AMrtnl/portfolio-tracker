@@ -1,78 +1,48 @@
 import { Router, Request, Response } from 'express';
+import { requireAuth, getUserId } from '../middleware/auth.js';
 import {
-  getSubscriptions,
-  addSubscription,
-  updateSubscription,
-  deleteSubscription,
-  getBudgetSummary,
-  getBudgetCategories,
-  upsertBudgetCategory,
+  getSubscriptions, addSubscription, updateSubscription, deleteSubscription,
+  getBudgetSummary, getBudgetCategories, upsertBudgetCategory,
 } from '../services/budget.service.js';
 
 const router = Router();
+router.use(requireAuth);
 
-router.get('/summary', async (_req: Request, res: Response) => {
-  try {
-    const summary = await getBudgetSummary();
-    res.json(summary);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch budget summary', message: (err as Error).message });
-  }
+router.get('/summary', async (req: Request, res: Response) => {
+  try { res.json(await getBudgetSummary(getUserId(req))); }
+  catch (err) { res.status(500).json({ error: (err as Error).message }); }
 });
 
-router.get('/subscriptions', async (_req: Request, res: Response) => {
-  try {
-    const subs = await getSubscriptions();
-    res.json(subs);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch subscriptions', message: (err as Error).message });
-  }
+router.get('/subscriptions', async (req: Request, res: Response) => {
+  try { res.json(await getSubscriptions(getUserId(req))); }
+  catch (err) { res.status(500).json({ error: (err as Error).message }); }
 });
 
 router.post('/subscriptions', async (req: Request, res: Response) => {
-  try {
-    const sub = await addSubscription(req.body);
-    res.status(201).json(sub);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to add subscription', message: (err as Error).message });
-  }
+  try { res.status(201).json(await addSubscription(getUserId(req), req.body)); }
+  catch (err) { res.status(500).json({ error: (err as Error).message }); }
 });
 
 router.patch('/subscriptions/:id', async (req: Request, res: Response) => {
-  try {
-    await updateSubscription(req.params.id, req.body);
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update subscription', message: (err as Error).message });
-  }
+  try { await updateSubscription(req.params.id, getUserId(req), req.body); res.json({ ok: true }); }
+  catch (err) { res.status(500).json({ error: (err as Error).message }); }
 });
 
 router.delete('/subscriptions/:id', async (req: Request, res: Response) => {
-  try {
-    await deleteSubscription(req.params.id);
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to delete subscription', message: (err as Error).message });
-  }
+  try { await deleteSubscription(req.params.id, getUserId(req)); res.json({ ok: true }); }
+  catch (err) { res.status(500).json({ error: (err as Error).message }); }
 });
 
-router.get('/categories', async (_req: Request, res: Response) => {
-  try {
-    const cats = await getBudgetCategories();
-    res.json(cats);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch categories', message: (err as Error).message });
-  }
+router.get('/categories', async (req: Request, res: Response) => {
+  try { res.json(await getBudgetCategories(getUserId(req))); }
+  catch (err) { res.status(500).json({ error: (err as Error).message }); }
 });
 
 router.put('/categories', async (req: Request, res: Response) => {
   try {
     const { name, limit, color } = req.body;
-    const cat = await upsertBudgetCategory(name, limit, color);
-    res.json(cat);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to upsert category', message: (err as Error).message });
-  }
+    res.json(await upsertBudgetCategory(getUserId(req), name, limit, color));
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
 });
 
 export default router;

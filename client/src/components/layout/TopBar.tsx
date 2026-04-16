@@ -1,77 +1,92 @@
-import { RefreshCw, Sun, Moon, Bell, Menu } from 'lucide-react'
+import { RefreshCw, Bell, Menu } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 import axios from 'axios'
 import { cn } from '@/lib/utils'
 
 interface TopBarProps {
-  theme: 'dark' | 'light'
-  onThemeToggle: () => void
+  sidebarOpen: boolean
   onMenuToggle: () => void
 }
 
-export function TopBar({ theme, onThemeToggle, onMenuToggle }: TopBarProps) {
+function fmt(v: number) {
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`
+  if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`
+  return `$${v.toFixed(2)}`
+}
+
+export function TopBar({ onMenuToggle }: TopBarProps) {
   const qc = useQueryClient()
-  const { data: portfolio, isFetching } = useQuery({
+
+  const { data: portfolio, isRefetching } = useQuery({
     queryKey: ['portfolio'],
     queryFn: () => axios.get('/api/portfolio').then(r => r.data),
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: 60_000,
   })
 
-  const totalValue = portfolio?.totalValue ?? 0
-  const pnl = portfolio?.pnl24h ?? 0
-  const pnlPct = portfolio?.pnl24hPercent ?? 0
-  const positive = pnl >= 0
+  const total = portfolio?.totalValue ?? 0
+  const pnl   = portfolio?.pnl24h ?? 0
+  const pct   = portfolio?.pnl24hPercent ?? 0
 
   return (
-    <header className="sticky top-0 z-30 h-14 flex items-center gap-4 px-4 border-b border-border bg-card/80 backdrop-blur-xl">
+    <header
+      className="flex items-center gap-3 px-4 shrink-0"
+      style={{
+        height: '56px',
+        background: 'var(--bg-surface)',
+        borderBottom: '1px solid var(--glass-border)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 20,
+      }}
+    >
       {/* Mobile menu */}
-      <button onClick={onMenuToggle} className="md:hidden text-muted-foreground hover:text-foreground">
-        <Menu className="w-5 h-5" />
+      <button onClick={onMenuToggle} className="p-1.5 rounded-lg md:hidden" style={{ color: 'var(--text-muted)' }}>
+        <Menu className="w-4 h-4" />
       </button>
 
       {/* Net worth ticker */}
-      <div className="flex items-center gap-3">
-        <div>
-          <p className="text-xs text-muted-foreground font-medium">Net Worth</p>
-          <p className="font-bold text-lg leading-none">
-            {totalValue > 0
-              ? `$${totalValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
-              : '—'
-            }
-          </p>
+      {total > 0 && (
+        <div className="flex items-center gap-3 mr-2">
+          <div>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Net Worth</p>
+            <p className="text-sm font-bold leading-tight" style={{ fontFamily: 'Space Grotesk' }}>{fmt(total)}</p>
+          </div>
+          <div className={cn('text-xs font-semibold px-2 py-0.5 rounded', pnl >= 0 ? 'badge-gain' : 'badge-loss')}>
+            {pnl >= 0 ? '+' : ''}{pct.toFixed(2)}%
+          </div>
         </div>
-        {totalValue > 0 && (
-          <span className={cn('text-xs font-semibold px-1.5 py-0.5 rounded-md', positive ? 'gain-bg' : 'loss-bg')}>
-            {positive ? '+' : ''}{pnlPct.toFixed(2)}%
-          </span>
-        )}
-      </div>
+      )}
 
-      <div className="ml-auto flex items-center gap-1">
-        {/* Refresh */}
-        <button
-          onClick={() => qc.invalidateQueries()}
-          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-          title="Refresh all data"
-        >
-          <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
-        </button>
+      <div className="flex-1" />
 
-        {/* Alerts indicator */}
-        <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors relative">
-          <Bell className="w-4 h-4" />
-        </button>
+      {/* Refresh */}
+      <button
+        onClick={() => qc.invalidateQueries()}
+        className="p-2 rounded-lg transition-colors"
+        style={{ color: 'var(--text-muted)', background: 'transparent' }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'var(--glass-hover)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      >
+        <RefreshCw className={cn('w-3.5 h-3.5', isRefetching && 'animate-spin')} />
+      </button>
 
-        {/* Theme toggle */}
-        <button
-          onClick={onThemeToggle}
-          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-          title="Toggle theme"
-        >
-          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
-      </div>
+      {/* Alerts bell */}
+      <button
+        className="relative p-2 rounded-lg transition-colors"
+        style={{ color: 'var(--text-muted)', background: 'transparent' }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'var(--glass-hover)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      >
+        <Bell className="w-3.5 h-3.5" />
+      </button>
+
+      {/* Wallet connect */}
+      <ConnectButton
+        showBalance={false}
+        chainStatus="icon"
+        accountStatus="avatar"
+      />
     </header>
   )
 }

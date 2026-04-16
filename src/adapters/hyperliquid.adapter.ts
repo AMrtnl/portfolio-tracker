@@ -1,144 +1,96 @@
-import axios from 'axios';
-import { ethers } from 'ethers';
+import * as hl from '@nktkas/hyperliquid';
 import { IAdapter } from './base.adapter.js';
 import { Balance, Position, TxRecord } from '../types/common.js';
 
-const BASE_URL = 'https://api.hyperliquid.xyz';
-
 export class HyperliquidAdapter implements IAdapter {
-  platform = 'hyperliquid';
-  accountType = 'CRYPTO_EXCHANGE' as const;
-
+  private client: hl.InfoClient;
   private address: string;
-  private privateKey?: string;
 
-  constructor(credentials: { address?: string; privateKey?: string; mnemonic?: string }) {
-    if (credentials.mnemonic) {
-      const wallet = ethers.Wallet.fromPhrase(credentials.mnemonic);
-      this.privateKey = wallet.privateKey;
-      this.address = wallet.address;
-    } else if (credentials.privateKey) {
-      const wallet = new ethers.Wallet(credentials.privateKey);
-      this.privateKey = credentials.privateKey;
-      this.address = wallet.address;
-    } else if (credentials.address) {
-      this.address = credentials.address;
-    } else {
-      this.address = '';
-    }
+  constructor(credentials: { address: string }) {
+    const transport = new hl.HttpTransport();
+    this.client = new hl.InfoClient({ transport });
+    this.address = credentials.address;
   }
 
   isConfigured(): boolean {
-    return this.address.length > 0;
+    return !!this.address;
   }
 
   async getBalances(): Promise<Balance[]> {
-    if (!this.isConfigured()) return [];
+    const balances: Balance[] = [];
+
     try {
-      const { data } = await axios.post(`${BASE_URL}/info`, {
-        type: 'clearinghouseState',
-        user: this.address,
-      });
-
-      const balances: Balance[] = [];
-
-      if (data?.marginSummary?.accountValue) {
+      const state = await this.client.clearinghouseState({ user: this.address as `0x${string}` });
+      const accountValue = parseFloat(state.marginSummary.accountValue ?? '0');
+      if (accountValue > 0) {
         balances.push({
           asset: 'USDC',
-          amount: data.marginSummary.accountValue,
-          usdValue: data.marginSummary.accountValue,
-          chain: 'Hyperliquid',
+          free: String(accountValue),
+          locked: state.marginSummary.totalMarginUsed ?? '0',
+          usdValue: String(accountValue),
           platform: 'hyperliquid',
         });
       }
+    } catch {}
 
-      // Spot balances
-      const spotData = await axios.post(`${BASE_URL}/info`, {
-        type: 'spotClearinghouseState',
-        user: this.address,
-      });
-
-      if (spotData.data?.balances) {
-        for (const b of spotData.data.balances) {
-          if (parseFloat(b.total) > 0) {
-            balances.push({
-              asset: b.coin,
-              amount: b.total,
-              usdValue: (parseFloat(b.total) * (b.entryNtl || 0)).toString(),
-              chain: 'Hyperliquid',
-              platform: 'hyperliquid',
-            });
-          }
+    try {
+      const spot = await this.client.spotClearinghouseState({ user: this.address as `0x${string}` });
+      for (const b of (spot as any).balances ?? []) {
+        const total = parseFloat(b.total ?? '0');
+        if (total > 0) {
+          balances.push({
+            asset: b.coin,
+            free: b.total,
+            locked: '0',
+            usdValue: String(total),
+            platform: 'hyperliquid',
+          });
         }
       }
+    } catch {}
 
-      return balances;
-    } catch (err) {
-      console.error('Hyperliquid getBalances error:', err);
-      return [];
-    }
+    return balances;
   }
 
   async getPositions(): Promise<Position[]> {
-    if (!this.isConfigured()) return [];
-    try {
-      const { data } = await axios.post(`${BASE_URL}/info`, {
-        type: 'clearinghouseState',
-        user: this.address,
+    const state = await this.client.clearinghouseState({ user: this.address as `0x${string}` });
+
+    return (state.assetPositions ?? [])
+      .filter(({ position }) => parseFloat(position.szi) !== 0)
+      .map(({ position }) => {
+        const size = parseFloat(position.szi);
+        const entryPrice = parseFloat(position.entryPx ?? '0');
+        const notional = Math.abs(size) * entryPrice;
+        const pnl = parseFloat(position.unrealizedPnl ?? '0');
+        return {
+          asset: position.coin,
+          side: size > 0 ? 'LONG' : 'SHORT',
+          size: String(Math.abs(size)),
+          entryPrice: position.entryPx ?? '0',
+          markPrice: position.entryPx ?? '0',
+          pnl: position.unrealizedPnl ?? '0',
+          pnlPercent: String(notional > 0 ? (pnl / notional) * 100 : 0),
+          leverage: (position.leverage as any)?.value ?? 1,
+          liquidationPrice: (position.liquidationPx as any) ?? null,
+          margin: position.marginUsed ?? '0',
+          platform: 'hyperliquid',
+          type: (position.leverage as any)?.type === 'cross' ? 'cross' : 'isolated',
+        } as Position;
       });
-
-      if (!data?.assetPositions) return [];
-
-      return data.assetPositions
-        .filter((p: any) => parseFloat(p.position?.szi ?? '0') !== 0)
-        .map((p: any) => {
-          const szi = parseFloat(p.position.szi);
-          return {
-            asset: p.position.coin,
-            size: Math.abs(szi).toString(),
-            entryPrice: p.position.entryPx ?? '0',
-            markPrice: p.position.markPx ?? '0',
-            pnl: p.position.unrealizedPnl ?? '0',
-            pnlPercent: p.position.returnOnEquity ?? '0',
-            leverage: p.position.leverage?.value?.toString() ?? '1',
-            side: szi > 0 ? 'LONG' : 'SHORT',
-            type: 'PERPETUAL',
-            protocol: 'HYPERLIQUID',
-            platform: 'hyperliquid',
-          } as Position;
-        });
-    } catch (err) {
-      console.error('Hyperliquid getPositions error:', err);
-      return [];
-    }
   }
 
-  async getTransactions(from?: Date): Promise<TxRecord[]> {
-    if (!this.isConfigured()) return [];
-    try {
-      const { data } = await axios.post(`${BASE_URL}/info`, {
-        type: 'userFills',
-        user: this.address,
-      });
-
-      if (!Array.isArray(data)) return [];
-
-      const cutoff = from ? from.getTime() : 0;
-      return data
-        .filter((fill: any) => fill.time > cutoff)
-        .map((fill: any) => ({
-          asset: fill.coin,
-          type: fill.dir === 'Open Long' || fill.dir === 'Open Short' ? 'BUY' : 'SELL',
-          amount: parseFloat(fill.sz),
-          price: parseFloat(fill.px),
-          fee: parseFloat(fill.fee ?? '0'),
-          currency: 'USD',
-          timestamp: new Date(fill.time),
-          platform: 'hyperliquid',
-        })) as TxRecord[];
-    } catch (err) {
-      console.error('Hyperliquid getTransactions error:', err);
-      return [];
-    }
+  async getTransactions(): Promise<TxRecord[]> {
+    const fills = await this.client.userFills({ user: this.address as `0x${string}` });
+    return (fills ?? []).slice(0, 100).map(fill => ({
+      asset: fill.coin,
+      type: (fill.side as string) === 'B' ? 'buy' : 'sell',
+      amount: String(fill.sz),
+      price: String(fill.px),
+      fee: String((fill as any).fee ?? 0),
+      currency: (fill as any).feeToken ?? 'USDC',
+      timestamp: new Date(fill.time),
+      platform: 'hyperliquid',
+      txHash: (fill as any).hash,
+    } as TxRecord));
   }
 }

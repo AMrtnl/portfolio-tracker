@@ -7,8 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ── User plan (LemonSqueezy) ──────────────────────────────────────────────────
+model UserPlan {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  plan                 String    @default("free")       // free | pro | business
+  lsCustomerId         String?                           // LemonSqueezy customer id
+  lsSubscriptionId     String?                           // LemonSqueezy subscription id
+  lsVariantId          String?                           // plan variant
+  lsCurrentPeriodEnd   DateTime?
+  lsStatus             String?                           // active | cancelled | past_due
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+// ── Accounts (per-user, encrypted credentials) ───────────────────────────────
 model Account {
   id              String              @id @default(cuid())
+  userId          String
   name            String
   type            String
   platform        String
@@ -22,6 +38,7 @@ model Account {
 
 model PortfolioSnapshot {
   id            String   @id @default(cuid())
+  userId        String
   accountId     String?
   account       Account? @relation(fields: [accountId], references: [id])
   date          DateTime
@@ -32,6 +49,7 @@ model PortfolioSnapshot {
 
 model Transaction {
   id        String   @id @default(cuid())
+  userId    String
   accountId String
   account   Account  @relation(fields: [accountId], references: [id])
   asset     String
@@ -46,6 +64,7 @@ model Transaction {
 
 model Subscription {
   id          String   @id @default(cuid())
+  userId      String
   name        String
   amount      Float
   currency    String   @default("USD")
@@ -59,14 +78,18 @@ model Subscription {
 
 model BudgetCategory {
   id        String   @id @default(cuid())
-  name      String   @unique
+  userId    String
+  name      String
   limit     Float
   color     String   @default("#3B82F6")
   createdAt DateTime @default(now())
+
+  @@unique([userId, name])
 }
 
 model Alert {
   id          String    @id @default(cuid())
+  userId      String
   type        String
   asset       String?
   threshold   Float
@@ -78,6 +101,7 @@ model Alert {
 
 model AIConversation {
   id        String   @id @default(cuid())
+  userId    String
   role      String
   content   String
   timestamp DateTime @default(now())
@@ -91,7 +115,8 @@ model MarketCache {
 }
 
 model UserSettings {
-  id                String   @id @default("singleton")
+  id                String   @id @default(cuid())
+  userId            String   @unique
   baseCurrency      String   @default("USD")
   riskProfile       String   @default("moderate")
   theme             String   @default("dark")
