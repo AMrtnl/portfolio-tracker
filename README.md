@@ -1,194 +1,119 @@
-# 🚀 Portfolio Tracker
+# Meridian
 
-A comprehensive crypto portfolio tracker with Hyperliquid integration, built with TypeScript, React, and Express.
+Personal portfolio tracker that aggregates **crypto wallets**, **brokerages** (SnapTrade Personal), and **manual accounts** into one dashboard.
 
-## ✨ Features
+## What works today
 
-- 📊 **Real-time Portfolio Tracking** - Monitor your crypto assets across multiple chains
-- 🔥 **Hyperliquid Integration** - Track perpetual positions and balances
-- 💼 **Multi-Protocol Support** - Ready for IBKR, Aster, and more DeFi protocols
-- 🎨 **Modern UI** - Beautiful dashboard built with React, TailwindCSS, and shadcn/ui
-- 🔐 **Secure Wallet Management** - BIP39 mnemonic-based wallet with HD derivation
-- 📈 **PnL Tracking** - Monitor your 24h, 7d, and 30d performance
+| Source | Status | Needs API keys? |
+|--------|--------|-----------------|
+| **Hyperliquid** (crypto wallet via recovery phrase) | Live sync of perps equity + spot | No |
+| **Manual** (any broker/bank/cash/holdings) | Works immediately — you enter balances | No |
+| **SnapTrade** (brokerages, read-only) | Import already-connected accounts + brokerage dashboard | Yes — free Personal plan |
 
-## 🏗️ Architecture
+Swiss / EU note: SnapTrade coverage is strongest for US/CA/UK/EU brokers. Many Swiss retail banks are not available via aggregators — use **Manual** for those.
+
+## Architecture
 
 ```
-portfolio-tracker/
-├── src/                    # Backend (Node.js + Express)
-│   ├── server.ts          # API server
-│   ├── wallet-core.ts     # Wallet management
-│   ├── defi/              # DeFi protocol adapters
-│   │   └── hyperliquid.ts
-│   └── types/             # TypeScript types
-└── client/                # Frontend (React + Vite)
-    └── src/
-        ├── components/    # UI components
-        ├── pages/         # Page components
-        └── hooks/         # React hooks
+src/
+  server.ts                 # Express API
+  store.ts                  # Account persistence (v2)
+  providers/                # hyperliquid · manual · snaptrade
+  snaptrade/                # Personal client, fetch, normalize (server-only)
+  types/
+client/src/
+  pages/Dashboard.tsx
+  pages/Accounts.tsx
+  pages/Brokerage.tsx       # SnapTrade-focused read-only surface
 ```
 
-## 🚀 Quick Start
+SnapTrade credentials stay in `.env` only. The Personal API key identifies you — Meridian never registers a Commercial `userId` / `userSecret`.
 
-### Prerequisites
+## Quick start
 
-- Node.js >= 18.0.0
-- npm or yarn
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   cd /Users/martinolialexandre/CascadeProjects/portfolio-tracker
-   ```
-
-2. **Install backend dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Install frontend dependencies**
-   ```bash
-   cd client
-   npm install
-   cd ..
-   ```
-
-4. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and add your mnemonic:
-   ```
-   MNEMONIC="your twelve or twenty four word mnemonic phrase"
-   PORT=4000
-   ```
-
-### Running the Application
-
-#### Option 1: Run Backend and Frontend Separately (Recommended for Development)
-
-**Terminal 1 - Backend API Server:**
 ```bash
+cp .env.example .env
+npm install
+cd client && npm install && cd ..
+
+# Terminal 1 — API
 npm run server
-```
-The API server will start on **http://localhost:4000**
 
-**Terminal 2 - Frontend Dev Server:**
-```bash
-cd client
-npm run dev
-```
-The frontend will start on **http://localhost:3000**
-
-#### Option 2: Build and Deploy
-
-```bash
-# Build backend
-npm run build
-
-# Build frontend
-cd client
-npm run build
-cd ..
-
-# Start production server
-npm start
+# Terminal 2 — UI
+cd client && npm run dev
 ```
 
-## 🌐 Access Points
+- UI: http://localhost:3000  
+- API: http://localhost:4000  
 
-- **Frontend Dashboard:** http://localhost:3000
-- **Backend API:** http://localhost:4000
-- **API Health Check:** http://localhost:4000/api/health
-- **Portfolio Data:** http://localhost:4000/api/portfolio
+### SnapTrade Personal (brokerages)
 
-## 📡 API Endpoints
+1. Sign up at [dashboard.snaptrade.com](https://dashboard.snaptrade.com) (Personal, free) and enable 2FA.
+2. Connect brokerages in the SnapTrade Dashboard (or Connection Portal).
+3. Create a Personal API key on the [API Key page](https://dashboard.snaptrade.com/api-key).
+4. Set in `.env` (do not paste keys into chat or commit them):
+
+```env
+SNAPTRADE_CLIENT_ID=
+SNAPTRADE_CONSUMER_KEY=
+STORE_SECRET=your-long-random-string
+```
+
+5. Restart the server → **Accounts → Brokerage → Import connected accounts**, or open **Brokerage** in the nav.
+6. Connection Portal is secondary (add or repair a brokerage).
+
+Without keys, SnapTrade routes return **503** and other providers still work. Failures never invent balances — you get clear errors and any sections that loaded successfully.
+
+## How to test (no broker keys)
+
+1. Open http://localhost:3000 → redirected to **Accounts**.
+2. Choose **Manual account** → name it e.g. `UBS` → add holding `CHF` qty `10000` price `1.12`.
+3. Or choose **Crypto wallet** and paste a Hyperliquid recovery phrase.
+4. Portfolio shows combined total + **Sources** breakdown.
+
+## API (selected)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/health` | Health check |
-| GET | `/api/portfolio` | Get portfolio summary with balances and positions |
-| GET | `/api/wallet/address` | Get wallet address |
+| GET | `/api/providers` | Provider registry + configured flags |
+| GET | `/api/accounts` | List Meridian accounts (no secrets) |
+| POST | `/api/accounts/snaptrade/import` | Import SnapTrade accounts into Meridian |
+| POST | `/api/accounts/snaptrade/connect` | Connection Portal URL (repair/add) |
+| GET | `/api/snaptrade/status` | Configured + connection summary |
+| GET | `/api/snaptrade/accounts` | Live list from SnapTrade |
+| GET | `/api/snaptrade/accounts/:id` | Details + balances + positions |
+| GET | `/api/snaptrade/accounts/:id/orders` | Recent orders (24h) |
+| GET | `/api/snaptrade/accounts/:id/activities` | Activities (~90d, limit 100) |
+| GET | `/api/snaptrade/connections` | Brokerage authorization health |
+| GET | `/api/portfolio` | Aggregate across all sources (`allSettled`) |
 
-## 🔧 Configuration
+## Security
 
-### Supported Chains
+- Never commit `.env` or `data/`.
+- Recovery phrases: encrypted at rest; not sent to the browser after connect.
+- SnapTrade `CONSUMER_KEY`: server-side only. No trading endpoints.
+- This is a personal local tool — add auth before exposing on a public host.
+- Avoid logging full brokerage API responses.
 
-The wallet core uses BIP44 derivation paths:
-- Ethereum (chainId: 60)
-- Hyperliquid (chainId: 1337)
-- Add more chains as needed
+## Troubleshooting (SnapTrade)
 
-### Adding New Protocols
+| Symptom | Check |
+|---------|--------|
+| 503 on `/api/snaptrade/*` | `.env` keys set and server restarted |
+| Empty import | Accounts connected in SnapTrade Dashboard; then Import |
+| Stale / empty holdings | Connection disabled → Add or repair via portal |
+| Totals look wrong across currencies | Values are in each account’s reported currency; FX normalization is a later phase |
 
-1. Create a new adapter in `src/defi/`
-2. Implement the balance and position fetching methods
-3. Add the adapter to `src/server.ts`
+## Roadmap / gaps
 
-## 🛠️ Tech Stack
+- [ ] Live SnapTrade FX normalization (multi-currency → display currency)
+- [ ] Return rates / balance history charts
+- [ ] Plaid Investments (US) provider
+- [ ] GoCardless / TrueLayer (EU open banking)
+- [ ] CSV import for manual holdings
+- [ ] Price refresh for manual equities
 
-### Backend
-- **TypeScript** - Type-safe development
-- **Express** - Web server framework
-- **ethers.js** - Ethereum library
-- **bip39** - Mnemonic generation and validation
-- **@hyperliquid/sdk** - Hyperliquid integration
-
-### Frontend
-- **React 18** - UI library
-- **Vite** - Build tool
-- **TailwindCSS** - Styling
-- **shadcn/ui** - UI components
-- **Lucide React** - Icons
-- **TanStack Query** - Data fetching
-- **Recharts** - Charts (ready to use)
-
-## 🔐 Security Notes
-
-⚠️ **IMPORTANT:**
-- Never commit your `.env` file
-- Keep your mnemonic phrase secure
-- Use environment variables for sensitive data
-- Consider using hardware wallets for production
-
-## 📝 Development Scripts
-
-```bash
-# Backend
-npm run dev        # Run backend in development mode
-npm run server     # Run API server
-npm run build      # Build backend
-npm run lint       # Lint code
-npm run format     # Format code
-
-# Frontend (in client/ directory)
-npm run dev        # Run frontend dev server
-npm run build      # Build for production
-npm run preview    # Preview production build
-```
-
-## 🎯 Roadmap
-
-- [ ] Add more DeFi protocol integrations (Aster, GMX, etc.)
-- [ ] NFT portfolio tracking
-- [ ] Historical price charts
-- [ ] Transaction history
-- [ ] Multi-wallet support
-- [ ] Mobile responsive design improvements
-- [ ] Dark/Light theme toggle
-- [ ] Export portfolio data (CSV, PDF)
-- [ ] Price alerts and notifications
-
-## 📄 License
+## License
 
 MIT
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-
-Built with ❤️ for the crypto community

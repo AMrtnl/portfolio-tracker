@@ -13,10 +13,15 @@ export default {
       center: true,
       padding: "2rem",
       screens: {
-        "2xl": "1400px",
+        "2xl": "1200px",
       },
     },
     extend: {
+      fontFamily: {
+        display: ["Bricolage Grotesque", "ui-sans-serif", "sans-serif"],
+        body: ["Schibsted Grotesk", "ui-sans-serif", "sans-serif"],
+        mono: ["IBM Plex Mono", "ui-monospace", "monospace"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -51,11 +56,23 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        gain: "hsl(var(--gain))",
+        loss: "hsl(var(--loss))",
+        warn: "hsl(var(--warn))",
+        ink: "hsl(var(--ink))",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      fontSize: {
+        // Hero value: fluid so it never wraps on a 320px phone.
+        hero: ["clamp(2.5rem, 11vw, 4.25rem)", { lineHeight: "0.95", letterSpacing: "-0.035em" }],
+        "hero-sm": ["clamp(1.75rem, 7vw, 2.5rem)", { lineHeight: "1", letterSpacing: "-0.03em" }],
+      },
+      maxWidth: {
+        measure: "76rem",
       },
       keyframes: {
         "accordion-down": {

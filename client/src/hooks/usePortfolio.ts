@@ -6,6 +6,9 @@ export interface Balance {
   amount: string
   usdValue: string
   chain: string
+  accountId?: string
+  accountLabel?: string
+  provider?: string
 }
 
 export interface Position {
@@ -17,8 +20,21 @@ export interface Position {
   pnlPercent: string
   leverage: string
   side: 'LONG' | 'SHORT'
-  type: 'PERPETUAL' | 'FUTURE' | 'OPTION'
+  type: 'PERPETUAL' | 'FUTURE' | 'OPTION' | 'EQUITY'
   protocol: string
+  accountId?: string
+  accountLabel?: string
+  provider?: string
+}
+
+export interface PortfolioSource {
+  accountId: string
+  label: string
+  provider: string
+  type: string
+  valueUsd: number
+  status: string
+  error?: string
 }
 
 export interface PortfolioSummary {
@@ -28,6 +44,7 @@ export interface PortfolioSummary {
   pnl30d: string
   assets: Balance[]
   positions: Position[]
+  sources?: PortfolioSource[]
   lastUpdated: string
 }
 

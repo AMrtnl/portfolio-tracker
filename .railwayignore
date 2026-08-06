@@ -1,0 +1,16 @@
+node_modules
+client/node_modules
+mobile
+dist
+client/dist
+data
+.git
+.env
+.env.local
+.env.*.local
+.impeccable
+coverage
+*.log
+*.tsbuildinfo
+client/preview-*.png
+.DS_Store

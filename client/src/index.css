@@ -4,48 +4,51 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* ------------------------------------------------------------------
+     * Meridian — "instrument" palette.
+     * Deep pine ink on warm paper. Colour carries meaning only:
+     * gain / loss / warn. Everything structural is ink at low opacity.
+     * ------------------------------------------------------------------ */
+    --paper: 152 22% 96%;
+    --background: 152 22% 96%;
+    --foreground: 185 42% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --card-foreground: 185 42% 9%;
+    --popover: 150 30% 99%;
+    --popover-foreground: 185 42% 9%;
+    --primary: 179 64% 19%;
+    --primary-foreground: 150 34% 98%;
+    --secondary: 158 16% 91%;
+    --secondary-foreground: 185 34% 14%;
+    --muted: 155 14% 92%;
+    --muted-foreground: 180 9% 38%;
+    --accent: 164 20% 89%;
+    --accent-foreground: 185 40% 11%;
+    --destructive: 6 64% 43%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 168 13% 84%;
+    --input: 168 13% 82%;
+    --ring: 179 64% 24%;
     --radius: 0.5rem;
-  }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    /* Semantic value roles */
+    --gain: 160 56% 28%;
+    --loss: 6 64% 43%;
+    --warn: 32 62% 34%;
+    --ink: 185 45% 8%;
+
+    /* Allocation ramp: one family (pine → slate) + a single brass accent
+     * so a 6-asset portfolio never turns into a rainbow. */
+    --chart-1: 179 58% 22%;
+    --chart-2: 180 40% 33%;
+    --chart-3: 187 29% 45%;
+    --chart-4: 198 21% 57%;
+    --chart-5: 36 40% 48%;
+    --chart-6: 205 12% 68%;
+
+    --font-display: "Bricolage Grotesque", ui-sans-serif, sans-serif;
+    --font-body: "Schibsted Grotesk", ui-sans-serif, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
   }
 }
 
@@ -53,7 +56,388 @@
   * {
     @apply border-border;
   }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body);
+    /* Atmosphere: warm paper lit from the upper left, with a fine grain
+     * so large flat areas read as a material rather than a flat fill. */
+    background-color: hsl(var(--paper));
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)' opacity='0.34'/%3E%3C/svg%3E"),
+      radial-gradient(
+        ellipse 130% 90% at 6% -12%,
+        hsl(179 42% 60% / 0.24),
+        transparent 62%
+      ),
+      linear-gradient(
+        168deg,
+        hsl(154 26% 97%) 0%,
+        hsl(159 19% 94%) 52%,
+        hsl(168 16% 92%) 100%
+      );
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: hsl(179 55% 34% / 0.18);
+  }
+
+  /* One focus language everywhere. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+    z-index: 60;
+    transform: translateY(-250%);
+    border-radius: var(--radius);
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .skip-link:focus {
+    transform: translateY(0);
+  }
+
+  /* ---------------- Type scale ---------------- */
+
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.022em;
+  }
+
+  /* Section / field label. The only place we use uppercase tracking. */
+  .t-eyebrow {
+    font-size: 0.6875rem;
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .t-meta {
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Every number in the app. Tabular so columns align down the page. */
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "zero" 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* ---------------- Value roles ---------------- */
+
+  .text-gain {
+    color: hsl(var(--gain));
+  }
+  .text-loss {
+    color: hsl(var(--loss));
+  }
+  .text-warn {
+    color: hsl(var(--warn));
+  }
+
+  .chip-gain {
+    background: hsl(var(--gain) / 0.1);
+    color: hsl(var(--gain));
+  }
+  .chip-loss {
+    background: hsl(var(--loss) / 0.09);
+    color: hsl(var(--loss));
+  }
+  .chip-warn {
+    background: hsl(var(--warn) / 0.1);
+    color: hsl(var(--warn));
+  }
+  .chip-neutral {
+    background: hsl(var(--ink) / 0.05);
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* ---------------- Surfaces ---------------- */
+
+  /* Cards exist only where something is interactive. */
+  .surface {
+    background: linear-gradient(
+      158deg,
+      hsl(0 0% 100% / 0.86),
+      hsl(158 28% 99% / 0.62)
+    );
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border) / 0.9);
+    box-shadow:
+      0 1px 2px hsl(var(--ink) / 0.04),
+      0 8px 24px -16px hsl(var(--ink) / 0.14);
+  }
+
+  /* Chrome that floats over scrolling content. */
+  .surface-chrome {
+    background: hsl(152 24% 96% / 0.84);
+    backdrop-filter: blur(14px) saturate(1.4);
+  }
+
+  /* Recessed block used for disclosed detail — the one "inset" language. */
+  .surface-inset {
+    background: hsl(var(--ink) / 0.032);
+    border: 1px solid hsl(var(--border) / 0.6);
+  }
+
+  /* The Meridian rule: a hairline with a single tick at the left,
+   * the recurring divider motif between sections. */
+  .rule {
+    position: relative;
+    border-top: 1px solid hsl(var(--ink) / 0.14);
+  }
+
+  .rule::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: 0;
+    width: 1.75rem;
+    height: 2px;
+    background: hsl(var(--primary) / 0.7);
+  }
+
+  /* ---------------- Data rows ---------------- */
+
+  .row-hover {
+    transition:
+      background-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .row-hover:hover {
+    background: hsl(var(--accent) / 0.5);
+  }
+
+  /* Vertical hairlines between unboxed stat columns. */
+  .divide-rule > * + * {
+    border-left: 1px solid hsl(var(--border) / 0.8);
+  }
+
+  /* ---------------- Motion ---------------- */
+
+  .animate-rise {
+    animation: rise 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out both;
+  }
+
+  /* Motion 2 — "the data lands": anything quantitative unrolls from its
+   * own origin. Horizontal bars grow rightward, columns grow up from the
+   * axis, and a line draws itself along its path. One idea, three shapes. */
+  .animate-seg {
+    animation: seg-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: left center;
+  }
+
+  .animate-bar {
+    animation: bar-grow 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: bottom center;
+  }
+
+  .animate-bar-down {
+    animation: bar-grow 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: top center;
+  }
+
+  .animate-draw {
+    stroke-dasharray: 1;
+    animation: draw 1s cubic-bezier(0.33, 1, 0.68, 1) both;
+  }
+
+  .animate-disclose {
+    animation: disclose 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-toast {
+    animation: toast 2.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .stagger-1 { animation-delay: 50ms; }
+  .stagger-2 { animation-delay: 100ms; }
+  .stagger-3 { animation-delay: 150ms; }
+  .stagger-4 { animation-delay: 210ms; }
+  .stagger-5 { animation-delay: 270ms; }
+  .stagger-6 { animation-delay: 330ms; }
+
+  /* Keep long tables from stretching on ultrawide displays. */
+  .measure {
+    width: 100%;
+    max-width: 76rem;
+    margin-inline: auto;
+  }
+
+  .measure-narrow {
+    width: 100%;
+    max-width: 30rem;
+    margin-inline: auto;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Allocation segments unroll left to right as the data lands. */
+@keyframes seg-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Monthly columns grow out of the axis. */
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* A value line traces itself. Paths carry pathLength="1", so the offset
+ * is range-independent. */
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes disclose {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  12%,
+  74% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -180% 0;
+  }
+  to {
+    background-position: 180% 0;
+  }
+}
+
+/* Skeletons mirror the real row geometry, so nothing shifts on load. */
+.skeleton {
+  background-image: linear-gradient(
+    92deg,
+    hsl(var(--ink) / 0.055) 22%,
+    hsl(var(--ink) / 0.022) 50%,
+    hsl(var(--ink) / 0.055) 78%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .skeleton {
+    background-image: none;
+    background-color: hsl(var(--ink) / 0.05);
+  }
+
+  /* Land the line fully drawn rather than relying on the animation's
+   * end state. */
+  .animate-draw {
+    stroke-dasharray: none;
   }
 }
