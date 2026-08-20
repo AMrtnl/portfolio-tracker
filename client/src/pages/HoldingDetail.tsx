@@ -2,17 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { NewsList } from '@/components/NewsList'
-import { Amount, Delta } from '@/components/ui/Amount'
-import { LinePlot, RangeTabs, type Series } from '@/components/ui/chart'
-import { SectionHead, StatStrip } from '@/components/ui/data'
-import {
-  EmptyState,
-  HistoryBuilding,
-  PanelUnavailable,
-  SkeletonBlock,
-  SkeletonChart,
-  SkeletonRows,
-} from '@/components/ui/states'
 import {
   useAnalyticsHoldings,
   usePriceHistory,
@@ -22,10 +11,11 @@ import {
   type AnalyticsHolding,
   type PriceHistoryRange,
 } from '@/hooks/useAnalytics'
-import { cn, formatAmount, formatCurrency } from '@/lib/utils'
+import { DetailChart } from '@/wealth/charts'
+import { useMoney } from '@/wealth/format'
 import { LogoAvatar } from '@/wealth/logos'
 
-const RANGES: Array<{ value: PriceHistoryRange; label: string }> = [
+const PRICE_RANGES: Array<{ value: PriceHistoryRange; label: string }> = [
   { value: '1m', label: '1M' },
   { value: '3m', label: '3M' },
   { value: '6m', label: '6M' },
@@ -36,17 +26,28 @@ const RANGES: Array<{ value: PriceHistoryRange; label: string }> = [
 function shortDate(iso: string): string {
   const d = new Date(iso)
   if (!Number.isFinite(d.getTime())) return iso
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
 function fillDate(iso: string): string {
   const d = new Date(iso)
   if (!Number.isFinite(d.getTime())) return iso
-  return d.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function compact(n: number): string {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    }).format(n)
+  } catch {
+    return n.toLocaleString()
+  }
+}
+
+function units(n: number): string {
+  return n.toLocaleString('en-US', { maximumFractionDigits: 4 })
 }
 
 /** Merge same-symbol lots into one position view. */
@@ -54,7 +55,7 @@ function mergeLots(lots: AnalyticsHolding[]): AnalyticsHolding | null {
   if (lots.length === 0) return null
   if (lots.length === 1) return lots[0]
 
-  let units = 0
+  let qty = 0
   let marketValue = 0
   let costBasis = 0
   let hasCost = false
@@ -63,7 +64,7 @@ function mergeLots(lots: AnalyticsHolding[]): AnalyticsHolding | null {
   let weight = 0
 
   for (const lot of lots) {
-    units += lot.units ?? 0
+    qty += lot.units ?? 0
     marketValue += lot.marketValue || 0
     if (lot.costBasis != null) {
       costBasis += lot.costBasis
@@ -76,15 +77,16 @@ function mergeLots(lots: AnalyticsHolding[]): AnalyticsHolding | null {
     weight += lot.weight ?? 0
   }
 
-  const averageCost =
-    hasCost && units > 0 ? costBasis / units : lots[0].averageCost ?? null
+  const averageCost = hasCost && qty > 0 ? costBasis / qty : lots[0].averageCost ?? null
   const unrealizedPnl = hasCost ? marketValue - costBasis : lots[0].unrealizedPnl ?? null
   const unrealizedPnlPercent =
-    hasCost && costBasis !== 0 ? (unrealizedPnl! / costBasis) * 100 : lots[0].unrealizedPnlPercent ?? null
+    hasCost && costBasis !== 0
+      ? (unrealizedPnl! / costBasis) * 100
+      : lots[0].unrealizedPnlPercent ?? null
 
   return {
     ...lots[0],
-    units,
+    units: qty,
     marketValue,
     costBasis: hasCost ? costBasis : lots[0].costBasis ?? null,
     averageCost,
@@ -92,25 +94,21 @@ function mergeLots(lots: AnalyticsHolding[]): AnalyticsHolding | null {
     unrealizedPnlPercent,
     dayChange: hasDay ? dayChange : lots[0].dayChange ?? null,
     weight,
-    accountLabel:
-      lots.length > 1
-        ? `${lots.length} accounts`
-        : lots[0].accountLabel,
+    accountLabel: lots.length > 1 ? `${lots.length} accounts` : lots[0].accountLabel,
   }
 }
 
 /**
- * One holding, fully opened.
- *
- * Shape follows Acorns / N26 / Revolut asset detail: identity + position
- * value and unrealized P&L first, then a price chart with honest empty
- * states, then a ledger of what you own, then news for that symbol only.
+ * One holding, fully opened. Fey-style anatomy: identity, hero price with
+ * a full-bleed chart and range pills at the chart's edge, then a stat
+ * strip, your position, fills, and news for this symbol only.
  */
 export function HoldingDetail() {
+  const { chf, pctStr } = useMoney()
   const { symbol: raw } = useParams<{ symbol: string }>()
   const symbol = decodeURIComponent(raw || '').toUpperCase()
   const [range, setRange] = useState<PriceHistoryRange>('1y')
-  const [hover, setHover] = useState<number | null>(null)
+  const [cur, setCur] = useState<number | null>(null)
 
   const holdingsQ = useAnalyticsHoldings()
   const quoteQ = useQuote(symbol || undefined)
@@ -118,7 +116,7 @@ export function HoldingDetail() {
   const tradesQ = useTrades(symbol || undefined)
 
   useEffect(() => {
-    document.title = symbol ? `${symbol}` : 'Holding'
+    document.title = symbol || 'Holding'
   }, [symbol])
 
   const lots = useMemo(
@@ -128,402 +126,301 @@ export function HoldingDetail() {
   const position = useMemo(() => mergeLots(lots), [lots])
   const quote = quoteQ.data
   const points = historyQ.data?.points ?? []
-  const historyWarnings = warningText(historyQ.data?.warnings)
-  const quoteWarnings = warningText(quoteQ.data?.warnings)
+  const notes = [...warningText(historyQ.data?.warnings), ...warningText(quoteQ.data?.warnings)]
+
+  const name = position?.name || quote?.name
+  const currency = position?.currency || quote?.currency || 'USD'
+  const livePrice = quote?.price ?? position?.price ?? null
+  const price = cur != null && points[cur] ? points[cur].close : livePrice
 
   const first = points[0]?.close
   const last = points[points.length - 1]?.close
-  const periodChange =
-    first != null && last != null && first !== 0
-      ? ((last - first) / first) * 100
-      : null
-
-  const hoverActive = hover != null && hover >= 0 && hover < points.length
+  const periodPct = first != null && last != null && first !== 0 ? ((last - first) / first) * 100 : null
   const plottable = points.length >= 3
 
-  const series: Series[] = [
-    {
-      id: 'price',
-      label: symbol,
-      color: 'hsl(var(--chart-1))',
-      fill: true,
-      values: points.map((p) => p.close),
-    },
-  ]
+  const low = quote?.fiftyTwoWeekLow
+  const high = quote?.fiftyTwoWeekHigh
+  const rangePos =
+    low != null && high != null && high > low && livePrice != null
+      ? Math.min(Math.max(((livePrice - low) / (high - low)) * 100, 0), 100)
+      : null
+
+  const trades = tradesQ.data?.trades ?? []
+  const invested = trades.reduce((s, t) => s + (t.side === 'buy' ? t.total : -t.total), 0)
 
   if (!symbol) {
     return (
-      <div>
-        <EmptyState
-          size="page"
-          glyph="holdings"
-          title="Missing symbol"
-          description="Open a holding from your portfolio to see its detail."
-          action={
-            <Link
-              to="/"
-              className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-            >
-              Back to portfolio
-            </Link>
-          }
-        />
+      <div className="ui-empty">
+        <div className="ui-empty-icon">?</div>
+        <b>Missing symbol</b>
+        <p>Open a holding from your portfolio to see its detail.</p>
+        <Link to="/" className="ui-btn tinted sm">
+          Back to portfolio
+        </Link>
       </div>
     )
   }
 
-  const name = position?.name || quote?.name
-  const currency = position?.currency || quote?.currency || 'USD'
-  const marketValue = position?.marketValue
-  const price = quote?.price ?? position?.price ?? null
-
   return (
     <article>
-      <div>
-        <Link to="/" className="a-back">
-          <ArrowLeft size={20} strokeWidth={2.5} />
-          Wealth
-        </Link>
+      <Link to="/" className="a-back">
+        <ArrowLeft size={20} strokeWidth={2.5} />
+        Wealth
+      </Link>
 
-        <div className="a-detid">
-          <LogoAvatar symbol={symbol} name={name} className="lg" color="#FFD84D" />
-          <div>
-            <h2 className="a-dettitle">{name || symbol}</h2>
-            <p className="a-detsub">
-              {symbol}
-              {quote?.sector ? ` · ${quote.sector}` : ''}
-            </p>
+      <section className="a-heroblock">
+        <div className="a-herotop">
+          <div className="a-detid">
+            <LogoAvatar symbol={symbol} name={name} className="lg" color="#FFD84D" />
+            <div>
+              <h2 className="a-dettitle">{name || symbol}</h2>
+              <p className="a-detsub">
+                {symbol}
+                {quote?.sector ? ` · ${quote.sector}` : ''}
+                {quote?.industry ? ` · ${quote.industry}` : ''}
+              </p>
+            </div>
           </div>
         </div>
 
-          {quoteQ.isLoading && !price ? (
-            <SkeletonBlock className="mt-4 h-10 w-48" />
-          ) : price != null ? (
-            <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <Amount value={price} currency={currency} size="lg" />
-              <Delta
-                amount={quote?.dayChange ?? null}
-                percent={quote?.dayChangePercent ?? null}
-                size="md"
-                showArrow
-              />
-              <span className="text-sm text-muted-foreground">today</span>
+        <div className="a-hero bare">
+          <div className="a-caption">
+            {cur != null && points[cur] ? shortDate(points[cur].date) : 'Price'}
+          </div>
+          <div className="a-value">
+            {price != null ? (
+              <>
+                <span className="a-unit">{currency}</span>
+                {chf(price, false, currency)}
+              </>
+            ) : (
+              '—'
+            )}
+          </div>
+          {cur == null && quote?.dayChangePercent != null ? (
+            <div className={`a-delta ${quote.dayChangePercent >= 0 ? 'gain' : 'loss'}`}>
+              {quote.dayChange != null ? `${chf(quote.dayChange, true, currency)} · ` : ''}
+              {pctStr(quote.dayChangePercent)}
+              <span className="a-period">today</span>
+            </div>
+          ) : cur == null && periodPct != null ? (
+            <div className={`a-delta ${periodPct >= 0 ? 'gain' : 'loss'}`}>
+              {pctStr(periodPct)}
+              <span className="a-period">{PRICE_RANGES.find((r) => r.value === range)?.label}</span>
             </div>
           ) : null}
         </div>
 
-        {/* Position ledger — Acorns "What you own" / N26 "In your portfolio" */}
-        <section className="mt-10" aria-labelledby="position-heading">
-          <SectionHead
-            id="position-heading"
-            title="Your position"
-            caption={
-              position?.accountLabel
-                ? `Held in ${position.accountLabel}.`
-                : 'Across your connected accounts.'
-            }
+        {plottable ? (
+          <DetailChart
+            values={points.map((p) => p.close)}
+            height={230}
+            color="#FFFFFF"
+            dates={(i) => (points[i] ? shortDate(points[i].date) : '')}
+            onScrub={setCur}
           />
-
-          {holdingsQ.isLoading ? (
-            <SkeletonRows rows={2} />
-          ) : !position ? (
-            <p className="border-y border-border/60 py-6 text-sm text-muted-foreground">
-              You don’t currently hold {symbol}. The quote and chart below still
-              reflect the market, when available.
-            </p>
-          ) : (
-            <StatStrip
-              stats={[
-                {
-                  label: 'Market value',
-                  value: (
-                    <Amount value={marketValue ?? 0} currency={currency} size="md" />
-                  ),
-                  sub:
-                    position.weight != null
-                      ? `${position.weight.toFixed(1)}% of portfolio`
-                      : undefined,
-                },
-                {
-                  label: 'Units',
-                  value: (
-                    <span className="num text-base font-medium">
-                      {position.units != null ? formatAmount(position.units) : '—'}
-                    </span>
-                  ),
-                  sub:
-                    position.averageCost != null
-                      ? `Avg cost ${formatCurrency(position.averageCost, { currency })}`
-                      : undefined,
-                },
-                {
-                  label: 'Cost basis',
-                  value:
-                    position.costBasis != null ? (
-                      <Amount value={position.costBasis} currency={currency} size="md" />
-                    ) : (
-                      <span className="text-base text-muted-foreground">—</span>
-                    ),
-                  sub:
-                    position.costBasis == null
-                      ? 'Not reported by provider'
-                      : undefined,
-                },
-                {
-                  label: 'Unrealized P&L',
-                  value: (
-                    <Delta
-                      amount={position.unrealizedPnl ?? null}
-                      percent={position.unrealizedPnlPercent ?? null}
-                      size="md"
-                    />
-                  ),
-                  sub:
-                    position.dayChange != null ? (
-                      <span>
-                        Today{' '}
-                        <Delta
-                          amount={position.dayChange}
-                          percent={position.dayChangePercent ?? null}
-                          size="sm"
-                        />
-                      </span>
-                    ) : undefined,
-                },
-              ]}
-            />
-          )}
-        </section>
-
-        {/* Purchase history — the broker fills behind the position. */}
-        {(tradesQ.data?.trades?.length ?? 0) > 0 && (
-          <section className="mt-12" aria-labelledby="purchases-heading">
-            <SectionHead
-              id="purchases-heading"
-              title="Purchases"
-              caption={`Fills reported by ${
-                tradesQ.data!.trades[0].accountLabel ?? 'your broker'
-              }.`}
-            />
-            <ul className="list-none border-y border-border/60 p-0">
-              {tradesQ.data!.trades.map((t) => (
-                <li
-                  key={`${t.date}-${t.side}-${t.price}`}
-                  className="flex items-center gap-3 border-b border-border/40 py-3 last:border-0"
-                >
-                  <span
-                    className={cn(
-                      'w-11 rounded px-1.5 py-0.5 text-center text-xs font-semibold',
-                      t.side === 'buy' ? 'chip-gain' : 'chip-loss',
-                    )}
-                  >
-                    {t.side === 'buy' ? 'Buy' : 'Sell'}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="num text-sm font-medium">
-                      {formatAmount(t.units)} × {formatCurrency(t.price, { currency: t.currency })}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{fillDate(t.date)}</p>
-                  </div>
-                  <Amount value={t.total} currency={t.currency} size="md" />
-                </li>
-              ))}
-            </ul>
-            <p className="t-meta mt-3">
-              {tradesQ.data!.trades.length} fills ·{' '}
-              <span className="num">
-                {formatCurrency(
-                  tradesQ.data!.trades.reduce(
-                    (s, t) => s + (t.side === 'buy' ? t.total : -t.total),
-                    0,
-                  ),
-                )}
-              </span>{' '}
-              invested in total.
-            </p>
-          </section>
+        ) : (
+          <p className="a-insnote spaced">
+            {historyQ.data?.note ||
+              'Not enough daily closes to draw a line yet. Meridian never invents a curve.'}
+          </p>
         )}
 
-        {/* Price chart */}
-        <section className="mt-12" aria-labelledby="chart-heading">
-          <SectionHead
-            id="chart-heading"
-            title="Price"
-            caption="Daily closes from the market. Gaps are left blank rather than filled in."
-            meta={
-              periodChange != null && plottable ? (
-                <Delta percent={periodChange} size="sm" />
-              ) : undefined
-            }
-          />
-
-          {historyQ.isLoading ? (
-            <SkeletonChart />
-          ) : historyQ.error ? (
-            <PanelUnavailable
-              what="Price history"
-              onRetry={() => historyQ.refetch()}
-            />
+        <div className="a-chartfoot">
+          {periodPct != null && plottable ? (
+            <span className={`a-tag ${periodPct >= 0 ? 'gain' : 'loss'}`}>
+              {pctStr(periodPct)} over{' '}
+              {PRICE_RANGES.find((r) => r.value === range)?.label}
+            </span>
           ) : (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div className="min-w-0" aria-live="polite">
-                  {hoverActive ? (
-                    <>
-                      <p className="t-eyebrow mb-1">
-                        {shortDate(points[hover!].date)}
-                      </p>
-                      <Amount
-                        value={points[hover!].close}
-                        currency={historyQ.data?.currency ?? currency}
-                        size="md"
-                      />
-                    </>
-                  ) : historyQ.data?.note ? (
-                    <p className="text-sm text-muted-foreground">{historyQ.data.note}</p>
-                  ) : periodChange != null && plottable ? (
-                    <p className="text-sm text-muted-foreground">
-                      {RANGES.find((r) => r.value === range)?.label} change{' '}
-                      <Delta percent={periodChange} size="sm" className="inline" />
-                    </p>
-                  ) : null}
-                </div>
-                <RangeTabs
-                  label="Price range"
-                  value={range}
-                  options={RANGES}
-                  onChange={(next) => {
-                    setRange(next)
-                    setHover(null)
-                  }}
-                />
-              </div>
+            <span />
+          )}
+          <div className="a-pills" role="tablist" aria-label="Price range">
+            {PRICE_RANGES.map((r) => (
+              <button
+                key={r.value}
+                type="button"
+                role="tab"
+                aria-selected={range === r.value}
+                className={`a-pill ${range === r.value ? 'on' : ''}`}
+                onClick={() => {
+                  setRange(r.value)
+                  setCur(null)
+                }}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
 
-              {plottable ? (
-                <LinePlot
-                  series={series}
-                  labels={points.map((p) => shortDate(p.date))}
-                  formatValue={(v) =>
-                    formatCurrency(v, {
-                      currency: historyQ.data?.currency ?? currency,
-                      digits: v >= 100 ? 2 : 4,
-                    })
-                  }
-                  onHover={setHover}
-                  hoverIndex={hover}
-                  ariaLabel={`Price history for ${symbol}`}
-                />
-              ) : (
-                <HistoryBuilding
-                  title={
-                    historyQ.data?.note
-                      ? 'No chart for this asset'
-                      : 'Not enough closes to draw a line yet'
-                  }
-                  detail={
-                    historyQ.data?.note ||
-                    'Meridian needs at least three daily closes before it will plot a curve. Inventing a line from two points would overstate precision.'
-                  }
-                  footnote={
-                    points.length > 0
-                      ? `${points.length} ${points.length === 1 ? 'close' : 'closes'} in this range.`
-                      : undefined
-                  }
-                />
-              )}
-
-              {historyWarnings.length > 0 && (
-                <ul className="t-meta list-none space-y-1 p-0">
-                  {historyWarnings.map((w) => (
-                    <li key={w}>{w}</li>
-                  ))}
-                </ul>
-              )}
+      {(quote?.marketCap != null ||
+        quote?.peRatio != null ||
+        low != null ||
+        high != null) && (
+        <div className="a-statstrip">
+          {quote?.marketCap != null && (
+            <div className="a-statcell">
+              <span>Mkt cap</span>
+              <b>{compact(quote.marketCap)}</b>
             </div>
           )}
-        </section>
-
-        {(quote?.fiftyTwoWeekHigh != null || quote?.marketCap != null) && (
-          <section className="mt-12" aria-labelledby="quote-stats">
-            <SectionHead id="quote-stats" title="Market" />
-            <StatStrip
-              animate={false}
-              stats={[
-                ...(quote.fiftyTwoWeekLow != null
-                  ? [
-                      {
-                        label: '52-week low',
-                        value: (
-                          <Amount
-                            value={quote.fiftyTwoWeekLow}
-                            currency={currency}
-                            size="sm"
-                          />
-                        ),
-                      },
-                    ]
-                  : []),
-                ...(quote.fiftyTwoWeekHigh != null
-                  ? [
-                      {
-                        label: '52-week high',
-                        value: (
-                          <Amount
-                            value={quote.fiftyTwoWeekHigh}
-                            currency={currency}
-                            size="sm"
-                          />
-                        ),
-                      },
-                    ]
-                  : []),
-                ...(quote.marketCap != null
-                  ? [
-                      {
-                        label: 'Market cap',
-                        value: (
-                          <Amount
-                            value={quote.marketCap}
-                            currency={currency}
-                            compact
-                            size="sm"
-                          />
-                        ),
-                      },
-                    ]
-                  : []),
-                ...(quote.peRatio != null
-                  ? [
-                      {
-                        label: 'P/E',
-                        value: (
-                          <span className="num text-sm font-medium">
-                            {quote.peRatio.toFixed(1)}
-                          </span>
-                        ),
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-            {quoteWarnings.length > 0 && (
-              <ul className="t-meta mt-3 list-none space-y-1 p-0">
-                {quoteWarnings.map((w) => (
-                  <li key={w}>{w}</li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
-
-        <div className="mt-12">
-          <NewsList
-            headingId="holding-news"
-            symbol={symbol}
-            limit={8}
-            title={`News · ${symbol}`}
-          />
+          {quote?.peRatio != null && (
+            <div className="a-statcell">
+              <span>P/E</span>
+              <b>{quote.peRatio.toFixed(1)}</b>
+            </div>
+          )}
+          {low != null && (
+            <div className="a-statcell">
+              <span>52w low</span>
+              <b>{chf(low, false, currency)}</b>
+            </div>
+          )}
+          {high != null && (
+            <div className="a-statcell">
+              <span>52w high</span>
+              <b>{chf(high, false, currency)}</b>
+            </div>
+          )}
+          {quote?.sector && (
+            <div className="a-statcell">
+              <span>Sector</span>
+              <b>{quote.sector}</b>
+            </div>
+          )}
         </div>
+      )}
+
+      {rangePos != null && (
+        <div className="a-range">
+          <div className="a-rangebar">
+            <i style={{ left: `${rangePos}%` }} />
+          </div>
+          <div className="a-rangelabels">
+            <span>{chf(low!, false, currency)}</span>
+            <em>52 weeks</em>
+            <span>{chf(high!, false, currency)}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="a-desk">
+        <div className="a-desk-primary">
+          <div className="a-header">Your position</div>
+          {position ? (
+            <section className="a-gcard pad">
+              <div className="a-statstrip flat">
+                <div className="a-statcell">
+                  <span>Market value</span>
+                  <b>{chf(position.marketValue ?? 0, false, currency)}</b>
+                </div>
+                <div className="a-statcell">
+                  <span>Units</span>
+                  <b>{position.units != null ? units(position.units) : '—'}</b>
+                </div>
+                <div className="a-statcell">
+                  <span>Avg cost</span>
+                  <b>
+                    {position.averageCost != null
+                      ? chf(position.averageCost, false, currency)
+                      : '—'}
+                  </b>
+                </div>
+                <div className="a-statcell">
+                  <span>Unrealized P&L</span>
+                  <b
+                    className={
+                      (position.unrealizedPnl ?? 0) >= 0 ? 'gain' : 'loss'
+                    }
+                  >
+                    {position.unrealizedPnl != null
+                      ? chf(position.unrealizedPnl, true, currency)
+                      : '—'}
+                  </b>
+                </div>
+                <div className="a-statcell">
+                  <span>Return</span>
+                  <b
+                    className={
+                      position.unrealizedPnlPercent == null
+                        ? ''
+                        : position.unrealizedPnlPercent >= 0
+                          ? 'gain'
+                          : 'loss'
+                    }
+                  >
+                    {position.unrealizedPnlPercent != null
+                      ? pctStr(position.unrealizedPnlPercent)
+                      : '—'}
+                  </b>
+                </div>
+                {position.weight != null && (
+                  <div className="a-statcell">
+                    <span>Weight</span>
+                    <b>{position.weight.toFixed(1)}%</b>
+                  </div>
+                )}
+              </div>
+              <p className="a-insnote spaced">
+                {position.accountLabel
+                  ? `Held in ${position.accountLabel}.`
+                  : 'Across your connected accounts.'}
+                {position.costBasis == null
+                  ? ' Cost basis is not reported by the provider.'
+                  : ''}
+              </p>
+            </section>
+          ) : (
+            <section className="a-gcard pad">
+              <p className="a-insnote spaced">
+                You don&rsquo;t currently hold {symbol}. The quote and chart still
+                reflect the market.
+              </p>
+            </section>
+          )}
+
+          {trades.length > 0 && (
+            <>
+              <div className="a-header">Purchases</div>
+              <section className="a-gcard">
+                {trades.map((t) => (
+                  <div key={`${t.date}-${t.side}-${t.price}`} className="a-arow">
+                    <span className={`a-tag ${t.side === 'buy' ? 'gain' : 'loss'}`}>
+                      {t.side === 'buy' ? 'Buy' : 'Sell'}
+                    </span>
+                    <span className="a-atext">
+                      <b>
+                        {units(t.units)} × {chf(t.price, false, t.currency || currency)}
+                      </b>
+                      <em>{fillDate(t.date)}</em>
+                    </span>
+                    <span className="a-anum">
+                      <b>{chf(t.total, false, t.currency || currency)}</b>
+                    </span>
+                  </div>
+                ))}
+                <div className="a-postotal">
+                  <span>
+                    {trades.length} fills
+                    {trades[0]?.accountLabel ? ` · ${trades[0].accountLabel}` : ''}
+                  </span>
+                  <b>{chf(invested, false, currency)} invested</b>
+                </div>
+              </section>
+            </>
+          )}
+
+          {notes.length > 0 && (
+            <p className="a-insnote spaced">{notes.join(' · ')}</p>
+          )}
+        </div>
+
+        <aside className="a-desk-aside">
+          <NewsList headingId="holding-news" symbol={symbol} limit={8} title={`News · ${symbol}`} />
+        </aside>
+      </div>
     </article>
   )
 }

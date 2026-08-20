@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 import {
   useAllocation,
   useConcentration,
@@ -12,7 +12,8 @@ import {
 import { useAccounts } from '@/hooks/useAccounts'
 import { usePortfolio } from '@/hooks/usePortfolio'
 import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccount'
-import { CandleChart, SplitBar, StackedChart, type Candle, type ChartSeries } from '@/wealth/charts'
+import { CandleChart, Ring, SplitBar, StackedChart, type Candle, type ChartSeries } from '@/wealth/charts'
+import { useQuickLook } from '@/wealth/QuickLook'
 import { useMoney } from '@/wealth/format'
 import { HoldingsGroups } from '@/wealth/HoldingsGroups'
 import { InsightsStrip, toSplitRows } from '@/wealth/Insights'
@@ -50,6 +51,7 @@ const RANGE_DAYS: Record<(typeof RANGES)[number]['k'], number> = {
 export function Dashboard() {
   const { chf, pctStr, unit } = useMoney()
   const { enabled: sampleOn } = useDemo()
+  const { look } = useQuickLook()
   const { data: accounts } = useAccounts()
   const hasAccounts = (accounts?.length ?? 0) > 0
   const hasLive = (accounts ?? []).some((a) => !isDemoId(a.id))
@@ -156,7 +158,6 @@ export function Dashboard() {
   const dayAbs =
     overview?.dayChange ?? (sampleOn ? DEMO_DAY_CHANGE : parseFloat(portfolio?.pnl24h || '0') || 0)
   const plotLen = Math.max(series[0]?.values.length ?? 0, 1)
-  const rangeIdx = RANGES.findIndex((r) => r.k === range)
   const dates = {
     short: (i: number) => (points[i] ? fmtDate(points[i].date) : 'Today'),
     long: (i: number) => (points[i] ? fmtDate(points[i].date, true) : 'Today'),
@@ -230,29 +231,48 @@ export function Dashboard() {
     <>
       <div className="a-desk">
         <div className="a-desk-primary">
-      <section className="a-card">
-        <div className="a-hero">
-          <div className="a-caption">
-            {cur != null && points[cur] ? dates.long(cur) : 'Net worth'}
+      <section className="a-heroblock">
+        <div className="a-herotop">
+          <div className="a-hero bare">
+            <div className="a-caption">
+              {cur != null && points[cur] ? dates.long(cur) : 'Net worth'}
+            </div>
+            <div className="a-value">
+              <span className="a-unit">{unit(currency)}</span>
+              {chf(net, false, currency)}
+            </div>
+            <div className={`a-delta ${up ? 'gain' : 'loss'}`}>
+              {chf(delta, true, currency)} · {pctStr(pct)}
+              <span className="a-period">{range}</span>
+            </div>
           </div>
-          <div className="a-value">
-            <span className="a-unit">{unit(currency)}</span>
-            {chf(net, false, currency)}
-          </div>
-          <div className={`a-delta ${up ? 'gain' : 'loss'}`}>
-            {chf(delta, true, currency)} · {pctStr(pct)}
-            <span className="a-period">{range}</span>
+          <div className="a-pills" role="tablist" aria-label="History range">
+            {RANGES.map((r) => (
+              <button
+                key={r.k}
+                type="button"
+                role="tab"
+                aria-selected={range === r.k}
+                onClick={() => {
+                  setRange(r.k)
+                  setCur(null)
+                }}
+                className={`a-pill ${range === r.k ? 'on' : ''}`}
+              >
+                {r.k}
+              </button>
+            ))}
           </div>
         </div>
 
         {plotLen >= 2 && mode === 'candles' ? (
-          <CandleChart data={candles} height={206} dates={dates.short} onScrub={setCur} />
+          <CandleChart data={candles} height={236} dates={dates.short} onScrub={setCur} />
         ) : plotLen >= 2 ? (
           <StackedChart
             series={series}
             net={netSeries.length ? netSeries : [grossNow - debtNow]}
             len={plotLen}
-            height={206}
+            height={236}
             dates={dates.short}
             onScrub={setCur}
             showDebt={debtNow > 0}
@@ -275,70 +295,81 @@ export function Dashboard() {
           </div>
         )}
 
-        <div className="a-seg" style={{ '--i': rangeIdx, '--n': RANGES.length } as React.CSSProperties}>
-          <span className="a-thumb" />
-          {RANGES.map((r) => (
+        <div className="a-chartfoot">
+          {mode === 'stacked' ? (
+            <div className="a-keys">
+              {CLASSES.filter((c) => (classTotals[c.id] || 0) > 0).map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`a-key ${off[c.id] ? 'off' : ''}`}
+                  onClick={() => setOff((h) => ({ ...h, [c.id]: !h[c.id] }))}
+                >
+                  <span className="a-dot" style={{ background: c.color }} />
+                  {c.name}
+                  <b>
+                    {off[c.id]
+                      ? '—'
+                      : `${grossNow ? (((classTotals[c.id] || 0) / grossNow) * 100).toFixed(0) : 0}%`}
+                  </b>
+                </button>
+              ))}
+              {debtNow > 0 && (
+                <span className="a-key static">
+                  <span className="a-dot hatch" />
+                  Debt
+                </span>
+              )}
+            </div>
+          ) : (
+            <span />
+          )}
+          <div className="a-pills" role="tablist" aria-label="Chart mode">
             <button
-              key={r.k}
               type="button"
-              onClick={() => {
-                setRange(r.k)
-                setCur(null)
-              }}
-              className={`a-segbtn ${range === r.k ? 'on' : ''}`}
+              role="tab"
+              aria-selected={mode === 'stacked'}
+              className={`a-pill ${mode === 'stacked' ? 'on' : ''}`}
+              onClick={() => setMode('stacked')}
             >
-              {r.k}
+              Composition
             </button>
-          ))}
-        </div>
-        <div
-          className="a-seg tight"
-          style={{ '--i': mode === 'stacked' ? 0 : 1, '--n': 2 } as React.CSSProperties}
-        >
-          <span className="a-thumb" />
-          <button
-            type="button"
-            className={`a-segbtn ${mode === 'stacked' ? 'on' : ''}`}
-            onClick={() => setMode('stacked')}
-          >
-            Composition
-          </button>
-          <button
-            type="button"
-            className={`a-segbtn ${mode === 'candles' ? 'on' : ''}`}
-            onClick={() => setMode('candles')}
-          >
-            Movement
-          </button>
-        </div>
-
-        {mode === 'stacked' && (
-          <div className="a-keys">
-            {CLASSES.filter((c) => (classTotals[c.id] || 0) > 0).map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className={`a-key ${off[c.id] ? 'off' : ''}`}
-                onClick={() => setOff((h) => ({ ...h, [c.id]: !h[c.id] }))}
-              >
-                <span className="a-dot" style={{ background: c.color }} />
-                {c.name}
-                <b>
-                  {off[c.id]
-                    ? '—'
-                    : `${grossNow ? (((classTotals[c.id] || 0) / grossNow) * 100).toFixed(0) : 0}%`}
-                </b>
-              </button>
-            ))}
-            {debtNow > 0 && (
-              <span className="a-key static">
-                <span className="a-dot hatch" />
-                Debt
-              </span>
-            )}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'candles'}
+              className={`a-pill ${mode === 'candles' ? 'on' : ''}`}
+              onClick={() => setMode('candles')}
+            >
+              Movement
+            </button>
           </div>
-        )}
+        </div>
       </section>
+
+      <div className="a-catchips">
+        {CLASSES.filter((c) => (classTotals[c.id] || 0) > 0).map((c) => {
+          const v = classTotals[c.id] || 0
+          const share = grossNow ? (v / grossNow) * 100 : 0
+          return (
+            <button
+              key={c.id}
+              type="button"
+              className="a-catchip"
+              onClick={() => look({ kind: 'class', id: c.id })}
+            >
+              <Ring pct={share} color={c.color} size={38} stroke={4.5} label="" />
+              <span className="a-catchiptext">
+                <b>{c.name}</b>
+                <em>
+                  {chf(v, false, currency)} · {share.toFixed(0)}%
+                </em>
+              </span>
+              <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
+            </button>
+          )
+        })}
+      </div>
 
       <div className="a-stats">
         <div className="a-stat">
@@ -379,6 +410,7 @@ export function Dashboard() {
               ? { symbol: DEMO_MOVERS.losers[0].symbol, pct: DEMO_MOVERS.losers[0].dayChangePercent }
               : undefined
         }
+        onSymbol={(symbol) => look({ kind: 'holding', symbol })}
       />
       </aside>
       </div>

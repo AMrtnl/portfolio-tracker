@@ -466,6 +466,146 @@ export function DetailChart({
   )
 }
 
+/** Two rebased lines on one plot — portfolio vs a benchmark. */
+export function CompareChart({
+  a,
+  b,
+  height = 190,
+  dates,
+  aColor = '#fff',
+  bColor = 'rgba(235,235,245,.38)',
+}: {
+  a: number[]
+  b: number[]
+  height?: number
+  dates: (i: number) => string
+  aColor?: string
+  bColor?: string
+}) {
+  const [ref, width] = useWidth()
+
+  const c = useMemo(() => {
+    if (!width || a.length < 2) return null
+    const iw = width - PAD.left - PAD.right
+    const ih = height - PAD.top - PAD.bottom
+    const all = [...a, ...b]
+    const x = scaleLinear([0, a.length - 1], [0, iw])
+    const y = scaleLinear(padDomain([Math.min(...all), Math.max(...all)]), [ih, 0])
+    const line = (vals: number[]) =>
+      curve(vals.map((v, i) => ({ px: x(Math.min(i, a.length - 1)), py: y(v) })))
+    return { iw, ih, y, aLine: line(a), bLine: line(b), x }
+  }, [width, height, a, b])
+
+  return (
+    <div ref={ref} className="a-plot" style={{ height }}>
+      {c && (
+        <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
+          <defs>
+            <filter id="a-cmpglow" x="-25%" y="-60%" width="150%" height="220%">
+              <feGaussianBlur stdDeviation="5" />
+            </filter>
+          </defs>
+          <g transform={`translate(${PAD.left},${PAD.top})`}>
+            <path
+              d={c.bLine}
+              fill="none"
+              stroke={bColor}
+              strokeWidth="1.75"
+              strokeDasharray="4 5"
+              strokeLinecap="round"
+              className="a-enter"
+            />
+            <g filter="url(#a-cmpglow)" opacity=".4">
+              <path d={c.aLine} fill="none" stroke={aColor} strokeWidth="3" />
+            </g>
+            <path
+              d={c.aLine}
+              fill="none"
+              stroke={aColor}
+              strokeWidth="2.25"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="a-enter"
+            />
+            <g transform={`translate(0,${c.ih + 6})`}>
+              <text x={0} className="a-axis" textAnchor="start">
+                {dates(0)}
+              </text>
+              <text x={c.iw} className="a-axis" textAnchor="end">
+                {dates(a.length - 1)}
+              </text>
+            </g>
+          </g>
+        </svg>
+      )}
+    </div>
+  )
+}
+
+/** Single-series month bars (income, deposits …). */
+export function MiniBars({
+  data,
+  color,
+  height = 150,
+}: {
+  data: Array<{ label: string; value: number }>
+  color: string
+  height?: number
+}) {
+  const [ref, width] = useWidth()
+
+  const c = useMemo(() => {
+    if (!width || !data.length) return null
+    const iw = width - 8
+    const ih = height - 24
+    const max = Math.max(...data.map((d) => d.value), 1)
+    return {
+      iw,
+      ih,
+      x: scaleBand(data.length, [0, iw], 0.34),
+      y: scaleLinear([0, max * 1.08], [ih, 0]),
+    }
+  }, [width, height, data])
+
+  return (
+    <div ref={ref} className="a-plot flow" style={{ height }}>
+      {c && (
+        <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
+          <g transform="translate(4,0)">
+            <line
+              x1={0}
+              x2={c.iw}
+              y1={c.ih}
+              y2={c.ih}
+              stroke="rgba(255,255,255,.1)"
+              shapeRendering="crispEdges"
+            />
+            {data.map((d, i) => (
+              <g key={`${d.label}-${i}`}>
+                <rect
+                  x={c.x(i)}
+                  y={c.y(d.value)}
+                  width={c.x.bandwidth}
+                  height={Math.max(c.ih - c.y(d.value), d.value > 0 ? 2 : 0)}
+                  rx={Math.min(4, c.x.bandwidth / 2)}
+                  fill={color}
+                  className="a-bargrow"
+                  style={{ animationDelay: `${i * 30}ms` }}
+                />
+                {(data.length <= 6 || i % 2 === 0) && (
+                  <text x={c.x.center(i)} y={c.ih + 16} textAnchor="middle" className="a-axis">
+                    {d.label}
+                  </text>
+                )}
+              </g>
+            ))}
+          </g>
+        </svg>
+      )}
+    </div>
+  )
+}
+
 export function FlowBars({
   data,
   height = 176,

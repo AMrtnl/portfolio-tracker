@@ -12,6 +12,7 @@ export function InsightsStrip({
   speculative,
   best,
   worst,
+  onSymbol,
 }: {
   topLabel?: string
   topPercent?: number
@@ -21,6 +22,7 @@ export function InsightsStrip({
   speculative: number
   best?: { symbol: string; pct: number }
   worst?: { symbol: string; pct: number }
+  onSymbol?: (symbol: string) => void
 }) {
   const { pctStr } = useMoney()
   const conc = topPercent ?? 0
@@ -92,24 +94,25 @@ export function InsightsStrip({
         {(best || worst) && (
           <article className="a-ins">
             <div className="a-inslabel">Today&apos;s movers</div>
-            {best && (
-              <div className="a-mover">
-                <span className="a-atext">
-                  <b>{best.symbol}</b>
-                  <em>Best</em>
-                </span>
-                <span className="a-tag gain">{pctStr(best.pct)}</span>
-              </div>
-            )}
-            {worst && (
-              <div className="a-mover">
-                <span className="a-atext">
-                  <b>{worst.symbol}</b>
-                  <em>Worst</em>
-                </span>
-                <span className="a-tag loss">{pctStr(worst.pct)}</span>
-              </div>
-            )}
+            {[
+              best ? { ...best, tone: 'gain' as const, note: 'Best' } : null,
+              worst ? { ...worst, tone: 'loss' as const, note: 'Worst' } : null,
+            ]
+              .filter((m): m is NonNullable<typeof m> => m != null)
+              .map((m) => (
+                <button
+                  key={m.note}
+                  type="button"
+                  className="a-mover tap"
+                  onClick={onSymbol ? () => onSymbol(m.symbol) : undefined}
+                >
+                  <span className="a-atext">
+                    <b>{m.symbol}</b>
+                    <em>{m.note}</em>
+                  </span>
+                  <span className={`a-tag ${m.tone}`}>{pctStr(m.pct)}</span>
+                </button>
+              ))}
           </article>
         )}
       </div>

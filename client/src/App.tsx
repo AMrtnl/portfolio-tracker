@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, MemoryRouter } from 'react-router-dom'
 import { PrivacyProvider } from '@/wealth/PrivacyContext'
+import { QuickLookProvider } from '@/wealth/QuickLook'
 import { DemoProvider } from '@/wealth/DemoContext'
 import { AppShell } from '@/wealth/Shell'
 
@@ -23,7 +24,9 @@ function App() {
       <PrivacyProvider>
         <DemoProvider>
           <Router>
-            <AppShell />
+            <QuickLookProvider>
+              <AppShell />
+            </QuickLookProvider>
           </Router>
         </DemoProvider>
       </PrivacyProvider>
