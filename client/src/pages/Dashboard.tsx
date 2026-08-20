@@ -6,6 +6,7 @@ import {
   useConcentration,
   useHistory,
   useMovers,
+  useNews,
   useOverview,
   type HistoryRange,
 } from '@/hooks/useAnalytics'
@@ -16,15 +17,15 @@ import { CandleChart, Ring, SplitBar, StackedChart, type Candle, type ChartSerie
 import { useQuickLook } from '@/wealth/QuickLook'
 import { useMoney } from '@/wealth/format'
 import { HoldingsGroups } from '@/wealth/HoldingsGroups'
-import { InsightsStrip, toSplitRows } from '@/wealth/Insights'
+import { toSplitRows } from '@/wealth/Insights'
 import { CLASSES, GEO_COLORS, RANGES, SECTOR_COLORS, classOf } from '@/wealth/tokens'
 import { useDemo } from '@/wealth/DemoContext'
-import { FLAGS } from '@/wealth/logos'
+import { FLAGS, LogoAvatar } from '@/wealth/logos'
+import { relativeTime } from '@/lib/utils'
 import {
   DEMO_CONCENTRATION,
   DEMO_DAY_CHANGE,
   DEMO_GEO,
-  DEMO_MOVERS,
   DEMO_SECTOR,
   demoHistory,
   isDemoId,
@@ -64,6 +65,7 @@ export function Dashboard() {
   const { data: bySector } = useAllocation('sector')
   const { data: concentration } = useConcentration()
   const { data: movers } = useMovers()
+  const { data: news } = useNews(6)
   const [mode, setMode] = useState<'stacked' | 'candles'>('stacked')
   const [range, setRange] = useState<(typeof RANGES)[number]['k']>('3M')
   const [off, setOff] = useState<Record<string, boolean>>({})
@@ -178,6 +180,34 @@ export function Dashboard() {
     (classTotals.stocks || 0) +
     (classTotals.bonds || 0) +
     (classTotals.crypto || 0)
+  const moverRows = [
+    ...(movers?.gainers ?? []).slice(0, 3),
+    ...(movers?.losers ?? []).slice(0, 3),
+  ]
+  const riskBuckets = [
+    {
+      key: 'def',
+      name: 'Defensive',
+      color: '#3ABEFF',
+      amount: (classTotals.cash || 0) + (classTotals.bonds || 0),
+    },
+    {
+      key: 'gro',
+      name: 'Growth',
+      color: '#FFD84D',
+      amount:
+        (classTotals.stocks || 0) +
+        (classTotals.funds || 0) +
+        (classTotals.estate || 0) +
+        (classTotals.pension || 0) +
+        (classTotals.other || 0),
+    },
+    { key: 'spec', name: 'Speculative', color: '#FF5C48', amount: classTotals.crypto || 0 },
+  ]
+  const riskTotal = Math.max(
+    riskBuckets.reduce((s, b) => s + b.amount, 0),
+    1,
+  )
 
   if (!hasAccounts) {
     return (
@@ -389,29 +419,111 @@ export function Dashboard() {
       </div>
 
       <aside className="a-desk-aside">
-      <InsightsStrip
-        topLabel={top ? top.label || top.symbol : undefined}
-        topPercent={top?.percent}
-        liquidPercent={grossNow ? (liquid / grossNow) * 100 : 0}
-        defensive={(classTotals.cash || 0) + (classTotals.bonds || 0)}
-        growth={(classTotals.stocks || 0) + (classTotals.funds || 0) + (classTotals.estate || 0) + (classTotals.pension || 0) + (classTotals.other || 0)}
-        speculative={classTotals.crypto || 0}
-        best={
-          movers?.gainers?.[0]
-            ? { symbol: movers.gainers[0].symbol, pct: movers.gainers[0].dayChangePercent ?? 0 }
-            : sampleOn
-              ? { symbol: DEMO_MOVERS.gainers[0].symbol, pct: DEMO_MOVERS.gainers[0].dayChangePercent }
-              : undefined
-        }
-        worst={
-          movers?.losers?.[0]
-            ? { symbol: movers.losers[0].symbol, pct: movers.losers[0].dayChangePercent ?? 0 }
-            : sampleOn
-              ? { symbol: DEMO_MOVERS.losers[0].symbol, pct: DEMO_MOVERS.losers[0].dayChangePercent }
-              : undefined
-        }
-        onSymbol={(symbol) => look({ kind: 'holding', symbol })}
-      />
+        {moverRows.length > 0 && (
+          <>
+            <div className="a-header">Today&rsquo;s movers</div>
+            <section className="a-gcard">
+              {moverRows.map((m) => (
+                <button
+                  key={m.symbol}
+                  type="button"
+                  className="a-arow tap"
+                  onClick={() => look({ kind: 'holding', symbol: m.symbol })}
+                >
+                  <LogoAvatar symbol={m.symbol} name={m.name} color="#FFD84D" />
+                  <span className="a-atext">
+                    <b>{m.name || m.symbol}</b>
+                    <em>
+                      {m.symbol}
+                      {m.price != null ? ` · ${chf(m.price, false, currency)}` : ''}
+                    </em>
+                  </span>
+                  <span className={`a-tag ${(m.dayChangePercent ?? 0) >= 0 ? 'gain' : 'loss'}`}>
+                    {pctStr(m.dayChangePercent ?? 0)}
+                  </span>
+                </button>
+              ))}
+            </section>
+          </>
+        )}
+
+        <div className="a-header">Portfolio health</div>
+        <section className="a-gcard pad">
+          <div className="a-healthrow">
+            <span>Concentration</span>
+            <span className="a-catbar">
+              <i
+                style={{
+                  width: `${Math.min(top?.percent ?? 0, 100)}%`,
+                  background: (top?.percent ?? 0) > 50 ? '#FF9F45' : '#30D158',
+                }}
+              />
+            </span>
+            <b>{(top?.percent ?? 0).toFixed(0)}%</b>
+          </div>
+          <div className="a-healthrow">
+            <span>Liquid</span>
+            <span className="a-catbar">
+              <i
+                style={{
+                  width: `${grossNow ? Math.min((liquid / grossNow) * 100, 100) : 0}%`,
+                  background: '#0A84FF',
+                }}
+              />
+            </span>
+            <b>{grossNow ? ((liquid / grossNow) * 100).toFixed(0) : 0}%</b>
+          </div>
+          {top && (
+            <p className="a-insnote spaced">
+              <b>{top.label || top.symbol}</b> is the largest holding
+              {(top.percent ?? 0) > 50 ? ' — over half the book sits in one place.' : '.'}
+            </p>
+          )}
+          <div className="a-riskbar spaced">
+            {riskBuckets.map((b) => (
+              <i
+                key={b.key}
+                style={{ flex: Math.max(b.amount, 0.01), background: b.color }}
+              />
+            ))}
+          </div>
+          <div className="a-keys">
+            {riskBuckets.map((b) => (
+              <span key={b.key} className="a-key static">
+                <span className="a-dot" style={{ background: b.color }} />
+                {b.name}
+                <b>{((b.amount / riskTotal) * 100).toFixed(0)}%</b>
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <div className="a-header">Market recap</div>
+        <section className="a-gcard pad">
+          {(news?.articles ?? []).slice(0, 5).map((a) => (
+            <a
+              key={`${a.link}-${a.title}`}
+              className="a-newsrow"
+              href={a.link}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <em>
+                {[
+                  (a.symbols ?? []).slice(0, 3).join(' · '),
+                  a.publisher,
+                  a.publishedAt ? relativeTime(a.publishedAt) : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </em>
+              <b>{a.title}</b>
+            </a>
+          ))}
+          {!(news?.articles ?? []).length && (
+            <p className="a-insnote spaced">No recent stories mention your holdings.</p>
+          )}
+        </section>
       </aside>
       </div>
 

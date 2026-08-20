@@ -17,6 +17,7 @@ import {
   demoIncome,
   demoOverview,
   demoNews,
+  demoNewsFeed,
   demoPriceHistory,
   demoQuote,
   demoTrades,
@@ -402,7 +403,7 @@ export function useNews(limit = 20, symbol?: string) {
   const q = useQuery(
     analyticsQuery<NewsResponse>(['market', 'news', limit, symbol ?? 'all'], path),
   )
-  const demo = symbol ? demoNews(symbol.toUpperCase()) : undefined
+  const demo = symbol ? demoNews(symbol.toUpperCase()) : demoNewsFeed(limit)
   const sampled = useSampled(q, (d) => !d?.articles?.length, () => demo as NewsResponse)
   return demo ? sampled : q
 }

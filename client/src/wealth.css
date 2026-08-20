@@ -576,6 +576,34 @@ button.a-arow { cursor: pointer; }
 }
 
 .a-tile.sm { width: 32px; height: 32px; border-radius: 11px; }
+.a-healthrow {
+  display: flex; align-items: center; gap: 10px; padding: 8px 6px;
+  font-size: 13px; font-weight: 600; color: rgba(235,235,245,.7);
+}
+.a-healthrow > span:first-child { width: 96px; flex: none; }
+.a-healthrow .a-catbar { flex: 1; }
+.a-healthrow b {
+  min-width: 40px; text-align: right; color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.a-riskbar.spaced { margin: 16px 6px 0; }
+.a-newsrow {
+  display: flex; flex-direction: column; gap: 4px; padding: 11px 8px;
+  border-radius: 14px; text-decoration: none; color: inherit;
+  transition: background .16s;
+}
+.a-newsrow:hover { background: rgba(255,255,255,.045); }
+.a-newsrow + .a-newsrow { border-top: .5px solid rgba(255,255,255,.06); }
+.a-newsrow em {
+  font-style: normal; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase;
+  color: rgba(235,235,245,.4);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.a-newsrow b {
+  font-size: 13.5px; font-weight: 600; line-height: 1.35;
+  color: rgba(235,235,245,.92); letter-spacing: -.005em;
+}
 .a-catbar.fixed { flex: 0 0 84px; }
 .a-mover.tap {
   width: 100%; border: 0; background: transparent; color: inherit; font: inherit;

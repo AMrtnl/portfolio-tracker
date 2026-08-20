@@ -833,6 +833,15 @@ export function demoNews(symbol: string): NewsResponse | undefined {
   }
 }
 
+/** Every sample symbol's headlines merged into one feed, newest first. */
+export function demoNewsFeed(limit = 8): NewsResponse {
+  const all = Object.keys(DEMO_HEADLINES).flatMap(
+    (sym) => demoNews(sym)?.articles ?? [],
+  )
+  all.sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || ''))
+  return { articles: all.slice(0, limit), retrievedAt: stamp() }
+}
+
 export const DEMO_MOVERS_RES: MoversResponse = {
   gainers: [
     { symbol: 'NVDA', name: 'NVIDIA', price: 118, marketValue: 4_720, dayChange: 111, dayChangePercent: 2.4 },
