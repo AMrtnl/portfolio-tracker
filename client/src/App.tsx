@@ -1,8 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter, MemoryRouter } from 'react-router-dom'
 import { PrivacyProvider } from '@/wealth/PrivacyContext'
 import { DemoProvider } from '@/wealth/DemoContext'
 import { AppShell } from '@/wealth/Shell'
+
+/* VITE_PREVIEW builds run as a standalone page with no server and a sandbox
+   that blocks history API calls — keep routing in memory there. */
+const Router = import.meta.env.VITE_PREVIEW ? MemoryRouter : BrowserRouter
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,9 +22,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <PrivacyProvider>
         <DemoProvider>
-          <BrowserRouter>
+          <Router>
             <AppShell />
-          </BrowserRouter>
+          </Router>
         </DemoProvider>
       </PrivacyProvider>
     </QueryClientProvider>
