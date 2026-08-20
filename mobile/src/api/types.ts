@@ -6,7 +6,14 @@
  * Source of truth: src/types/common.ts, src/types/accounts.ts, src/snaptrade/types.ts
  */
 
-export type AccountType = 'crypto_wallet' | 'broker' | 'bank' | 'manual';
+export type AccountType =
+  | 'crypto_wallet'
+  | 'broker'
+  | 'bank'
+  | 'manual'
+  | 'loan'
+  | 'pension'
+  | 'estate';
 export type ProviderId = 'hyperliquid' | 'snaptrade' | 'manual';
 export type AccountStatus =
   | 'connected'
@@ -30,6 +37,9 @@ export interface PublicAccount {
   type: AccountType;
   provider: ProviderId;
   status: AccountStatus;
+  kind?: 'asset' | 'liability';
+  bookClass?: string;
+  notes?: string;
   externalId?: string;
   maskedIdentifier?: string;
   institution?: string;
@@ -211,4 +221,56 @@ export interface ActivitiesResponse {
   activities: SnapActivityVM[];
   error?: string;
   retrievedAt?: string;
+}
+
+export type TxKind = 'income' | 'spend';
+export type BillingCycle = 'monthly' | 'quarterly' | 'yearly';
+
+export interface MoneyCategory {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface MoneyTransaction {
+  id: string;
+  date: string;
+  kind: TxKind;
+  amount: number;
+  category: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface Subscription {
+  id: string;
+  name: string;
+  plan?: string;
+  amount: number;
+  cycle: BillingCycle;
+  day: number;
+  month?: number;
+  cat: string;
+  createdAt: string;
+}
+
+export interface CashflowMonth {
+  key: string;
+  label: string;
+  year: number;
+  month: number;
+  income: number;
+  spend: number;
+}
+
+export interface CashflowResponse {
+  months: CashflowMonth[];
+  categories: Array<{ id: string; name: string; color: string; amount: number }>;
+  hasActivity: boolean;
+  retrievedAt: string;
+}
+
+export interface SubscriptionsResponse {
+  subscriptions: Subscription[];
+  categories: MoneyCategory[];
 }

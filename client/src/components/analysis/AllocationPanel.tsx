@@ -11,6 +11,7 @@ import {
   type AllocationDimension,
 } from '@/hooks/useAnalytics'
 import { chartColor, cn, formatCurrency } from '@/lib/utils'
+import { flagFor } from '@/wealth/logos'
 
 /**
  * One total, cut five ways.
@@ -114,11 +115,17 @@ export function AllocationPanel({
                 style={{ animationDelay: `${40 + i * 30}ms` }}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <span
-                    aria-hidden
-                    className="h-4 w-[3px] shrink-0"
-                    style={{ background: chartColor(i) }}
-                  />
+                  {by === 'region' && flagFor(segment.key, segment.label) ? (
+                    <span aria-hidden className="shrink-0 text-[15px] leading-none">
+                      {flagFor(segment.key, segment.label)}
+                    </span>
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="h-4 w-[3px] shrink-0"
+                      style={{ background: chartColor(i) }}
+                    />
+                  )}
                   <span className="truncate text-sm font-medium">{segment.label}</span>
                   {typeof segment.count === 'number' && segment.count > 0 && (
                     <span className="num shrink-0 text-xs text-muted-foreground">

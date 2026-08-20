@@ -1,61 +1,62 @@
 /**
- * Meridian design tokens, converted from the HSL custom properties in
- * `client/src/index.css` so web and iOS stay visually identical.
+ * Wealth design tokens — shared with the web client (black canvas, iOS tint).
  */
 
 export const color = {
-  background: '#F6F9F7', // 150 18% 97%
-  surface: '#FFFFFF',
-  foreground: '#11221E', // 168 32% 10%
-  ink: '#0C1D19', // 168 40% 8%
-  primary: '#0D6D63', // 174 78% 24%
-  primaryForeground: '#F7FCFA',
-  muted: '#EBF0EE', // 155 14% 93%
-  mutedForeground: '#5C706B', // 165 10% 40%
-  accent: '#E0EBE8', // 162 22% 90%
-  haze: '#EBF4F0', // 155 28% 94%
-  border: '#D7E0DD', // 160 12% 86%
-  gain: '#178C61', // 158 72% 32%
-  loss: '#D32E22', // 4 72% 48%
-  gainSoft: 'rgba(23, 140, 97, 0.10)',
-  lossSoft: 'rgba(211, 46, 34, 0.10)',
-  warn: '#D09D25',
-  warnSoft: 'rgba(208, 157, 37, 0.12)',
+  background: '#000000',
+  surface: 'rgba(28,28,30,0.72)',
+  surfaceSolid: '#1C1C1E',
+  foreground: '#FFFFFF',
+  ink: '#FFFFFF',
+  primary: '#0A84FF',
+  primaryForeground: '#FFFFFF',
+  muted: 'rgba(118,118,128,0.24)',
+  mutedForeground: 'rgba(235,235,245,0.55)',
+  accent: 'rgba(118,118,128,0.18)',
+  haze: 'rgba(28,28,30,0.9)',
+  border: 'rgba(255,255,255,0.08)',
+  gain: '#30D158',
+  loss: '#FF453A',
+  gainSoft: 'rgba(48,209,88,0.16)',
+  lossSoft: 'rgba(255,69,58,0.16)',
+  warn: '#FF9F45',
+  warnSoft: 'rgba(255,159,69,0.16)',
 } as const;
 
-/** Matches --chart-1..5 and drives allocation slices. */
 export const chartPalette = [
-  '#188B7F',
-  '#3083A6',
-  '#D09D25',
-  '#B1437A',
-  '#685AAF',
+  '#FF5C48',
+  '#FF9F45',
+  '#FFD84D',
+  '#4BD57E',
+  '#3ABEFF',
+  '#A57BFF',
 ] as const;
 
 export function chartColor(index: number): string {
   return chartPalette[index % chartPalette.length];
 }
 
-/**
- * The web app paints three radial blooms over a linear wash. Native has no
- * radial gradient primitive in expo-linear-gradient, so the atmosphere is
- * rebuilt from stacked linear gradients using the same stop colours.
- *
- * Every bloom fades to a zero-alpha copy of its own colour rather than to
- * `transparent`: iOS interpolates `transparent` as transparent *black*, which
- * greys out the midpoint and leaves visible rectangles.
- */
+export const CLASSES = [
+  { id: 'estate', name: 'Real estate', color: '#FF5C48' },
+  { id: 'pension', name: 'Pension', color: '#FF9F45' },
+  { id: 'stocks', name: 'Stocks', color: '#FFD84D' },
+  { id: 'funds', name: 'Funds', color: '#FF9F45' },
+  { id: 'cash', name: 'Cash', color: '#4BD57E' },
+  { id: 'bonds', name: 'Bonds', color: '#3ABEFF' },
+  { id: 'crypto', name: 'Crypto', color: '#A57BFF' },
+  { id: 'other', name: 'Other', color: '#8E8E93' },
+] as const;
+
+export type AssetClassId = (typeof CLASSES)[number]['id'];
+
+/** Subtle dark wash — no light paper blooms. */
 export const atmosphere = {
-  wash: ['#F6F9F8', '#EDF2F1', '#F3F6F5'] as const,
-  // 174 50% 68% — teal bloom, top-left
-  teal: ['rgba(133, 214, 206, 0.42)', 'rgba(133, 214, 206, 0.12)', 'rgba(133, 214, 206, 0)'] as const,
-  // 198 48% 74% — sky bloom, top-right
-  sky: ['rgba(157, 201, 221, 0.35)', 'rgba(157, 201, 221, 0.10)', 'rgba(157, 201, 221, 0)'] as const,
-  // 155 35% 82% — sage bloom lifting the lower third
-  sage: ['rgba(193, 225, 212, 0)', 'rgba(193, 225, 212, 0.18)', 'rgba(193, 225, 212, 0.5)'] as const,
+  wash: ['#000000', '#0A0A0C', '#000000'] as const,
+  teal: ['rgba(10,132,255,0.16)', 'rgba(10,132,255,0.04)', 'rgba(10,132,255,0)'] as const,
+  sky: ['rgba(165,123,255,0.12)', 'rgba(165,123,255,0.03)', 'rgba(165,123,255,0)'] as const,
+  sage: ['rgba(48,209,88,0)', 'rgba(48,209,88,0.04)', 'rgba(48,209,88,0.08)'] as const,
 } as const;
 
-/** 4pt scale. */
 export const space = {
   xs: 4,
   sm: 8,
@@ -69,10 +70,10 @@ export const space = {
 } as const;
 
 export const radius = {
-  sm: 6,
-  md: 10, // --radius: 0.625rem
-  lg: 14,
-  xl: 20,
+  sm: 8,
+  md: 14,
+  lg: 20,
+  xl: 26,
   pill: 999,
 } as const;
 
@@ -86,21 +87,20 @@ export const font = {
   monoMedium: 'IBMPlexMono_500Medium',
 } as const;
 
-/** Uppercase micro-label used for every section heading in the web app. */
 export const overline = {
   fontFamily: font.bodySemi,
   fontSize: 11,
   letterSpacing: 1.5,
-  textTransform: 'uppercase',
+  textTransform: 'uppercase' as const,
   color: color.mutedForeground,
-} as const;
+};
 
 export const shadow = {
   card: {
-    shadowColor: '#0C1D19',
-    shadowOpacity: 0.05,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
 } as const;

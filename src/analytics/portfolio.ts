@@ -7,7 +7,8 @@
  * class), the day's move, and FX. A market-data outage therefore degrades
  * classification, not the totals.
  */
-import type { PublicAccount } from '../types/accounts';
+import type { BookClass, PublicAccount } from '../types/accounts';
+import { isLiabilityAccount } from '../types/accounts';
 import type { Store } from '../store';
 import {
   FxConverter,
@@ -36,6 +37,7 @@ interface RawPosition {
   averageCost: number | null;
   isCash: boolean;
   account: AccountRef;
+  bookClass?: BookClass;
 }
 
 const SNAPSHOT_TTL_MS = 60_000;
@@ -129,8 +131,9 @@ async function collectViaProvider(
           currency: 'USD',
           marketValue: usd,
           averageCost: null,
-          isCash: isStablecoin(balance.asset),
+          isCash: isStablecoin(balance.asset) || account.bookClass === 'cash',
           account: ref,
+          bookClass: account.bookClass,
         };
       });
   } catch (err) {
@@ -147,6 +150,12 @@ function classify(
   yahooSymbol: string | null,
   kind: string,
 ): MarketAssetClass {
+  if (raw.bookClass === 'estate') return 'real_estate';
+  if (raw.bookClass === 'pension') return 'pension';
+  if (raw.bookClass === 'cash' || raw.isCash) return 'cash';
+  if (raw.bookClass === 'bonds') return 'bond';
+  if (raw.bookClass === 'crypto') return 'crypto';
+  if (raw.bookClass === 'stocks') return 'equity';
   if (raw.isCash) return 'cash';
   if (kind === 'cash') return 'cash';
   if (quote?.quoteType) {
@@ -182,6 +191,7 @@ export async function getPortfolioSnapshot(
 
   const collected = await Promise.all(
     accounts.map(async (account) => {
+      if (isLiabilityAccount(account)) return [];
       if (account.provider === 'snaptrade') {
         if (!isSnaptradeConfigured()) {
           warnings.push(
@@ -316,7 +326,11 @@ export async function getPortfolioSnapshot(
           ? 'Crypto'
           : assetClass === 'cash'
             ? 'Cash'
-            : (profile?.region ?? regionFromSymbol(symbol.yahooSymbol)),
+            : assetClass === 'real_estate'
+              ? 'Real estate'
+              : assetClass === 'pension'
+                ? 'Pension'
+                : (profile?.region ?? regionFromSymbol(symbol.yahooSymbol)),
       dayChange,
       dayChangePercent,
       quoteStale: symbol.yahooSymbol

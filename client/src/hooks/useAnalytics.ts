@@ -1,5 +1,26 @@
-import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
+import { useMemo } from 'react'
+import {
+  useQuery,
+  type UseQueryOptions,
+  type UseQueryResult,
+} from '@tanstack/react-query'
 import axios from 'axios'
+import { useDemo } from '@/wealth/DemoContext'
+import {
+  DEMO_CONCENTRATION_RES,
+  DEMO_HOLDINGS_RES,
+  DEMO_MOVERS_RES,
+  demoAllocation,
+  demoBenchmark,
+  demoFlows,
+  demoHistoryRes,
+  demoIncome,
+  demoOverview,
+  demoNews,
+  demoPriceHistory,
+  demoQuote,
+  demoTrades,
+} from '@/wealth/demo'
 
 /* ------------------------------------------------------------------ *
  * Wire types for /api/analytics/* and /api/market/*.
@@ -167,6 +188,20 @@ export interface MoversResponse extends Envelope {
   losers?: Mover[]
 }
 
+export interface TradeFill {
+  date: string
+  side: 'buy' | 'sell'
+  units: number
+  price: number
+  total: number
+  accountLabel?: string
+  currency?: string
+}
+
+export interface TradesResponse extends Envelope {
+  trades: TradeFill[]
+}
+
 export interface NewsArticle {
   title: string
   publisher?: string
@@ -233,85 +268,130 @@ function analyticsQuery<T>(
   } as UseQueryOptions<T>
 }
 
+/**
+ * Sample-book fallback: when the sample household is on and the live
+ * endpoint has nothing to show (or failed), hand the panel the demo
+ * response instead. Live data always wins the moment it exists.
+ */
+function useSampled<T>(
+  query: UseQueryResult<T>,
+  isEmpty: (data: T | undefined) => boolean,
+  make: () => T,
+): UseQueryResult<T> {
+  const { enabled } = useDemo()
+  const useDemoData = enabled && !query.isLoading && (query.error != null || isEmpty(query.data))
+  const data = useMemo(
+    () => (useDemoData ? make() : query.data),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useDemoData, query.data],
+  )
+  if (!useDemoData) return query
+  return { ...query, data, error: null, isError: false } as UseQueryResult<T>
+}
+
 export function useOverview() {
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<AnalyticsOverview>(
       ['analytics', 'overview'],
       '/api/analytics/overview',
       { refetchInterval: 60_000 },
     ),
   )
+  return useSampled(q, (d) => !d?.totalValue, demoOverview)
 }
 
 export function useAllocation(by: AllocationDimension) {
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<AllocationResponse>(
       ['analytics', 'allocation', by],
       `/api/analytics/allocation?by=${by}`,
     ),
   )
+  return useSampled(q, (d) => !d?.segments?.length, () => demoAllocation(by))
 }
 
 export function useConcentration() {
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<ConcentrationResponse>(
       ['analytics', 'concentration'],
       '/api/analytics/concentration',
     ),
   )
+  return useSampled(q, (d) => !d?.top?.length, () => DEMO_CONCENTRATION_RES)
 }
 
 export function useAnalyticsHoldings() {
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<HoldingsResponse>(
       ['analytics', 'holdings'],
       '/api/analytics/holdings',
       { refetchInterval: 60_000 },
     ),
   )
+  return useSampled(q, (d) => !d?.holdings?.length, () => DEMO_HOLDINGS_RES)
 }
 
 export function useIncome(months = 12) {
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<IncomeResponse>(
       ['analytics', 'income', months],
       `/api/analytics/income?months=${months}`,
     ),
   )
+  return useSampled(
+    q,
+    (d) =>
+      !d?.byMonth?.some(
+        (m) => (m.total ?? (m.dividends || 0) + (m.interest || 0)) > 0,
+      ),
+    () => demoIncome(months),
+  )
 }
 
 export function useFlows(months = 12) {
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<FlowsResponse>(
       ['analytics', 'flows', months],
       `/api/analytics/flows?months=${months}`,
     ),
   )
+  return useSampled(
+    q,
+    (d) => !d?.byMonth?.some((m) => (m.deposits || 0) + (m.withdrawals || 0) > 0),
+    () => demoFlows(months),
+  )
 }
 
 export function useHistory(range: HistoryRange) {
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<HistoryResponse>(
       ['analytics', 'history', range],
       `/api/analytics/history?range=${range}`,
     ),
   )
+  return useSampled(q, (d) => (d?.points?.length ?? 0) < 8, () => demoHistoryRes(range))
 }
 
 export function useBenchmark(range: BenchmarkRange, symbol = 'SPY') {
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<BenchmarkResponse>(
       ['analytics', 'benchmark', range, symbol],
       `/api/analytics/benchmark?range=${range}&symbol=${encodeURIComponent(symbol)}`,
     ),
   )
+  return useSampled(q, (d) => !d?.portfolio?.length, () => demoBenchmark(range))
 }
 
 export function useMovers() {
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<MoversResponse>(['market', 'movers'], '/api/market/movers', {
       refetchInterval: 120_000,
     }),
+  )
+  return useSampled(
+    q,
+    (d) => !(d?.gainers?.length || d?.losers?.length),
+    () => DEMO_MOVERS_RES,
   )
 }
 
@@ -319,32 +399,64 @@ export function useNews(limit = 20, symbol?: string) {
   const path = symbol
     ? `/api/market/news?limit=${limit}&symbol=${encodeURIComponent(symbol)}`
     : `/api/market/news?limit=${limit}`
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<NewsResponse>(['market', 'news', limit, symbol ?? 'all'], path),
   )
+  const demo = symbol ? demoNews(symbol.toUpperCase()) : undefined
+  const sampled = useSampled(q, (d) => !d?.articles?.length, () => demo as NewsResponse)
+  return demo ? sampled : q
+}
+
+/**
+ * Broker fills for one symbol. There is no live endpoint for this yet —
+ * the query 404s and, with the sample book on, the demo lots step in.
+ * When /api/analytics/trades ships, live data wins automatically.
+ */
+export function useTrades(symbol: string | undefined) {
+  const q = useQuery(
+    analyticsQuery<TradesResponse>(
+      ['analytics', 'trades', symbol ?? ''],
+      `/api/analytics/trades?symbol=${encodeURIComponent(symbol ?? '')}`,
+      { enabled: Boolean(symbol) },
+    ),
+  )
+  const demo = symbol ? demoTrades(symbol.toUpperCase()) : undefined
+  const sampled = useSampled(q, (d) => !d?.trades?.length, () => demo as TradesResponse)
+  return demo ? sampled : q
 }
 
 export function useQuote(symbol: string | undefined) {
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<Quote>(
       ['market', 'quote', symbol ?? ''],
       `/api/market/quote/${encodeURIComponent(symbol ?? '')}`,
       { enabled: Boolean(symbol) },
     ),
   )
+  const demo = symbol ? demoQuote(symbol.toUpperCase()) : undefined
+  const sampled = useSampled(q, (d) => d?.price == null, () => demo as Quote)
+  // Only symbols the sample book actually holds get a sample quote.
+  return demo ? sampled : q
 }
 
 export function usePriceHistory(
   symbol: string | undefined,
   range: PriceHistoryRange = '1y',
 ) {
-  return useQuery(
+  const q = useQuery(
     analyticsQuery<PriceHistoryResponse>(
       ['market', 'history', symbol ?? '', range],
       `/api/market/history/${encodeURIComponent(symbol ?? '')}?range=${range}`,
       { enabled: Boolean(symbol) },
     ),
   )
+  const known = symbol ? demoQuote(symbol.toUpperCase()) != null : false
+  const sampled = useSampled(
+    q,
+    (d) => (d?.points?.length ?? 0) < 3,
+    () => demoPriceHistory(symbol!.toUpperCase(), range) as PriceHistoryResponse,
+  )
+  return known ? sampled : q
 }
 
 /* ------------------------------------------------------------------ *

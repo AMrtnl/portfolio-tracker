@@ -1,55 +1,88 @@
-import { Platform, StyleSheet } from 'react-native';
-import { Redirect, Tabs } from 'expo-router';
+import { Platform, Pressable, StyleSheet } from 'react-native';
+import { Redirect, Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '../../src/auth/AuthContext';
+import { usePrivacy } from '../../src/wealth/PrivacyContext';
 import { color, font } from '../../src/theme/tokens';
 
-/**
- * Four tabs, ordered the way investing apps do it: the portfolio first, then
- * what you own, where it comes from, and what happened. Public and Fidelity both
- * put the portfolio in slot one; Wealthfront and YNAB give accounts their own tab
- * rather than burying them in settings.
- */
 export default function TabsLayout() {
   const { phase } = useAuth();
+  const { hidden, toggle } = usePrivacy();
+  const router = useRouter();
 
   if (phase === 'signedOut' || phase === 'locked') return <Redirect href="/login" />;
 
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerTransparent: true,
+        headerBlurEffect: 'systemThinMaterialDark',
+        headerTintColor: color.foreground,
+        headerTitleStyle: {
+          fontFamily: font.displaySemi,
+          fontSize: 17,
+          color: color.foreground,
+        },
+        headerRight: () => (
+          <>
+            <Pressable
+              onPress={toggle}
+              hitSlop={12}
+              accessibilityLabel={hidden ? 'Show balances' : 'Hide balances'}
+              style={styles.headerBtn}
+            >
+              <Ionicons
+                name={hidden ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={color.foreground}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/(tabs)/settings')}
+              hitSlop={12}
+              accessibilityLabel="Settings"
+              style={styles.headerBtn}
+            >
+              <Ionicons name="settings-outline" size={20} color={color.foreground} />
+            </Pressable>
+          </>
+        ),
         tabBarActiveTintColor: color.primary,
         tabBarInactiveTintColor: color.mutedForeground,
         tabBarLabelStyle: styles.label,
-        // Translucent bar so the atmosphere shows through as content scrolls under.
         tabBarStyle: Platform.OS === 'ios' ? styles.iosBar : styles.defaultBar,
         tabBarBackground: () =>
           Platform.OS === 'ios' ? (
-            <BlurView
-              tint="light"
-              intensity={70}
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView tint="dark" intensity={50} style={StyleSheet.absoluteFill} />
           ) : null,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Portfolio',
+          title: 'Wealth',
           tabBarIcon: ({ color: tint, size }) => (
-            <Ionicons name="trending-up" size={size} color={tint} />
+            <Ionicons name="wallet-outline" size={size} color={tint} />
           ),
         }}
       />
       <Tabs.Screen
-        name="holdings"
+        name="cashflow"
         options={{
-          title: 'Holdings',
+          title: 'Cash flow',
           tabBarIcon: ({ color: tint, size }) => (
-            <Ionicons name="layers-outline" size={size} color={tint} />
+            <Ionicons name="swap-horizontal-outline" size={size} color={tint} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="subscriptions"
+        options={{
+          title: 'Subscriptions',
+          tabBarIcon: ({ color: tint, size }) => (
+            <Ionicons name="calendar-outline" size={size} color={tint} />
           ),
         }}
       />
@@ -58,34 +91,20 @@ export default function TabsLayout() {
         options={{
           title: 'Accounts',
           tabBarIcon: ({ color: tint, size }) => (
-            <Ionicons name="wallet-outline" size={size} color={tint} />
+            <Ionicons name="layers-outline" size={size} color={tint} />
           ),
         }}
       />
-      <Tabs.Screen
-        name="activity"
-        options={{
-          title: 'Activity',
-          tabBarIcon: ({ color: tint, size }) => (
-            <Ionicons name="time-outline" size={size} color={tint} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color: tint, size }) => (
-            <Ionicons name="settings-outline" size={size} color={tint} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="holdings" options={{ href: null, title: 'Holdings' }} />
+      <Tabs.Screen name="activity" options={{ href: null, title: 'Activity' }} />
+      <Tabs.Screen name="settings" options={{ href: null, title: 'Settings' }} />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
-  label: { fontFamily: font.bodyMedium, fontSize: 11 },
+  label: { fontFamily: font.bodyMedium, fontSize: 10 },
+  headerBtn: { marginRight: 14 },
   iosBar: {
     position: 'absolute',
     backgroundColor: 'transparent',
@@ -93,7 +112,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   defaultBar: {
-    backgroundColor: color.surface,
+    backgroundColor: color.surfaceSolid,
     borderTopColor: color.border,
   },
 });

@@ -10,7 +10,7 @@ import { PressableButton } from '../../src/components/PressableButton';
 import { StatusPill } from '../../src/components/Pills';
 import { ListGroup, Panel, Section } from '../../src/components/Section';
 import { ScreenScroll } from '../../src/components/ScreenScroll';
-import { Body, Caption, Display, Mono } from '../../src/components/Type';
+import { Body, Caption, Mono } from '../../src/components/Type';
 import { relativeTime } from '../../src/lib/format';
 import { color, space } from '../../src/theme/tokens';
 
@@ -51,7 +51,7 @@ export default function SettingsScreen() {
 
   return (
     <ScreenScroll>
-      <Display>Settings</Display>
+      <Caption style={{ opacity: 0.7 }}>Session and connection health</Caption>
 
       <Section overline="Security">
         <ListGroup>

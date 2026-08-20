@@ -48,13 +48,14 @@ export interface PortfolioSummary {
   lastUpdated: string
 }
 
-export function usePortfolio() {
+export function usePortfolio(opts?: { enabled?: boolean }) {
   return useQuery<PortfolioSummary>({
     queryKey: ['portfolio'],
     queryFn: async () => {
       const { data } = await axios.get('/api/portfolio')
       return data
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
+    enabled: opts?.enabled ?? true,
+    refetchInterval: 30000,
   })
 }

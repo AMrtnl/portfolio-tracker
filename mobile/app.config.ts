@@ -19,8 +19,8 @@ const config: ExpoConfig = {
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
-  userInterfaceStyle: 'light',
-  backgroundColor: '#F6F9F7',
+  userInterfaceStyle: 'dark',
+  backgroundColor: '#000000',
   assetBundlePatterns: ['**/*'],
   ios: {
     bundleIdentifier,
@@ -37,7 +37,7 @@ const config: ExpoConfig = {
   android: {
     package: bundleIdentifier,
     adaptiveIcon: {
-      backgroundColor: '#0D6D63',
+      backgroundColor: '#000000',
       foregroundImage: './assets/android-icon-foreground.png',
       monochromeImage: './assets/android-icon-monochrome.png',
     },
@@ -61,7 +61,7 @@ const config: ExpoConfig = {
         image: './assets/splash-icon.png',
         imageWidth: 180,
         resizeMode: 'contain',
-        backgroundColor: '#F6F9F7',
+        backgroundColor: '#000000',
       },
     ],
   ],

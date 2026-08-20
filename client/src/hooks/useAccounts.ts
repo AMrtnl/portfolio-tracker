@@ -1,7 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
+import { useDemo } from '@/wealth/DemoContext'
+import { mergeAccounts } from '@/wealth/demo'
 
-export type AccountType = 'crypto_wallet' | 'broker' | 'bank' | 'manual'
+export type AccountType =
+  | 'crypto_wallet'
+  | 'broker'
+  | 'bank'
+  | 'manual'
+  | 'loan'
+  | 'pension'
+  | 'estate'
+export type AccountKind = 'asset' | 'liability'
+export type BookClass =
+  | 'estate'
+  | 'pension'
+  | 'stocks'
+  | 'cash'
+  | 'bonds'
+  | 'crypto'
+  | 'other'
 export type ProviderId = 'hyperliquid' | 'snaptrade' | 'manual'
 export type AccountStatus =
   | 'connected'
@@ -24,6 +42,9 @@ export interface Account {
   type: AccountType
   provider: ProviderId
   status: AccountStatus
+  kind?: AccountKind
+  bookClass?: BookClass
+  notes?: string
   externalId?: string
   maskedIdentifier?: string
   institution?: string
@@ -57,7 +78,8 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
 }
 
 export function useAccounts() {
-  return useQuery<Account[]>({
+  const { enabled } = useDemo()
+  const query = useQuery<Account[]>({
     queryKey: ['accounts'],
     queryFn: async () => {
       const { data } = await axios.get('/api/accounts')
@@ -68,6 +90,10 @@ export function useAccounts() {
       }))
     },
   })
+  return {
+    ...query,
+    data: mergeAccounts(query.data, enabled),
+  }
 }
 
 export function useProviders() {
@@ -100,7 +126,12 @@ export function useAddManualAccount() {
     mutationFn: async (payload: {
       label: string
       institution?: string
-      type?: 'manual' | 'broker' | 'bank'
+      type?: AccountType
+      kind?: AccountKind
+      bookClass?: BookClass
+      notes?: string
+      balance?: number
+      currency?: string
       holdings?: Holding[]
     }) => {
       const { data } = await axios.post('/api/accounts/manual', payload)

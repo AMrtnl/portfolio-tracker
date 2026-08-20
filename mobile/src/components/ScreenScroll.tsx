@@ -6,6 +6,8 @@ import { color, space } from '../theme/tokens';
 
 /** Height of the translucent tab bar that content scrolls beneath. */
 const TAB_BAR_CLEARANCE = 58;
+/** Native stack header sitting over tab screens. */
+const HEADER_CLEARANCE = 44;
 
 interface Props {
   children: ReactNode;
@@ -41,13 +43,13 @@ export function ScreenScroll({
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + headerOffset + space.lg,
+            paddingTop: insets.top + headerOffset + space.lg + (insideTabs ? HEADER_CLEARANCE : 0),
             paddingBottom:
               insets.bottom + space['3xl'] + (insideTabs ? TAB_BAR_CLEARANCE : 0),
           },
         ]}
         // iOS momentum indicators feel wrong over a light wash without this.
-        indicatorStyle="black"
+        indicatorStyle="white"
         refreshControl={
           onRefresh ? (
             <RefreshControl
@@ -81,7 +83,7 @@ export function ScreenFill({
       <View
         style={[
           styles.fill,
-          { paddingTop: insets.top, paddingBottom: insets.bottom + TAB_BAR_CLEARANCE },
+          { paddingTop: insets.top + HEADER_CLEARANCE, paddingBottom: insets.bottom + TAB_BAR_CLEARANCE },
         ]}
       >
         {children}

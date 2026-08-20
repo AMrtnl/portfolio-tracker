@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowLeft, ExternalLink, Loader2 } from 'lucide-react'
+import { ExternalLink, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Amount, Delta } from '@/components/ui/Amount'
 import { Banner, EmptyState, SkeletonRows } from '@/components/ui/states'
@@ -186,7 +185,7 @@ export function Brokerage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   useEffect(() => {
-    document.title = 'Brokerage — Meridian'
+    document.title = 'Brokerage'
   }, [])
 
   useEffect(() => {
@@ -248,29 +247,9 @@ export function Brokerage() {
   const busy = accountsQ.isFetching || detail.isFetching
 
   return (
-    <article className="measure px-5 py-9 sm:px-8 sm:py-14">
-      <header className="animate-rise mb-8">
-        <Link
-          to="/accounts"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-          Accounts
-        </Link>
-
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="t-eyebrow mb-2.5">SnapTrade · read only</p>
-            <h1 className="font-display text-[clamp(1.75rem,6vw,2.25rem)] tracking-tight">
-              Brokerage
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-              Accounts linked through your SnapTrade Personal key. Values use
-              each account’s own reported currency. No orders are ever placed
-              from Meridian.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+    <article>
+      <header className="mb-4">
+        <div className="flex flex-wrap items-center justify-end gap-2">
             <RefreshButton
               onRefresh={refreshAll}
               busy={busy}
@@ -286,7 +265,6 @@ export function Brokerage() {
               )}
               Import to portfolio
             </Button>
-          </div>
         </div>
 
         {retrievedAt && <FreshnessNote iso={retrievedAt} prefix="Read" className="mt-3" />}

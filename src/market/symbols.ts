@@ -14,6 +14,8 @@ export type MarketAssetClass =
   | 'crypto'
   | 'cash'
   | 'bond'
+  | 'real_estate'
+  | 'pension'
   | 'other'
   | 'unclassified';
 

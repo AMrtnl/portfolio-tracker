@@ -84,10 +84,10 @@ export default function LoginScreen() {
           <View style={styles.brand}>
             <Overline>Meridian</Overline>
             <Display style={styles.headline}>
-              {locked && !showPassphraseForm ? 'Welcome back' : 'Your whole portfolio'}
+              {locked && !showPassphraseForm ? 'Welcome back' : 'Your money, one book'}
             </Display>
             <Body style={styles.subhead}>
-              Crypto, brokerages and manual accounts in one read-only view.
+              Net worth, cash flow, subscriptions, and every account — on this phone and on the web.
             </Body>
             <HeroCurve up bleed={space['2xl']} />
           </View>

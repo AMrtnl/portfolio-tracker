@@ -35,6 +35,7 @@ import {
   toNumber,
 } from '../../src/lib/format';
 import { useRefresh } from '../../src/lib/useRefresh';
+import { usePrivacy } from '../../src/wealth/PrivacyContext';
 import { color, font, space } from '../../src/theme/tokens';
 
 /**
@@ -47,6 +48,7 @@ import { color, font, space } from '../../src/theme/tokens';
  */
 export default function AccountDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { hidden } = usePrivacy();
   const accountsQuery = useAccounts();
   const portfolioQuery = usePortfolio();
 
@@ -155,7 +157,11 @@ export default function AccountDetailScreen() {
         <View style={styles.valueBlock}>
           <Caption>Reported value</Caption>
           <Mono style={styles.value}>
-            {headlineValue === null ? '—' : formatMoney(headlineValue, currency)}
+            {headlineValue === null
+              ? '—'
+              : hidden
+                ? '••••••'
+                : formatMoney(headlineValue, currency)}
           </Mono>
           <Caption>
             Native currency {currency} · synced {relativeTime(account.lastSyncedAt)}

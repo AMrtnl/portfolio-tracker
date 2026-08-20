@@ -17,11 +17,13 @@ import {
   useAnalyticsHoldings,
   usePriceHistory,
   useQuote,
+  useTrades,
   warningText,
   type AnalyticsHolding,
   type PriceHistoryRange,
 } from '@/hooks/useAnalytics'
-import { formatAmount, formatCurrency } from '@/lib/utils'
+import { cn, formatAmount, formatCurrency } from '@/lib/utils'
+import { LogoAvatar } from '@/wealth/logos'
 
 const RANGES: Array<{ value: PriceHistoryRange; label: string }> = [
   { value: '1m', label: '1M' },
@@ -35,6 +37,16 @@ function shortDate(iso: string): string {
   const d = new Date(iso)
   if (!Number.isFinite(d.getTime())) return iso
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function fillDate(iso: string): string {
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return iso
+  return d.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 /** Merge same-symbol lots into one position view. */
@@ -103,9 +115,10 @@ export function HoldingDetail() {
   const holdingsQ = useAnalyticsHoldings()
   const quoteQ = useQuote(symbol || undefined)
   const historyQ = usePriceHistory(symbol || undefined, range)
+  const tradesQ = useTrades(symbol || undefined)
 
   useEffect(() => {
-    document.title = symbol ? `${symbol} — Meridian` : 'Holding — Meridian'
+    document.title = symbol ? `${symbol}` : 'Holding'
   }, [symbol])
 
   const lots = useMemo(
@@ -140,7 +153,7 @@ export function HoldingDetail() {
 
   if (!symbol) {
     return (
-      <div className="measure px-5 py-10 sm:px-8">
+      <div>
         <EmptyState
           size="page"
           glyph="holdings"
@@ -165,21 +178,23 @@ export function HoldingDetail() {
   const price = quote?.price ?? position?.price ?? null
 
   return (
-    <article className="pb-16">
-      <div className="measure px-5 pt-8 sm:px-8 sm:pt-12">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-          Portfolio
+    <article>
+      <div>
+        <Link to="/" className="a-back">
+          <ArrowLeft size={20} strokeWidth={2.5} />
+          Wealth
         </Link>
 
-        <header className="mt-6">
-          <p className="t-eyebrow">{symbol}</p>
-          <h1 className="mt-2 font-display text-2xl tracking-tight sm:text-3xl">
-            {name || symbol}
-          </h1>
+        <div className="a-detid">
+          <LogoAvatar symbol={symbol} name={name} className="lg" color="#FFD84D" />
+          <div>
+            <h2 className="a-dettitle">{name || symbol}</h2>
+            <p className="a-detsub">
+              {symbol}
+              {quote?.sector ? ` · ${quote.sector}` : ''}
+            </p>
+          </div>
+        </div>
 
           {quoteQ.isLoading && !price ? (
             <SkeletonBlock className="mt-4 h-10 w-48" />
@@ -194,18 +209,8 @@ export function HoldingDetail() {
               />
               <span className="text-sm text-muted-foreground">today</span>
             </div>
-          ) : quoteQ.error ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              No live quote for this symbol.
-            </p>
           ) : null}
-
-          {(quote?.sector || quote?.industry) && (
-            <p className="t-meta mt-2">
-              {[quote.sector, quote.industry].filter(Boolean).join(' · ')}
-            </p>
-          )}
-        </header>
+        </div>
 
         {/* Position ledger — Acorns "What you own" / N26 "In your portfolio" */}
         <section className="mt-10" aria-labelledby="position-heading">
@@ -289,6 +294,55 @@ export function HoldingDetail() {
             />
           )}
         </section>
+
+        {/* Purchase history — the broker fills behind the position. */}
+        {(tradesQ.data?.trades?.length ?? 0) > 0 && (
+          <section className="mt-12" aria-labelledby="purchases-heading">
+            <SectionHead
+              id="purchases-heading"
+              title="Purchases"
+              caption={`Fills reported by ${
+                tradesQ.data!.trades[0].accountLabel ?? 'your broker'
+              }.`}
+            />
+            <ul className="list-none border-y border-border/60 p-0">
+              {tradesQ.data!.trades.map((t) => (
+                <li
+                  key={`${t.date}-${t.side}-${t.price}`}
+                  className="flex items-center gap-3 border-b border-border/40 py-3 last:border-0"
+                >
+                  <span
+                    className={cn(
+                      'w-11 rounded px-1.5 py-0.5 text-center text-xs font-semibold',
+                      t.side === 'buy' ? 'chip-gain' : 'chip-loss',
+                    )}
+                  >
+                    {t.side === 'buy' ? 'Buy' : 'Sell'}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="num text-sm font-medium">
+                      {formatAmount(t.units)} × {formatCurrency(t.price, { currency: t.currency })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{fillDate(t.date)}</p>
+                  </div>
+                  <Amount value={t.total} currency={t.currency} size="md" />
+                </li>
+              ))}
+            </ul>
+            <p className="t-meta mt-3">
+              {tradesQ.data!.trades.length} fills ·{' '}
+              <span className="num">
+                {formatCurrency(
+                  tradesQ.data!.trades.reduce(
+                    (s, t) => s + (t.side === 'buy' ? t.total : -t.total),
+                    0,
+                  ),
+                )}
+              </span>{' '}
+              invested in total.
+            </p>
+          </section>
+        )}
 
         {/* Price chart */}
         <section className="mt-12" aria-labelledby="chart-heading">
@@ -470,7 +524,6 @@ export function HoldingDetail() {
             title={`News · ${symbol}`}
           />
         </div>
-      </div>
     </article>
   )
 }

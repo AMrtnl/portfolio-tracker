@@ -165,6 +165,8 @@ const ASSET_CLASS_LABELS: Record<string, string> = {
   crypto: 'Crypto',
   cash: 'Cash',
   bond: 'Bonds',
+  real_estate: 'Real estate',
+  pension: 'Pension',
   other: 'Other',
   unclassified: 'Unclassified',
 };

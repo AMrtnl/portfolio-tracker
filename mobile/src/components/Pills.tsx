@@ -32,10 +32,14 @@ export function DeltaPill({
 type Tone = 'ok' | 'warn' | 'bad' | 'neutral';
 
 const TONE: Record<Tone, { fg: string; bg: string; dot: string }> = {
-  ok: { fg: '#0F6B4C', bg: color.gainSoft, dot: color.gain },
-  warn: { fg: '#8A6714', bg: color.warnSoft, dot: color.warn },
-  bad: { fg: '#9E2318', bg: color.lossSoft, dot: color.loss },
-  neutral: { fg: color.mutedForeground, bg: color.muted, dot: color.mutedForeground },
+  ok: { fg: color.gain, bg: color.gainSoft, dot: color.gain },
+  warn: { fg: color.warn, bg: color.warnSoft, dot: color.warn },
+  bad: { fg: color.loss, bg: color.lossSoft, dot: color.loss },
+  neutral: {
+    fg: color.mutedForeground,
+    bg: color.muted,
+    dot: color.mutedForeground,
+  },
 };
 
 export function StatusPill({

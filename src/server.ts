@@ -15,7 +15,7 @@ import {
 } from './auth';
 import { WalletCore } from './wallet-core';
 import { PortfolioSummary, PortfolioSource } from './types/common';
-import { Holding } from './types/accounts';
+import { Holding, isLiabilityAccount } from './types/accounts';
 import { Store } from './store';
 import {
   bootHyperliquidAccount,
@@ -37,8 +37,10 @@ import {
 import {
   createAnalyticsRouter,
   createMarketRouter,
+  invalidatePortfolioSnapshot,
   startHistoryScheduler,
 } from './analytics';
+import { createMoneyRouter } from './money';
 
 dotenv.config();
 
@@ -158,6 +160,7 @@ app.post('/api/accounts', (req: Request, res: Response) => {
       store.removeAccount(id);
       return res.status(400).json({ error: 'Failed to initialize wallet' });
     }
+    invalidatePortfolioSnapshot();
     console.log(`✅ Crypto account added: "${accountLabel}" → ${address}`);
     res.json(store.getAccount(id, true));
   } catch (err) {
@@ -171,7 +174,11 @@ app.post('/api/accounts/manual', (req: Request, res: Response) => {
     label?: string;
     institution?: string;
     currency?: string;
-    type?: 'manual' | 'broker' | 'bank';
+    type?: 'manual' | 'broker' | 'bank' | 'loan' | 'pension' | 'estate';
+    kind?: 'asset' | 'liability';
+    bookClass?: 'estate' | 'pension' | 'stocks' | 'cash' | 'bonds' | 'crypto' | 'other';
+    notes?: string;
+    balance?: number;
     holdings?: Holding[];
   };
 
@@ -190,7 +197,12 @@ app.post('/api/accounts/manual', (req: Request, res: Response) => {
     currency: body.currency,
     holdings,
     type: body.type,
+    kind: body.kind,
+    bookClass: body.bookClass,
+    notes: body.notes,
+    balance: body.balance,
   });
+  invalidatePortfolioSnapshot();
   console.log(`✅ Manual account added: "${label}" (${holdings.length} holdings)`);
   res.json(store.getAccount(id));
 });
@@ -407,6 +419,7 @@ app.patch('/api/accounts/:id', (req: Request, res: Response) => {
     holdings: body.holdings,
   });
   if (!ok) return res.status(404).json({ error: 'Account not found' });
+  invalidatePortfolioSnapshot();
   res.json(store.getAccount(id, hasLiveAdapter(id)));
 });
 
@@ -439,6 +452,7 @@ app.delete('/api/accounts/:id', (req: Request, res: Response) => {
   const ok = store.removeAccount(id);
   if (!ok) return res.status(404).json({ error: 'Account not found' });
   removeLiveAdapter(id);
+  invalidatePortfolioSnapshot();
   console.log(`🗑️  Account ${id} removed.`);
   res.json({ success: true });
 });
@@ -475,7 +489,9 @@ app.get('/api/portfolio', async (_req: Request, res: Response) => {
     const sources: PortfolioSource[] = [];
 
     const settled = await Promise.allSettled(
-      accounts.map(async (acct) => {
+      accounts
+        .filter((acct) => !isLiabilityAccount(acct))
+        .map(async (acct) => {
         const provider = getProvider(acct.provider);
         const result = await provider.sync(acct);
         return { acct, result };
@@ -559,6 +575,7 @@ app.get('/api/portfolio', async (_req: Request, res: Response) => {
 
 app.use('/api/analytics', createAnalyticsRouter(store));
 app.use('/api/market', createMarketRouter(store));
+app.use('/api/money', createMoneyRouter());
 
 // ---- Static client (production single-service deploy) ----
 

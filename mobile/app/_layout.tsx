@@ -21,6 +21,7 @@ import {
   IBMPlexMono_500Medium,
 } from '@expo-google-fonts/ibm-plex-mono';
 import { AuthProvider } from '../src/auth/AuthContext';
+import { PrivacyProvider } from '../src/wealth/PrivacyContext';
 import { color, font } from '../src/theme/tokens';
 
 void SplashScreen.preventAutoHideAsync();
@@ -73,7 +74,8 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <StatusBar style="dark" />
+            <PrivacyProvider>
+            <StatusBar style="light" />
             <View style={styles.root}>
               <Stack
                 screenOptions={{
@@ -91,7 +93,7 @@ export default function RootLayout() {
                     headerTitle: 'Account',
                     headerBackTitle: 'Back',
                     headerTransparent: true,
-                    headerBlurEffect: 'systemThinMaterialLight',
+                    headerBlurEffect: 'systemThinMaterialDark',
                     headerTintColor: color.primary,
                     headerTitleStyle: {
                       fontFamily: font.displaySemi,
@@ -102,6 +104,7 @@ export default function RootLayout() {
                 />
               </Stack>
             </View>
+            </PrivacyProvider>
           </AuthProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

@@ -2,11 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import {
+  AccountKind,
   AccountStatus,
   AccountType,
+  BookClass,
   Holding,
   ProviderId,
   PublicAccount,
+  inferBookClass,
+  inferKind,
 } from './types/accounts';
 
 // ----- Internal persisted shapes -----
@@ -27,6 +31,9 @@ interface StoredAccountV2 {
   type: AccountType;
   provider: ProviderId;
   status: AccountStatus;
+  kind?: AccountKind;
+  bookClass?: BookClass;
+  notes?: string;
   externalId?: string;
   maskedIdentifier?: string;
   institution?: string;
@@ -118,12 +125,16 @@ function migrateV1ToV2(old: StoreDataV1): StoreDataV2 {
 }
 
 function toPublic(acct: StoredAccountV2, live?: boolean): PublicAccount {
+  const kind = inferKind(acct.type, acct.kind);
   const pub: PublicAccount = {
     id: acct.id,
     label: acct.label,
     type: acct.type,
     provider: acct.provider,
     status: acct.status,
+    kind,
+    bookClass: inferBookClass(acct.type, acct.bookClass),
+    notes: acct.notes,
     externalId: acct.externalId,
     maskedIdentifier: acct.maskedIdentifier,
     institution: acct.institution,
@@ -135,7 +146,7 @@ function toPublic(acct: StoredAccountV2, live?: boolean): PublicAccount {
   };
   if (acct.provider === 'manual') {
     pub.holdings = acct.holdings || [];
-    pub.totalValueUsd = holdingsTotal(acct.holdings);
+    pub.totalValueUsd = Math.abs(holdingsTotal(acct.holdings));
   }
   return pub;
 }
@@ -244,17 +255,42 @@ export class Store {
       institution?: string;
       currency?: string;
       holdings?: Holding[];
-      type?: 'manual' | 'broker' | 'bank';
+      type?: AccountType;
+      kind?: AccountKind;
+      bookClass?: BookClass;
+      notes?: string;
+      balance?: number;
     } = {},
   ): string {
     const id = crypto.randomUUID();
-    const holdings = (opts.holdings || []).map(normalizeHolding);
+    const type = opts.type || 'manual';
+    const kind = inferKind(type, opts.kind);
+    const bookClass = inferBookClass(type, opts.bookClass);
+    let holdings = (opts.holdings || []).map(normalizeHolding);
+    if (
+      holdings.length === 0 &&
+      opts.balance != null &&
+      Number.isFinite(opts.balance)
+    ) {
+      holdings = [
+        holdingFromBalance({
+          kind,
+          bookClass,
+          currency: opts.currency || 'USD',
+          amount: opts.balance,
+          notes: opts.notes,
+        }),
+      ];
+    }
     this.data.accounts.push({
       id,
       label,
-      type: opts.type || 'manual',
+      type,
       provider: 'manual',
       status: 'connected',
+      kind,
+      bookClass,
+      notes: opts.notes?.trim() || undefined,
       maskedIdentifier: opts.institution || 'Manual',
       institution: opts.institution || 'Manual',
       currency: opts.currency || 'USD',
@@ -318,6 +354,7 @@ export class Store {
       status?: AccountStatus;
       lastSyncedAt?: string;
       lastError?: string | null;
+      notes?: string | null;
     },
   ): boolean {
     const acct = this.find(id);
@@ -336,6 +373,9 @@ export class Store {
     if (patch.lastSyncedAt !== undefined) acct.lastSyncedAt = patch.lastSyncedAt;
     if (patch.lastError !== undefined) {
       acct.lastError = patch.lastError ?? undefined;
+    }
+    if (patch.notes !== undefined) {
+      acct.notes = patch.notes?.trim() || undefined;
     }
     this.save();
     return true;
@@ -375,5 +415,50 @@ function normalizeHolding(h: Holding): Holding {
     quantity: Number(h.quantity) || 0,
     priceUsd: Number(h.priceUsd) || 0,
     assetClass: h.assetClass || 'other',
+  };
+}
+
+function holdingFromBalance(opts: {
+  kind: AccountKind;
+  bookClass?: BookClass;
+  currency: string;
+  amount: number;
+  notes?: string;
+}): Holding {
+  const amount = Math.abs(Number(opts.amount) || 0);
+  const ccy = (opts.currency || 'USD').toUpperCase();
+  if (opts.kind === 'liability') {
+    return {
+      symbol: 'DEBT',
+      name: opts.notes || 'Loan',
+      quantity: amount,
+      priceUsd: 1,
+      assetClass: 'other',
+    };
+  }
+  if (opts.bookClass === 'estate') {
+    return {
+      symbol: 'PROPERTY',
+      name: opts.notes || 'Property',
+      quantity: 1,
+      priceUsd: amount,
+      assetClass: 'other',
+    };
+  }
+  if (opts.bookClass === 'pension') {
+    return {
+      symbol: 'PENSION',
+      name: opts.notes || 'Pension',
+      quantity: 1,
+      priceUsd: amount,
+      assetClass: 'etf',
+    };
+  }
+  return {
+    symbol: ccy,
+    name: `${ccy} cash`,
+    quantity: amount,
+    priceUsd: 1,
+    assetClass: 'cash',
   };
 }

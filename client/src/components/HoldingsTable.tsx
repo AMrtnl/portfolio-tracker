@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/data'
 import { EmptyState, PanelUnavailable, SkeletonRows } from '@/components/ui/states'
 import { useAnalyticsHoldings, type AnalyticsHolding } from '@/hooks/useAnalytics'
+import { LogoAvatar } from '@/wealth/logos'
 import { cn, formatAmount, formatCurrency } from '@/lib/utils'
 
 /** Which figure the switchable right-hand column shows. */
@@ -359,15 +360,10 @@ function HoldingRow({
         className="row-hover -mx-2 block rounded-md px-2 py-3 lg:grid lg:grid-cols-[minmax(0,1fr)_6rem_6rem_7.5rem_8.5rem_5rem] lg:items-center lg:gap-3"
       >
         <div className="flex min-w-0 items-center gap-2.5">
-          <span
-            aria-hidden
-            className="h-7 w-[3px] shrink-0"
-            style={{
-              background:
-                (holding.unrealizedPnl ?? 0) >= 0
-                  ? 'hsl(var(--gain) / 0.5)'
-                  : 'hsl(var(--loss) / 0.5)',
-            }}
+          <LogoAvatar
+            symbol={holding.symbol}
+            name={holding.name}
+            color={(holding.unrealizedPnl ?? 0) >= 0 ? '#30D158' : '#FF453A'}
           />
           <div className="min-w-0">
             <p className="flex items-center gap-1.5 truncate text-sm font-semibold">

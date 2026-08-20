@@ -14,23 +14,21 @@ const TONE: Record<
   { wrap: string; icon: typeof Info; iconClass: string; role: 'status' | 'alert' }
 > = {
   info: {
-    wrap: 'border-border/80 bg-secondary/50',
+    wrap: 'ui-banner info border-0',
     icon: Info,
-    iconClass: 'text-muted-foreground',
+    iconClass: 'text-primary',
     role: 'status',
   },
   warn: {
-    // Keep the tint faint and carry the signal on the left edge + icon; a
-    // heavier amber fill reads as a beige slab against the paper background.
-    wrap: 'border-warn/25 border-l-[3px] border-l-warn bg-[hsl(38_72%_52%/0.06)]',
+    wrap: 'ui-banner warn border-0',
     icon: AlertTriangle,
     iconClass: 'text-warn',
     role: 'alert',
   },
   error: {
-    wrap: 'border-destructive/30 bg-destructive/[0.05]',
+    wrap: 'ui-banner warn border-0',
     icon: XOctagon,
-    iconClass: 'text-destructive',
+    iconClass: 'text-loss',
     role: 'alert',
   },
 }
@@ -56,7 +54,7 @@ export function Banner({
     <div
       role={role}
       className={cn(
-        'flex gap-3 rounded-md border px-3.5 py-3 text-sm',
+        'flex gap-3 rounded-[18px] px-3.5 py-3 text-sm',
         wrap,
         className,
       )}

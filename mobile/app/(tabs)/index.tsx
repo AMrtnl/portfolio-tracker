@@ -1,16 +1,12 @@
 import { useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAccounts, usePortfolio } from '../../src/api/queries';
 import { API_BASE_URL, describeError } from '../../src/api/client';
 import { AllocationBar } from '../../src/components/AllocationBar';
-import { AnimatedMoney } from '../../src/components/AnimatedMoney';
-import { Freshness } from '../../src/components/Freshness';
-import { HeroCurve } from '../../src/components/HeroCurve';
 import { ListRow } from '../../src/components/ListRow';
-import { DeltaPill, ProviderGlyph } from '../../src/components/Pills';
-import { ListGroup, Section } from '../../src/components/Section';
+import { ListGroup, Panel, Section } from '../../src/components/Section';
 import { ScreenFill, ScreenScroll } from '../../src/components/ScreenScroll';
 import {
   ConfigurationNotice,
@@ -19,31 +15,26 @@ import {
   LoadingState,
   WarningBanner,
 } from '../../src/components/StateViews';
-import { Caption, Mono, Overline } from '../../src/components/Type';
-import { formatMoney, formatPercent } from '../../src/lib/format';
+import { Body, Caption, Display, Mono } from '../../src/components/Type';
+import { formatFigure, formatMoney } from '../../src/lib/format';
 import {
   allocationByAsset,
   dayChange,
-  mixedCurrencies,
   portfolioCurrency,
   sourceProblems,
 } from '../../src/lib/portfolio';
+import { accountClass, accountValue, isLiability } from '../../src/wealth/classify';
+import { usePrivacy } from '../../src/wealth/PrivacyContext';
 import { useRefresh } from '../../src/lib/useRefresh';
-import { color, space } from '../../src/theme/tokens';
-import type { ProviderId } from '../../src/api/types';
+import { CLASSES, color, space } from '../../src/theme/tokens';
 
-/**
- * Portfolio home.
- *
- * Layout borrows from Yahoo Finance (large value with the day move stacked
- * directly beneath and an explicit refresh timestamp) and Origin (overline label
- * above the total, allocation as its own block). The hero is deliberately
- * unboxed — no card — so nothing competes with the number.
- */
-export default function PortfolioScreen() {
+export default function WealthScreen() {
   const router = useRouter();
-  const portfolioQuery = usePortfolio();
+  const { hidden } = usePrivacy();
   const accountsQuery = useAccounts();
+  const accounts = accountsQuery.data ?? [];
+  const hasAccounts = accounts.length > 0;
+  const portfolioQuery = usePortfolio(hasAccounts);
 
   const refetchAll = useCallback(
     () => Promise.all([portfolioQuery.refetch(), accountsQuery.refetch()]),
@@ -59,7 +50,52 @@ export default function PortfolioScreen() {
     );
   }
 
-  if (portfolioQuery.isLoading) {
+  if (accountsQuery.isLoading) {
+    return (
+      <ScreenFill>
+        <LoadingState label="Loading accounts…" />
+      </ScreenFill>
+    );
+  }
+
+  const assets = accounts.filter((a) => !isLiability(a));
+  const loans = accounts.filter(isLiability);
+  const gross = assets.reduce((s, a) => s + accountValue(a), 0);
+  const debt = loans.reduce((s, a) => s + accountValue(a), 0);
+  const net = gross - debt;
+  const currency = portfolioCurrency(portfolioQuery.data) || 'USD';
+  const day = dayChange(portfolioQuery.data);
+  const problems = sourceProblems(portfolioQuery.data);
+
+  if (!hasAccounts) {
+    return (
+      <ScreenScroll refreshing={refreshing} onRefresh={onRefresh}>
+        <View style={styles.hero}>
+          <Caption>Net worth</Caption>
+          <Display style={styles.heroValue}>
+            <Caption style={styles.unit}>USD </Caption>
+            {formatFigure(0, { hidden })}
+          </Display>
+          <Caption>Add what you own and what you owe</Caption>
+        </View>
+        <EmptyState
+          icon="wallet-outline"
+          title="Your book is empty"
+          message="Cash, brokers, crypto, pension, property, and loans. Add them on Accounts — cash flow and subscriptions work immediately."
+        />
+        <Pressable
+          onPress={() => router.push('/(tabs)/accounts')}
+          style={styles.add}
+          accessibilityRole="button"
+        >
+          <Ionicons name="add" size={18} color={color.primary} />
+          <Body style={styles.addLabel}>Add account</Body>
+        </Pressable>
+      </ScreenScroll>
+    );
+  }
+
+  if (portfolioQuery.isLoading && !portfolioQuery.data) {
     return (
       <ScreenFill>
         <LoadingState />
@@ -67,188 +103,185 @@ export default function PortfolioScreen() {
     );
   }
 
-  const portfolio = portfolioQuery.data;
-
-  if (portfolioQuery.isError || !portfolio) {
-    // 503 from /api/portfolio specifically means "no accounts configured", which
-    // is an empty state rather than a failure.
+  if (portfolioQuery.isError && !portfolioQuery.data) {
     const message = describeError(portfolioQuery.error);
     const noAccounts = message.toLowerCase().includes('no accounts');
-    return (
-      <ScreenFill>
-        {noAccounts ? (
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              icon="wallet-outline"
-              title="No accounts yet"
-              message="Connect a brokerage, crypto wallet or manual account in the Meridian web app, then pull to refresh here."
-            />
-          </View>
-        ) : (
+    if (!noAccounts) {
+      return (
+        <ScreenFill>
           <ErrorState
-            title="Couldn’t load portfolio"
+            title="Couldn’t load wealth"
             message={message}
-            hint="Meridian only talks to your own backend, so this usually means the server is asleep or unreachable."
             onRetry={() => void portfolioQuery.refetch()}
           />
-        )}
-      </ScreenFill>
-    );
+        </ScreenFill>
+      );
+    }
   }
 
-  const currency = portfolioCurrency(portfolio);
-  const day = dayChange(portfolio);
-  const accounts = accountsQuery.data;
-  const foreign = mixedCurrencies(accounts, currency);
-  const allocation = allocationByAsset(portfolio);
-  const problems = sourceProblems(portfolio);
-  const sources = [...(portfolio.sources ?? [])].sort(
-    (a, b) => b.valueUsd - a.valueUsd,
-  );
+  const allocation = allocationByAsset(portfolioQuery.data);
 
   return (
     <ScreenScroll refreshing={refreshing} onRefresh={onRefresh}>
       <View style={styles.hero}>
-        <Overline>Portfolio</Overline>
-        <Caption style={styles.heroLabel}>
-          Total value
-          {accounts?.length
-            ? ` · ${accounts.length} account${accounts.length === 1 ? '' : 's'}`
-            : ''}
-        </Caption>
-        <AnimatedMoney value={day.total} currency={currency} />
-
-        <View style={styles.dayRow}>
-          <Ionicons
-            name={day.positive ? 'arrow-up' : 'arrow-down'}
-            size={15}
-            color={day.positive ? color.gain : color.loss}
-          />
-          <Mono
-            style={[
-              styles.dayAmount,
-              { color: day.positive ? color.gain : color.loss },
-            ]}
-          >
-            {formatMoney(day.amount, currency, { signed: true })}
-          </Mono>
-          <Mono
-            style={[
-              styles.dayPercent,
-              { color: day.positive ? color.gain : color.loss },
-            ]}
-          >
-            ({formatPercent(day.percent)})
-          </Mono>
-          <Caption>today</Caption>
-        </View>
-
-        <HeroCurve up={day.positive} bleed={space['2xl']} />
+        <Caption>Net worth</Caption>
+        <Display style={styles.heroValue}>
+          <Caption style={styles.unit}>{currency} </Caption>
+          {formatFigure(net, { hidden })}
+        </Display>
+        <Mono
+          style={[
+            styles.day,
+            { color: day.positive ? color.gain : color.loss },
+          ]}
+        >
+          {hidden ? '••' : formatFigure(day.amount, { signed: true })} today
+        </Mono>
       </View>
 
-      <View style={styles.metaBlock}>
-        <Freshness
-          retrievedAt={portfolio.lastUpdated}
-          isFetching={portfolioQuery.isFetching && !refreshing}
-        />
-        {foreign.length > 0 ? (
-          <Caption style={styles.currencyNote}>
-            Totals are summed in {currency}. Accounts reporting{' '}
-            {foreign.join(', ')} are not FX-converted yet — open an account for its
-            native figures.
-          </Caption>
-        ) : null}
+      <View style={styles.stats}>
+        <View style={styles.stat}>
+          <Caption>Assets</Caption>
+          <Mono style={styles.statVal}>
+            {hidden ? '••••••' : formatMoney(gross, currency, { compact: true })}
+          </Mono>
+        </View>
+        <View style={styles.stat}>
+          <Caption>Debt</Caption>
+          <Mono style={[styles.statVal, { color: debt ? color.loss : color.foreground }]}>
+            {hidden
+              ? '••••••'
+              : debt
+                ? `−${formatMoney(debt, currency, { compact: true })}`
+                : formatMoney(0, currency, { compact: true })}
+          </Mono>
+        </View>
+        <View style={styles.stat}>
+          <Caption>Today</Caption>
+          <Mono
+            style={[
+              styles.statVal,
+              { color: day.positive ? color.gain : color.loss },
+            ]}
+          >
+            {hidden ? '••' : formatFigure(day.amount, { signed: true })}
+          </Mono>
+        </View>
       </View>
 
       <WarningBanner title="Some sources reported problems" lines={problems} />
 
-      <Section overline="Performance">
-        <View style={styles.performance}>
-          {(
-            [
-              ['24h', portfolio.pnl24h],
-              ['7d', portfolio.pnl7d],
-              ['30d', portfolio.pnl30d],
-            ] as const
-          ).map(([label, value]) => (
-            <View key={label} style={styles.performanceCell}>
-              <Overline>{label}</Overline>
-              <DeltaPill value={Number(value) || 0} style={styles.performancePill} />
-            </View>
-          ))}
-        </View>
-        <Caption style={styles.performanceNote}>
-          Value-weighted across sources that report performance.
-        </Caption>
-      </Section>
-
-      <Section overline="Allocation" title="What you hold">
-        <AllocationBar slices={allocation} currency={currency} />
-      </Section>
-
-      {sources.length > 0 ? (
-        <Section
-          overline="Sources"
-          title="Where it sits"
-          action={{ label: 'Accounts', onPress: () => router.push('/(tabs)/accounts') }}
-        >
-          <ListGroup>
-            {sources.map((source) => (
-              <ListRow
-                key={source.accountId}
-                leading={<ProviderGlyph provider={source.provider as ProviderId} />}
-                title={source.label}
-                subtitle={source.provider}
-                errorText={source.error}
-                trailing={
-                  <Mono
-                    style={source.status === 'error' ? styles.sourceError : undefined}
-                  >
-                    {formatMoney(source.valueUsd, currency)}
-                  </Mono>
-                }
-                onPress={
-                  source.accountId === 'unknown'
-                    ? undefined
-                    : () => router.push(`/account/${source.accountId}`)
-                }
-              />
-            ))}
-          </ListGroup>
+      {allocation.length > 0 ? (
+        <Section overline="Holdings" title="What you own">
+          <AllocationBar slices={allocation} currency={currency} />
         </Section>
       ) : null}
 
-      <View style={styles.disclosure}>
-        <Ionicons name="lock-closed-outline" size={13} color={color.mutedForeground} />
-        <Caption style={styles.disclosureText}>
-          Read-only. Meridian never places orders and holds no brokerage
-          credentials on this device.
-        </Caption>
-      </View>
+      {CLASSES.map((c) => {
+        const rows = assets.filter((a) => accountClass(a) === c.id);
+        if (!rows.length) return null;
+        const sum = rows.reduce((s, a) => s + accountValue(a), 0);
+        return (
+          <Section key={c.id} overline={c.name} caption={`${rows.length} account${rows.length === 1 ? '' : 's'}`}>
+            <Panel>
+              <View style={styles.classHead}>
+                <View style={[styles.dot, { backgroundColor: c.color }]} />
+                <Mono style={styles.classSum}>
+                  {hidden ? '••••••' : formatMoney(sum, currency, { compact: true })}
+                </Mono>
+              </View>
+              <ListGroup>
+                {rows.map((a) => (
+                  <ListRow
+                    key={a.id}
+                    title={a.label}
+                    subtitle={a.notes || a.institution || a.type}
+                    trailing={
+                      <Mono>
+                        {hidden
+                          ? '••••••'
+                          : formatMoney(accountValue(a), a.currency || currency, {
+                              compact: true,
+                            })}
+                      </Mono>
+                    }
+                    onPress={() => router.push(`/account/${a.id}`)}
+                  />
+                ))}
+              </ListGroup>
+            </Panel>
+          </Section>
+        );
+      })}
+
+      {loans.length > 0 ? (
+        <Section overline="Liabilities" title="Loans">
+          <Panel>
+            <ListGroup>
+              {loans.map((l) => (
+                <ListRow
+                  key={l.id}
+                  title={l.label}
+                  subtitle={l.notes || l.institution || 'Loan'}
+                  trailing={
+                    <Mono style={{ color: color.loss }}>
+                      {hidden
+                        ? '••••••'
+                        : `−${formatMoney(accountValue(l), l.currency || currency, { compact: true })}`}
+                    </Mono>
+                  }
+                  onPress={() => router.push(`/account/${l.id}`)}
+                />
+              ))}
+            </ListGroup>
+          </Panel>
+        </Section>
+      ) : null}
+
+      <Pressable
+        onPress={() => router.push('/(tabs)/accounts')}
+        style={styles.add}
+        accessibilityRole="button"
+      >
+        <Ionicons name="add" size={18} color={color.primary} />
+        <Body style={styles.addLabel}>Add account</Body>
+      </Pressable>
     </ScreenScroll>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { gap: space.xs },
-  heroLabel: { marginTop: space.sm },
-  dayRow: {
+  hero: { gap: 6 },
+  heroValue: { fontSize: 40, lineHeight: 46 },
+  unit: { fontSize: 15, letterSpacing: 0.4 },
+  day: { marginTop: 4, fontSize: 15 },
+  stats: { flexDirection: 'row', gap: 8 },
+  stat: {
+    flex: 1,
+    gap: 6,
+    backgroundColor: color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.border,
+    borderRadius: 20,
+    padding: 13,
+  },
+  statVal: { fontSize: 15 },
+  classHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: space.md,
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
-  dayAmount: { fontSize: 17 },
-  dayPercent: { fontSize: 15, opacity: 0.9 },
-  metaBlock: { gap: space.sm, marginTop: -space.xl },
-  currencyNote: { fontSize: 12, lineHeight: 17 },
-  performance: { flexDirection: 'row', gap: space['3xl'] },
-  performanceCell: { gap: space.sm },
-  performancePill: { marginTop: 2 },
-  performanceNote: { fontSize: 12 },
-  sourceError: { color: color.loss },
-  emptyWrap: { flex: 1, justifyContent: 'center' },
-  disclosure: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start' },
-  disclosureText: { flex: 1, fontSize: 12, lineHeight: 17, opacity: 0.85 },
+  classSum: { fontSize: 15 },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  add: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 18,
+    backgroundColor: 'rgba(10,132,255,0.14)',
+  },
+  addLabel: { color: color.primary, fontSize: 16 },
 });

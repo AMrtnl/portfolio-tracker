@@ -11,7 +11,7 @@ export class ManualProvider implements FinanceProvider {
       name: 'Manual',
       description:
         'Enter cash and holdings yourself — works for any broker, bank, or asset without an API.',
-      accountTypes: ['manual', 'broker', 'bank'],
+      accountTypes: ['manual', 'broker', 'bank', 'loan', 'pension', 'estate'],
       configured: true,
       coverage: 'Global · any institution',
       connectMode: 'manual',

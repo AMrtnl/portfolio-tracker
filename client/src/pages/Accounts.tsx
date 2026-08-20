@@ -19,6 +19,10 @@ import {
   PenLine,
   ExternalLink,
   MoreHorizontal,
+  Landmark,
+  Home,
+  Umbrella,
+  CreditCard,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Amount } from '@/components/ui/Amount'
@@ -36,29 +40,30 @@ import {
   useSyncAccount,
   Account,
   Holding,
-  ProviderId,
 } from '@/hooks/useAccounts'
 import {
   useSnaptradeConnections,
   useSnaptradeStatus,
 } from '@/hooks/useSnaptrade'
 
-type AddStep = 'chooser' | 'crypto' | 'manual' | 'broker'
+import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccount'
+import { CLASSES } from '@/wealth/tokens'
+import { isDemoId } from '@/wealth/demo'
+import { LogoAvatar } from '@/wealth/logos'
+
+type AddStep =
+  | 'chooser'
+  | 'crypto'
+  | 'manual'
+  | 'broker'
+  | 'cash'
+  | 'pension'
+  | 'estate'
+  | 'loan'
 
 /** One field treatment for every input on the route. */
 const fieldClass =
-  'w-full rounded-md border border-input bg-background/70 px-3 py-2.5 text-sm placeholder:text-muted-foreground/70 transition-colors hover:border-border focus:border-primary/50'
-
-function providerLabel(p: ProviderId): string {
-  switch (p) {
-    case 'hyperliquid':
-      return 'Hyperliquid'
-    case 'snaptrade':
-      return 'SnapTrade'
-    case 'manual':
-      return 'Manual'
-  }
-}
+  'w-full rounded-[14px] border-[0.5px] border-white/[0.07] bg-[rgba(118,118,128,0.18)] px-3.5 py-3 text-[15px] font-semibold text-white placeholder:text-white/30'
 
 function typeLabel(a: Account): string {
   switch (a.type) {
@@ -68,6 +73,12 @@ function typeLabel(a: Account): string {
       return 'Broker'
     case 'bank':
       return 'Bank'
+    case 'loan':
+      return 'Loan'
+    case 'pension':
+      return 'Pension'
+    case 'estate':
+      return 'Property'
     case 'manual':
       return 'Manual'
   }
@@ -385,6 +396,191 @@ function ManualForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
   )
 }
 
+function SimpleBalanceForm({
+  kind,
+  onDone,
+  onBack,
+}: {
+  kind: 'cash' | 'pension' | 'estate' | 'loan'
+  onDone?: () => void
+  onBack: () => void
+}) {
+  const add = useAddManualAccount()
+  const [label, setLabel] = useState('')
+  const [institution, setInstitution] = useState('')
+  const [amount, setAmount] = useState('')
+  const [notes, setNotes] = useState('')
+  const [currency, setCurrency] = useState('USD')
+
+  const copy = {
+    cash: {
+      title: 'Cash account',
+      name: 'UBS · Checking',
+      inst: 'UBS',
+      amount: 'Current balance',
+      notes: 'Last four digits · optional',
+    },
+    pension: {
+      title: 'Pension',
+      name: 'VIAC · Pillar 3a',
+      inst: 'VIAC',
+      amount: 'Current value',
+      notes: 'Strategy · optional',
+    },
+    estate: {
+      title: 'Property',
+      name: 'Apartment · Carouge',
+      inst: 'Home',
+      amount: 'Estimated value',
+      notes: 'Address or notes · optional',
+    },
+    loan: {
+      title: 'Loan',
+      name: 'UBS Hypothèque',
+      inst: 'UBS',
+      amount: 'Outstanding balance',
+      notes: 'Rate and term · optional',
+    },
+  }[kind]
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const n = parseFloat(amount)
+    if (!label.trim() || !Number.isFinite(n) || n < 0) return
+    add.mutate(
+      {
+        label: label.trim(),
+        institution: institution.trim() || undefined,
+        notes: notes.trim() || undefined,
+        currency,
+        balance: n,
+        type:
+          kind === 'cash'
+            ? 'bank'
+            : kind === 'loan'
+              ? 'loan'
+              : kind === 'pension'
+                ? 'pension'
+                : 'estate',
+        kind: kind === 'loan' ? 'liability' : 'asset',
+        bookClass:
+          kind === 'cash'
+            ? 'cash'
+            : kind === 'pension'
+              ? 'pension'
+              : kind === 'estate'
+                ? 'estate'
+                : undefined,
+      },
+      { onSuccess: () => onDone?.() },
+    )
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4" aria-label={copy.title}>
+      <BackLink onClick={onBack} />
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium" htmlFor="simple-label">
+          Name
+        </label>
+        <input
+          id="simple-label"
+          required
+          placeholder={copy.name}
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          className={fieldClass}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium" htmlFor="simple-inst">
+          Institution
+        </label>
+        <input
+          id="simple-inst"
+          placeholder={copy.inst}
+          value={institution}
+          onChange={(e) => setInstitution(e.target.value)}
+          className={fieldClass}
+        />
+      </div>
+      <div className="grid grid-cols-[1fr_7rem] gap-2">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium" htmlFor="simple-amt">
+            {copy.amount}
+          </label>
+          <input
+            id="simple-amt"
+            required
+            inputMode="decimal"
+            placeholder="0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium" htmlFor="simple-ccy">
+            Ccy
+          </label>
+          <select
+            id="simple-ccy"
+            className={fieldClass}
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+          >
+            <option value="USD">USD</option>
+            <option value="CHF">CHF</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+          </select>
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium" htmlFor="simple-notes">
+          Notes
+        </label>
+        <input
+          id="simple-notes"
+          placeholder={copy.notes}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className={fieldClass}
+        />
+      </div>
+      {add.isError && <FormError error={add.error} fallback="Could not save this account." />}
+      <Button type="submit" className="h-11 w-full" disabled={!label.trim() || add.isPending}>
+        {add.isPending ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+        ) : (
+          <ArrowRight className="mr-2 h-4 w-4" aria-hidden />
+        )}
+        Save {copy.title.toLowerCase()}
+      </Button>
+    </form>
+  )
+}
+
+function AddFlow({
+  step,
+  onPick,
+  onBack,
+  onDone,
+}: {
+  step: AddStep
+  onPick: (step: Exclude<AddStep, 'chooser'>) => void
+  onBack: () => void
+  onDone?: () => void
+}) {
+  if (step === 'crypto') return <CryptoForm onDone={onDone} onBack={onBack} />
+  if (step === 'manual') return <ManualForm onDone={onDone} onBack={onBack} />
+  if (step === 'broker') return <BrokerForm onDone={onDone} onBack={onBack} />
+  if (step === 'cash' || step === 'pension' || step === 'estate' || step === 'loan') {
+    return <SimpleBalanceForm kind={step} onDone={onDone} onBack={onBack} />
+  }
+  return <AddChooser onPick={onPick} />
+}
+
 function BrokerForm({ onDone, onBack }: { onDone?: () => void; onBack: () => void }) {
   const { data: providers } = useProviders()
   const snap = providers?.find((p) => p.id === 'snaptrade')
@@ -553,78 +749,96 @@ function AddChooser({
     title: string
     subtitle: string
     icon: typeof Wallet
+    color: string
     badge?: string
   }> = [
     {
-      id: 'crypto',
-      title: 'Crypto wallet',
-      subtitle: 'Hyperliquid perps and spot, via recovery phrase',
-      icon: Wallet,
+      id: 'cash',
+      title: 'Cash',
+      subtitle: 'Checking, savings, or a wallet of cash',
+      icon: Landmark,
+      color: '#4BD57E',
     },
     {
       id: 'broker',
       title: 'Brokerage',
       subtitle: snapConfigured
         ? 'Import accounts already connected in SnapTrade'
-        : 'SnapTrade — needs API keys',
+        : 'SnapTrade — needs API keys, or add holdings by hand',
       icon: Building2,
+      color: '#FFD84D',
       badge: snapConfigured ? 'Ready' : 'Needs keys',
     },
     {
+      id: 'crypto',
+      title: 'Crypto wallet',
+      subtitle: 'Hyperliquid perps and spot, via recovery phrase',
+      icon: Wallet,
+      color: '#A57BFF',
+    },
+    {
+      id: 'pension',
+      title: 'Pension',
+      subtitle: 'Pillar 2, 3a, or any retirement account',
+      icon: Umbrella,
+      color: '#FF9F45',
+    },
+    {
+      id: 'estate',
+      title: 'Real estate',
+      subtitle: 'A home or property at estimated value',
+      icon: Home,
+      color: '#FF5C48',
+    },
+    {
+      id: 'loan',
+      title: 'Loan or mortgage',
+      subtitle: 'What you owe — subtracted from net worth',
+      icon: CreditCard,
+      color: '#8E8E93',
+    },
+    {
       id: 'manual',
-      title: 'Manual account',
-      subtitle: 'Any bank or broker — enter cash and holdings yourself',
+      title: 'Holdings by hand',
+      subtitle: 'Tickers, quantities, and prices you enter yourself',
       icon: PenLine,
+      color: '#3ABEFF',
     },
   ]
 
   return (
-    <ul className="list-none space-y-2 p-0">
+    <div className="a-arows">
       {options.map((opt) => (
-        <li key={opt.id}>
-          <button
-            type="button"
-            onClick={() => onPick(opt.id)}
-            className="group flex w-full items-center gap-3 rounded-md border border-border/70 px-3.5 py-3.5 text-left transition-colors hover:border-primary/45 hover:bg-accent/40"
+        <button
+          key={opt.id}
+          type="button"
+          onClick={() => onPick(opt.id)}
+          className="a-arow tap"
+        >
+          <span
+            className="a-av"
+            style={{ background: `${opt.color}22`, color: opt.color }}
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/[0.09] text-primary">
-              <opt.icon className="h-[18px] w-[18px]" aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-2">
-                <span className="text-sm font-semibold">{opt.title}</span>
-                {opt.badge && (
-                  <span
-                    className={cn(
-                      'rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-                      snapConfigured || opt.id !== 'broker'
-                        ? 'chip-gain'
-                        : 'chip-warn',
-                    )}
-                  >
-                    {opt.badge}
-                  </span>
-                )}
-              </span>
-              <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
-                {opt.subtitle}
-              </span>
-            </span>
-            <ArrowRight
-              className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5"
-              aria-hidden
-            />
-          </button>
-        </li>
+            <opt.icon size={16} strokeWidth={2.2} aria-hidden />
+          </span>
+          <span className="a-atext">
+            <b>
+              {opt.title}
+              {opt.badge ? ` · ${opt.badge}` : ''}
+            </b>
+            <em>{opt.subtitle}</em>
+          </span>
+          <ArrowRight size={15} strokeWidth={2.5} className="a-rowchev" aria-hidden />
+        </button>
       ))}
-    </ul>
+    </div>
   )
 }
 
 /* ---------- Account row ---------- */
 
 const menuItemClass =
-  'flex w-full cursor-pointer items-center gap-2 rounded-[5px] px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-accent/70'
+  'flex w-full cursor-pointer items-center gap-2 rounded-[12px] px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-white/10'
 
 function AccountRow({ account }: { account: Account }) {
   const [editing, setEditing] = useState(false)
@@ -646,6 +860,7 @@ function AccountRow({ account }: { account: Account }) {
     account.institution && account.institution !== typeLabel(account)
       ? account.institution
       : null
+  const demo = isDemoId(account.id)
   const failed = account.status === 'error' || Boolean(account.lastError)
 
   const statusTone =
@@ -673,12 +888,11 @@ function AccountRow({ account }: { account: Account }) {
 
   return (
     <li className="flex items-center gap-3 border-b border-border/50 py-3 last:border-0">
-      <span
-        aria-hidden
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-ink/[0.05] font-display text-xs text-foreground/70"
-      >
-        {account.label.slice(0, 2).toUpperCase()}
-      </span>
+      <LogoAvatar
+        institution={account.institution}
+        name={account.label}
+        color="#AEAEB2"
+      />
 
       <div className="min-w-0 flex-1">
         {editing ? (
@@ -731,9 +945,14 @@ function AccountRow({ account }: { account: Account }) {
             className={cn('h-1.5 w-1.5 shrink-0 rounded-full', statusTone)}
           />
           <span className="truncate">
-            {failed ? account.lastError || 'Needs attention' : syncedNote}
+            {demo
+              ? 'Sample account'
+              : failed
+                ? account.lastError || 'Needs attention'
+                : syncedNote}
           </span>
-          {failed && (
+          {demo && <span className="a-tag cycle">Sample</span>}
+          {!demo && failed && (
             <Link
               to="/brokerage"
               className="shrink-0 font-semibold text-primary underline-offset-2 hover:underline"
@@ -746,12 +965,12 @@ function AccountRow({ account }: { account: Account }) {
 
       {account.totalValueUsd != null && (
         <Amount
-          value={account.totalValueUsd}
+          value={isLiability(account) ? -account.totalValueUsd : account.totalValueUsd}
           className="shrink-0 text-sm font-medium"
         />
       )}
 
-      {confirming ? (
+      {demo ? null : confirming ? (
         <div className="animate-fade-in flex shrink-0 items-center gap-1.5">
           <span className="text-xs font-medium text-destructive">Disconnect?</span>
           <Button
@@ -795,7 +1014,7 @@ function AccountRow({ account }: { account: Account }) {
               <DropdownMenu.Content
                 align="end"
                 sideOffset={6}
-                className="surface z-50 min-w-[10rem] rounded-md p-1"
+                className="surface z-50 min-w-[10rem] rounded-[16px] p-1.5"
               >
                 <DropdownMenu.Item
                   className={menuItemClass}
@@ -834,38 +1053,30 @@ function AccountRow({ account }: { account: Account }) {
  * institutions.
  */
 function AccountGroups({ accounts }: { accounts: Account[] }) {
-  const order: ProviderId[] = ['snaptrade', 'hyperliquid', 'manual']
-  const groups = order
-    .map((provider) => ({
-      provider,
-      items: accounts.filter((a) => a.provider === provider),
-    }))
-    .filter((g) => g.items.length > 0)
+  const assets = accounts.filter((a) => !isLiability(a))
+  const loans = accounts.filter(isLiability)
 
   return (
-    <div className="space-y-8">
-      {groups.map(({ provider, items }) => {
-        const subtotal = items.reduce((s, a) => s + (a.totalValueUsd ?? 0), 0)
-        const anyValued = items.some((a) => a.totalValueUsd != null)
-        const headingId = `provider-${provider}`
+    <div className="a-holdings-cols">
+      {CLASSES.map((c) => {
+        const items = assets.filter((a) => accountClass(a) === c.id)
+        if (!items.length) return null
+        const subtotal = items.reduce((s, a) => s + accountValue(a), 0)
+        const headingId = `class-${c.id}`
         return (
-          <section key={provider} aria-labelledby={headingId}>
-            {/* Trailing gutter matches the row action button so the group
-             * subtotal lands in the same column as each row's value. */}
-            <div className="flex items-baseline justify-between gap-3 border-b border-border/70 pb-2 pr-[2.1rem]">
-              <h3 id={headingId} className="t-eyebrow">
-                {providerLabel(provider)}
-                <span className="ml-2 font-normal normal-case tracking-normal text-muted-foreground/70">
+          <section key={c.id} className="a-gcard" aria-labelledby={headingId}>
+            <div className="flex items-baseline justify-between gap-3 px-3 pt-3 pb-1">
+              <h3 id={headingId} className="text-[13px] font-bold">
+                {c.name}
+                <span className="ml-2 font-medium text-white/40">
                   {items.length} {items.length === 1 ? 'account' : 'accounts'}
                 </span>
               </h3>
-              {anyValued && (
-                <span className="num text-xs font-medium">
-                  {formatCurrency(subtotal, { compact: true })}
-                </span>
-              )}
+              <span className="num text-xs font-bold">
+                {formatCurrency(subtotal, { compact: true })}
+              </span>
             </div>
-            <ul className="list-none p-0">
+            <ul className="a-arows list-none p-0">
               {items.map((a) => (
                 <AccountRow key={a.id} account={a} />
               ))}
@@ -873,6 +1084,29 @@ function AccountGroups({ accounts }: { accounts: Account[] }) {
           </section>
         )
       })}
+      {loans.length > 0 && (
+        <section className="a-gcard" aria-labelledby="class-loans">
+          <div className="flex items-baseline justify-between gap-3 px-3 pt-3 pb-1">
+            <h3 id="class-loans" className="text-[13px] font-bold">
+              Loans
+              <span className="ml-2 font-medium text-white/40">
+                {loans.length} {loans.length === 1 ? 'account' : 'accounts'}
+              </span>
+            </h3>
+            <span className="num text-xs font-bold text-[#FF453A]">
+              −{formatCurrency(
+                loans.reduce((s, a) => s + accountValue(a), 0),
+                { compact: true },
+              )}
+            </span>
+          </div>
+          <ul className="a-arows list-none p-0">
+            {loans.map((a) => (
+              <AccountRow key={a.id} account={a} />
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   )
 }
@@ -886,7 +1120,7 @@ export function Accounts() {
   const hasAccounts = Boolean(accounts && accounts.length > 0)
 
   useEffect(() => {
-    document.title = hasAccounts ? 'Accounts — Meridian' : 'Connect — Meridian'
+    document.title = hasAccounts ? 'Accounts' : 'Connect'
   }, [hasAccounts])
 
   // With nothing connected the chooser *is* the page; otherwise it's opt-in.
@@ -899,80 +1133,46 @@ export function Accounts() {
     if (!hasAccounts) navigate('/')
   }
 
-  const providerCount = new Set(accounts?.map((a) => a.provider)).size
-
   /* ---- First run: a single focused task, no dashboard chrome ---- */
   if (!isLoading && !hasAccounts) {
     return (
-      <article className="px-5 py-12 sm:px-8 sm:py-20">
-        <div className="measure-narrow">
-          <header className="animate-rise mb-9 text-center">
-            <p className="t-eyebrow mb-4">Set up Meridian</p>
-            <h1 className="font-display text-balance text-[clamp(2rem,8vw,2.75rem)] leading-[1.05] tracking-tight">
-              One ledger for everything you own
-            </h1>
-            <p className="mx-auto mt-4 max-w-md text-pretty text-[0.9375rem] leading-relaxed text-muted-foreground">
-              Bring brokers, banks, and crypto into a single portfolio. Start
-              with Hyperliquid, a manual account, or SnapTrade.
-            </p>
-          </header>
+      <article>
+        <div className="ui-empty">
+          <div className="ui-empty-icon">
+            <Wallet className="h-5 w-5" />
+          </div>
+          <b>One picture of everything you own and owe</b>
+          <p>Cash, brokers, crypto, pension, property, and loans on a single book.</p>
+        </div>
 
-          <div className="surface animate-rise stagger-2 rounded-lg p-5 sm:p-6">
+        <section className="a-gcard pad">
             <h2 id="add-account-heading" className="sr-only">
               Choose an account type
             </h2>
-            {step === 'crypto' ? (
-              <CryptoForm onDone={handleAdded} onBack={() => setStep('chooser')} />
-            ) : step === 'manual' ? (
-              <ManualForm onDone={handleAdded} onBack={() => setStep('chooser')} />
-            ) : step === 'broker' ? (
-              <BrokerForm onDone={handleAdded} onBack={() => setStep('chooser')} />
-            ) : (
-              <AddChooser onPick={setStep} />
-            )}
-          </div>
+            <AddFlow
+              step={step ?? 'chooser'}
+              onPick={setStep}
+              onBack={() => setStep('chooser')}
+              onDone={handleAdded}
+            />
+        </section>
 
-          <p className="animate-fade-in stagger-4 t-meta mx-auto mt-6 max-w-sm text-pretty text-center">
-            Secrets stay on the server. Recovery phrases are encrypted at rest;
-            SnapTrade keys never leave <code className="num">.env</code>.
-          </p>
-        </div>
+        <p className="a-footnote">
+          Secrets stay on the server. Recovery phrases are encrypted at rest.
+        </p>
       </article>
     )
   }
 
   /* ---- Managing existing accounts ---- */
   return (
-    <article className="measure px-5 py-9 sm:px-8 sm:py-14">
-      {/* Header shares the list's measure so the action lines up with the
-       * value column rather than floating out at the page edge. */}
-      <header
-        className={cn(
-          'animate-rise mb-8 flex flex-wrap items-end justify-between gap-4',
-          step === null && 'max-w-3xl',
-        )}
-      >
-        <div>
-          <p className="t-eyebrow mb-2.5">Connections</p>
-          <h1 className="font-display text-[clamp(1.75rem,6vw,2.25rem)] tracking-tight">
-            Accounts
-          </h1>
-          {!isLoading && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              <span className="num text-foreground">{accounts!.length}</span>{' '}
-              connected across {providerCount}{' '}
-              {providerCount === 1 ? 'provider' : 'providers'}
-            </p>
-          )}
-        </div>
-
-        {step === null && (
-          <Button onClick={() => setStep('chooser')}>
-            <Plus className="mr-2 h-4 w-4" aria-hidden />
-            Add account
-          </Button>
-        )}
-      </header>
+    <article>
+      {step === null && (
+        <button type="button" className="a-add" onClick={() => setStep('chooser')}>
+          <Plus size={17} strokeWidth={2.5} />
+          Add account
+        </button>
+      )}
 
       {isLoading ? (
         <>
@@ -985,51 +1185,41 @@ export function Accounts() {
         <>
           {/* Two columns only while adding: the list keeps the full measure
            * the rest of the time rather than carrying filler beside it. */}
-          <div
-            className={cn(
-              'grid items-start gap-10',
-              step !== null && 'lg:grid-cols-[minmax(0,1fr)_23rem] lg:gap-14',
-            )}
-          >
-            <section aria-labelledby="connected-accounts-heading" className="max-w-3xl">
+          <div className="space-y-3">
+            <section aria-labelledby="connected-accounts-heading">
               <h2 id="connected-accounts-heading" className="sr-only">
                 Connected accounts
               </h2>
               <AccountGroups accounts={accounts!} />
             </section>
 
-            {/* The add flow is the one interactive card on the page. */}
             {step !== null && (
-              <div className="surface animate-rise rounded-lg p-5 lg:sticky lg:top-20">
-                <div className="mb-4 flex items-baseline justify-between gap-3">
-                  <h2 id="add-account-heading" className="font-display text-base">
+              <section className="a-gcard pad">
+                <div className="mb-3 flex items-baseline justify-between gap-3">
+                  <h2 id="add-account-heading" className="text-[15px] font-bold">
                     Add an account
                   </h2>
                   <button
                     type="button"
                     onClick={() => setStep(null)}
-                    className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                    className="a-navbtn"
                     aria-label="Close add account panel"
                   >
                     <X className="h-4 w-4" aria-hidden />
                   </button>
                 </div>
-                {step === 'crypto' ? (
-                  <CryptoForm onDone={handleAdded} onBack={() => setStep('chooser')} />
-                ) : step === 'manual' ? (
-                  <ManualForm onDone={handleAdded} onBack={() => setStep('chooser')} />
-                ) : step === 'broker' ? (
-                  <BrokerForm onDone={handleAdded} onBack={() => setStep('chooser')} />
-                ) : (
-                  <AddChooser onPick={setStep} />
-                )}
-              </div>
+                <AddFlow
+                  step={step}
+                  onPick={setStep}
+                  onBack={() => setStep('chooser')}
+                  onDone={handleAdded}
+                />
+              </section>
             )}
           </div>
 
-          <p className="t-meta mt-10 max-w-3xl">
-            Secrets stay on the server. Recovery phrases are encrypted at rest;
-            SnapTrade keys never leave <code className="num">.env</code>.
+          <p className="a-footnote">
+            Secrets stay on the server. Recovery phrases are encrypted at rest.
           </p>
         </>
       )}

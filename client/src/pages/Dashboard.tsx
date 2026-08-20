@@ -1,322 +1,434 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { RefreshCw } from 'lucide-react'
-import { PortfolioOverview } from '@/components/PortfolioOverview'
-import { HoldingsTable } from '@/components/HoldingsTable'
-import { MoversStrip } from '@/components/MoversStrip'
-import { NewsList } from '@/components/NewsList'
-import { PositionsList } from '@/components/PositionsList'
-import { Button } from '@/components/ui/button'
-import { Amount, Delta } from '@/components/ui/Amount'
-import { Banner, EmptyState, SkeletonBlock, SkeletonRows } from '@/components/ui/states'
-import { FreshnessNote, SectionHead } from '@/components/ui/data'
-import { usePortfolio, type PortfolioSource } from '@/hooks/usePortfolio'
+import { Plus } from 'lucide-react'
+import {
+  useAllocation,
+  useConcentration,
+  useHistory,
+  useMovers,
+  useOverview,
+  type HistoryRange,
+} from '@/hooks/useAnalytics'
 import { useAccounts } from '@/hooks/useAccounts'
-import { useOverview } from '@/hooks/useAnalytics'
-import { cn, freshness, providerName } from '@/lib/utils'
+import { usePortfolio } from '@/hooks/usePortfolio'
+import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccount'
+import { CandleChart, SplitBar, StackedChart, type Candle, type ChartSeries } from '@/wealth/charts'
+import { useMoney } from '@/wealth/format'
+import { HoldingsGroups } from '@/wealth/HoldingsGroups'
+import { InsightsStrip, toSplitRows } from '@/wealth/Insights'
+import { CLASSES, GEO_COLORS, RANGES, SECTOR_COLORS, classOf } from '@/wealth/tokens'
+import { useDemo } from '@/wealth/DemoContext'
+import { FLAGS } from '@/wealth/logos'
+import {
+  DEMO_CONCENTRATION,
+  DEMO_DAY_CHANGE,
+  DEMO_GEO,
+  DEMO_MOVERS,
+  DEMO_SECTOR,
+  demoHistory,
+  isDemoId,
+} from '@/wealth/demo'
 
-/** Mirrors the real hero + table geometry so the page doesn't reflow. */
-function DashboardSkeleton() {
-  return (
-    <div className="measure px-5 pb-16 pt-9 sm:px-8 sm:pt-14" aria-hidden>
-      <SkeletonBlock className="h-3 w-32" />
-      <SkeletonBlock className="mt-4 h-14 w-72 max-w-full sm:h-[4.75rem] sm:w-[26rem]" />
-      <SkeletonBlock className="mt-5 h-5 w-56" />
-      <SkeletonBlock className="mt-3 h-3 w-40" />
-      <SkeletonBlock className="mt-9 h-2.5 w-full rounded-full" />
-      <div className="mt-4 flex gap-4">
-        {[0, 1, 2, 3].map((i) => (
-          <SkeletonBlock key={i} className="h-3 w-16" />
-        ))}
-      </div>
-      <div className="mt-10 flex max-w-xl gap-10">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="space-y-2">
-            <SkeletonBlock className="h-2.5 w-14" />
-            <SkeletonBlock className="h-4 w-16" />
-          </div>
-        ))}
-      </div>
-      <div className="mt-14 space-y-3">
-        <SkeletonBlock className="h-5 w-28" />
-        <SkeletonRows rows={6} />
-      </div>
-    </div>
+function fmtDate(iso: string, long = false): string {
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return iso
+  return d.toLocaleDateString(
+    'en-GB',
+    long
+      ? { day: 'numeric', month: 'long', year: 'numeric' }
+      : { day: 'numeric', month: 'short' },
   )
 }
 
-/**
- * Where each number came from, and whether that source is healthy. Stale or
- * failing rows get an inline action rather than a silent timestamp — the
- * treatment Wealthfront and Rocket Money use on linked accounts.
- */
-function SourcesSection({ sources }: { sources: PortfolioSource[] }) {
-  return (
-    <section aria-labelledby="sources-heading">
-      <SectionHead
-        id="sources-heading"
-        title="Sources"
-        caption="Each connected account's contribution to the total."
-        meta={
-          <Link
-            to="/accounts"
-            className="font-medium text-primary underline-offset-4 hover:underline"
-          >
-            Manage
-          </Link>
-        }
-      />
-      <ul className="list-none divide-y divide-border/60 border-y border-border/60 p-0">
-        {sources.map((source) => {
-          const failed = source.status === 'error' || Boolean(source.error)
-          return (
-            <li
-              key={source.accountId}
-              className="flex items-center justify-between gap-4 py-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{source.label}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {providerName(source.provider)}
-                  {failed && (
-                    <span className="text-destructive">
-                      {' · '}
-                      {source.error || 'Sync failed'}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <Amount
-                  value={source.valueUsd}
-                  className={cn(
-                    'text-sm font-medium',
-                    failed && 'text-muted-foreground line-through',
-                  )}
-                />
-                {failed && (
-                  <Link
-                    to="/accounts"
-                    className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
-                  >
-                    Fix
-                  </Link>
-                )}
-              </div>
-            </li>
-          )
-        })}
-      </ul>
-    </section>
-  )
-}
-
-/** Cost basis + unrealized P&L strip — Finary / Sumeria "chiffres clés". */
-function LedgerStrip({
-  costBasis,
-  unrealizedPnl,
-  unrealizedPnlPercent,
-  cashValue,
-  cashPercent,
-}: {
-  costBasis?: number | null
-  unrealizedPnl?: number | null
-  unrealizedPnlPercent?: number | null
-  cashValue?: number | null
-  cashPercent?: number | null
-}) {
-  if (
-    costBasis == null &&
-    unrealizedPnl == null &&
-    cashValue == null
-  ) {
-    return null
-  }
-
-  return (
-    <section aria-labelledby="ledger-heading" className="rule pt-6">
-      <div className="mb-4 flex items-baseline justify-between gap-4">
-        <h2 id="ledger-heading" className="t-eyebrow">
-          At a glance
-        </h2>
-        <Link
-          to="/analysis"
-          className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-        >
-          Full analysis
-        </Link>
-      </div>
-      <dl className="divide-rule flex max-w-2xl flex-wrap">
-        {costBasis != null && (
-          <div className="px-4 first:pl-0 sm:px-6">
-            <dt className="t-eyebrow mb-1.5">Cost basis</dt>
-            <dd>
-              <Amount value={costBasis} className="text-sm font-medium" />
-            </dd>
-          </div>
-        )}
-        {unrealizedPnl != null && (
-          <div className="px-4 sm:px-6">
-            <dt className="t-eyebrow mb-1.5">Unrealized P&L</dt>
-            <dd>
-              <Delta
-                amount={unrealizedPnl}
-                percent={unrealizedPnlPercent ?? null}
-                size="sm"
-                className="font-medium"
-              />
-            </dd>
-          </div>
-        )}
-        {cashValue != null && (
-          <div className="px-4 sm:px-6">
-            <dt className="t-eyebrow mb-1.5">Cash</dt>
-            <dd>
-              <Amount value={cashValue} className="text-sm font-medium" />
-              {cashPercent != null && (
-                <span className="num ml-1.5 text-xs text-muted-foreground">
-                  {cashPercent.toFixed(1)}%
-                </span>
-              )}
-            </dd>
-          </div>
-        )}
-      </dl>
-    </section>
-  )
+const RANGE_DAYS: Record<(typeof RANGES)[number]['k'], number> = {
+  '1M': 30,
+  '3M': 90,
+  '6M': 180,
+  '1Y': 365,
 }
 
 export function Dashboard() {
-  const { data: portfolio, isLoading, isFetching, error, refetch } = usePortfolio()
+  const { chf, pctStr, unit } = useMoney()
+  const { enabled: sampleOn } = useDemo()
   const { data: accounts } = useAccounts()
+  const hasAccounts = (accounts?.length ?? 0) > 0
+  const hasLive = (accounts ?? []).some((a) => !isDemoId(a.id))
+  const { data: portfolio, isLoading, error, refetch } = usePortfolio({
+    enabled: hasLive,
+  })
   const { data: overview } = useOverview()
-  const [justSynced, setJustSynced] = useState(false)
-  const wasFetching = useRef(false)
+  const { data: byClass } = useAllocation('assetClass')
+  const { data: byRegion } = useAllocation('region')
+  const { data: bySector } = useAllocation('sector')
+  const { data: concentration } = useConcentration()
+  const { data: movers } = useMovers()
+  const [mode, setMode] = useState<'stacked' | 'candles'>('stacked')
+  const [range, setRange] = useState<(typeof RANGES)[number]['k']>('3M')
+  const [off, setOff] = useState<Record<string, boolean>>({})
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [cur, setCur] = useState<number | null>(null)
+  const [split, setSplit] = useState<'geo' | 'sector'>('geo')
+
+  const historyRange: HistoryRange =
+    (RANGES.find((r) => r.k === range)?.n as HistoryRange) ?? '3m'
+  const { data: history } = useHistory(historyRange)
 
   useEffect(() => {
-    document.title = 'Portfolio — Meridian'
+    document.title = 'Wealth'
   }, [])
 
-  // Acknowledge a completed refresh, then let the confirmation fade out.
-  useEffect(() => {
-    if (wasFetching.current && !isFetching && !isLoading) {
-      setJustSynced(true)
-      const t = setTimeout(() => setJustSynced(false), 2600)
-      wasFetching.current = false
-      return () => clearTimeout(t)
-    }
-    if (isFetching) wasFetching.current = true
-  }, [isFetching, isLoading])
+  const currency = overview?.currency || 'USD'
+  const livePoints = history?.points ?? []
+  const grossHint =
+    (accounts ?? []).filter((a) => !isLiability(a)).reduce((s, a) => s + accountValue(a), 0) ||
+    overview?.totalValue ||
+    0
+  const points =
+    livePoints.length >= 8
+      ? livePoints
+      : sampleOn && grossHint
+        ? demoHistory(grossHint, RANGE_DAYS[range] ?? 90)
+        : livePoints
+  const assetSeries = useMemo(() => points.map((p) => p.value), [points])
 
-  if (isLoading) {
+  const classTotals = useMemo(() => {
+    const totals: Record<string, number> = {}
+    for (const a of accounts ?? []) {
+      if (isLiability(a)) continue
+      const id = accountClass(a)
+      totals[id] = (totals[id] || 0) + accountValue(a)
+    }
+    if (!Object.keys(totals).length) {
+      for (const seg of byClass?.segments ?? []) {
+        const cls = classOf(seg.key)
+        totals[cls.id] = (totals[cls.id] || 0) + (seg.value || 0)
+      }
+    }
+    return totals
+  }, [byClass, accounts])
+
+  const debtNow = useMemo(
+    () => (accounts ?? []).filter(isLiability).reduce((s, a) => s + accountValue(a), 0),
+    [accounts],
+  )
+
+  const netSeries = useMemo(
+    () => assetSeries.map((v) => v - debtNow),
+    [assetSeries, debtNow],
+  )
+
+  const grossNow =
+    Object.values(classTotals).reduce((s, v) => s + v, 0) ||
+    overview?.totalValue ||
+    parseFloat(portfolio?.totalValue || '0') ||
+    0
+
+  const series: ChartSeries[] = useMemo(() => {
+    const active = CLASSES.filter((c) => (classTotals[c.id] || 0) > 0 && !off[c.id])
+    const source = assetSeries.length ? assetSeries : [grossNow]
+    return active.map((c) => {
+      const weight = grossNow ? (classTotals[c.id] || 0) / grossNow : 0
+      return {
+        id: c.id,
+        name: c.name,
+        color: c.color,
+        values: source.map((v) => v * weight),
+      }
+    })
+  }, [classTotals, off, assetSeries, grossNow])
+
+  const candles: Candle[] = useMemo(
+    () =>
+      netSeries.map((t, i) => {
+        const o = i ? netSeries[i - 1] : t
+        return { o, c: t, h: Math.max(o, t), l: Math.min(o, t) }
+      }),
+    [netSeries],
+  )
+
+  const n = Math.max(netSeries.length, 1)
+  const idx = cur ?? n - 1
+  const net = netSeries[idx] ?? grossNow - debtNow
+  const start = netSeries[0] ?? net
+  const delta = net - start
+  const pct = start ? (delta / start) * 100 : 0
+  const up = delta >= 0
+  const dayAbs =
+    overview?.dayChange ?? (sampleOn ? DEMO_DAY_CHANGE : parseFloat(portfolio?.pnl24h || '0') || 0)
+  const plotLen = Math.max(series[0]?.values.length ?? 0, 1)
+  const rangeIdx = RANGES.findIndex((r) => r.k === range)
+  const dates = {
+    short: (i: number) => (points[i] ? fmtDate(points[i].date) : 'Today'),
+    long: (i: number) => (points[i] ? fmtDate(points[i].date, true) : 'Today'),
+  }
+
+  const geoRows = toSplitRows(
+    byRegion?.segments?.length ? byRegion.segments : sampleOn ? DEMO_GEO : undefined,
+    GEO_COLORS,
+    FLAGS,
+  )
+  const secRows = toSplitRows(
+    bySector?.segments?.length ? bySector.segments : sampleOn ? DEMO_SECTOR : undefined,
+    SECTOR_COLORS,
+  )
+  const top = concentration?.top?.[0] ?? (sampleOn ? DEMO_CONCENTRATION.top[0] : undefined)
+  const liquid =
+    (classTotals.cash || 0) +
+    (classTotals.stocks || 0) +
+    (classTotals.bonds || 0) +
+    (classTotals.crypto || 0)
+
+  if (!hasAccounts) {
     return (
       <>
-        <p role="status" aria-live="polite" className="sr-only">
-          Syncing balances
-        </p>
-        <DashboardSkeleton />
+        <section className="a-card">
+          <div className="a-hero">
+            <div className="a-caption">Net worth</div>
+            <div className="a-value">
+              <span className="a-unit">USD</span>
+              {chf(0)}
+            </div>
+            <div className="a-delta muted">Add what you own and what you owe</div>
+          </div>
+          <p className="a-insnote spaced">
+            Cash, brokers, crypto, pension, property, and loans sit on one book.
+            Cash flow and subscriptions work even before a broker is connected.
+          </p>
+        </section>
+        <Link to="/accounts" className="a-add">
+          <Plus size={17} strokeWidth={2.5} />
+          Add account
+        </Link>
       </>
     )
   }
 
-  if (error) {
-    const message =
-      (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error ||
-      (error as Error)?.message ||
-      'The API may be offline, or a connected source returned an error.'
-
+  if (hasLive && isLoading) {
     return (
-      <div className="measure px-5 py-8 sm:px-8">
-        <EmptyState
-          size="page"
-          glyph="ledger"
-          title="Couldn’t load your portfolio"
-          description={message}
-          action={
-            <Button onClick={() => refetch()}>
-              <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
-              Try again
-            </Button>
-          }
-        />
+      <section className="a-card" aria-hidden>
+        <div className="a-hero">
+          <span className="ui-skel" style={{ width: 88, height: 14, borderRadius: 7 }} />
+        </div>
+      </section>
+    )
+  }
+
+  if (hasLive && error && !sampleOn) {
+    return (
+      <div className="ui-empty">
+        <div className="ui-empty-icon">!</div>
+        <b>Could not load your portfolio</b>
+        <p>{(error as Error)?.message || 'The API may be offline.'}</p>
+        <button type="button" className="ui-btn primary sm" onClick={() => refetch()}>
+          Try again
+        </button>
       </div>
     )
   }
 
-  if (!portfolio) return null
-
-  const allocation = portfolio.assets.map((a) => ({
-    label: a.asset,
-    value: parseFloat(a.usdValue) || 0,
-  }))
-  const sources = portfolio.sources ?? []
-  const failedSources = sources.filter(
-    (s) => s.status === 'error' || Boolean(s.error),
-  )
-  const isStale = freshness(portfolio.lastUpdated) === 'stale'
-
   return (
-    <article className="pb-16">
-      <PortfolioOverview
-        totalValue={portfolio.totalValue}
-        pnl24h={portfolio.pnl24h}
-        pnl7d={portfolio.pnl7d}
-        pnl30d={portfolio.pnl30d}
-        allocation={allocation}
-        accountCount={accounts?.length ?? sources.length}
-        lastUpdated={portfolio.lastUpdated}
-        isFetching={isFetching}
-        onRefresh={() => refetch()}
-        justSynced={justSynced}
+    <>
+      <div className="a-desk">
+        <div className="a-desk-primary">
+      <section className="a-card">
+        <div className="a-hero">
+          <div className="a-caption">
+            {cur != null && points[cur] ? dates.long(cur) : 'Net worth'}
+          </div>
+          <div className="a-value">
+            <span className="a-unit">{unit(currency)}</span>
+            {chf(net, false, currency)}
+          </div>
+          <div className={`a-delta ${up ? 'gain' : 'loss'}`}>
+            {chf(delta, true, currency)} · {pctStr(pct)}
+            <span className="a-period">{range}</span>
+          </div>
+        </div>
+
+        {plotLen >= 2 && mode === 'candles' ? (
+          <CandleChart data={candles} height={206} dates={dates.short} onScrub={setCur} />
+        ) : plotLen >= 2 ? (
+          <StackedChart
+            series={series}
+            net={netSeries.length ? netSeries : [grossNow - debtNow]}
+            len={plotLen}
+            height={206}
+            dates={dates.short}
+            onScrub={setCur}
+            showDebt={debtNow > 0}
+          />
+        ) : (
+          <p className="a-insnote spaced">
+            History starts after the first snapshot. The mix below is live.
+          </p>
+        )}
+
+        {mode === 'stacked' && series.length > 0 && (
+          <div className="a-alloc">
+            {series.map((c) => (
+              <div
+                key={c.id}
+                className="a-allocseg"
+                style={{ flex: c.values[idx] || 0.01, background: c.color }}
+              />
+            ))}
+          </div>
+        )}
+
+        <div className="a-seg" style={{ '--i': rangeIdx, '--n': RANGES.length } as React.CSSProperties}>
+          <span className="a-thumb" />
+          {RANGES.map((r) => (
+            <button
+              key={r.k}
+              type="button"
+              onClick={() => {
+                setRange(r.k)
+                setCur(null)
+              }}
+              className={`a-segbtn ${range === r.k ? 'on' : ''}`}
+            >
+              {r.k}
+            </button>
+          ))}
+        </div>
+        <div
+          className="a-seg tight"
+          style={{ '--i': mode === 'stacked' ? 0 : 1, '--n': 2 } as React.CSSProperties}
+        >
+          <span className="a-thumb" />
+          <button
+            type="button"
+            className={`a-segbtn ${mode === 'stacked' ? 'on' : ''}`}
+            onClick={() => setMode('stacked')}
+          >
+            Composition
+          </button>
+          <button
+            type="button"
+            className={`a-segbtn ${mode === 'candles' ? 'on' : ''}`}
+            onClick={() => setMode('candles')}
+          >
+            Movement
+          </button>
+        </div>
+
+        {mode === 'stacked' && (
+          <div className="a-keys">
+            {CLASSES.filter((c) => (classTotals[c.id] || 0) > 0).map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`a-key ${off[c.id] ? 'off' : ''}`}
+                onClick={() => setOff((h) => ({ ...h, [c.id]: !h[c.id] }))}
+              >
+                <span className="a-dot" style={{ background: c.color }} />
+                {c.name}
+                <b>
+                  {off[c.id]
+                    ? '—'
+                    : `${grossNow ? (((classTotals[c.id] || 0) / grossNow) * 100).toFixed(0) : 0}%`}
+                </b>
+              </button>
+            ))}
+            {debtNow > 0 && (
+              <span className="a-key static">
+                <span className="a-dot hatch" />
+                Debt
+              </span>
+            )}
+          </div>
+        )}
+      </section>
+
+      <div className="a-stats">
+        <div className="a-stat">
+          <span>Assets</span>
+          <b>{chf(grossNow, false, currency)}</b>
+        </div>
+        <div className="a-stat">
+          <span>Debt</span>
+          <b className="loss">{chf(-debtNow, false, currency)}</b>
+        </div>
+        <div className="a-stat">
+          <span>Today</span>
+          <b className={dayAbs >= 0 ? 'gain' : 'loss'}>{chf(dayAbs, true, currency)}</b>
+        </div>
+      </div>
+
+      </div>
+
+      <aside className="a-desk-aside">
+      <InsightsStrip
+        topLabel={top ? top.label || top.symbol : undefined}
+        topPercent={top?.percent}
+        liquidPercent={grossNow ? (liquid / grossNow) * 100 : 0}
+        defensive={(classTotals.cash || 0) + (classTotals.bonds || 0)}
+        growth={(classTotals.stocks || 0) + (classTotals.funds || 0) + (classTotals.estate || 0) + (classTotals.pension || 0) + (classTotals.other || 0)}
+        speculative={classTotals.crypto || 0}
+        best={
+          movers?.gainers?.[0]
+            ? { symbol: movers.gainers[0].symbol, pct: movers.gainers[0].dayChangePercent ?? 0 }
+            : sampleOn
+              ? { symbol: DEMO_MOVERS.gainers[0].symbol, pct: DEMO_MOVERS.gainers[0].dayChangePercent }
+              : undefined
+        }
+        worst={
+          movers?.losers?.[0]
+            ? { symbol: movers.losers[0].symbol, pct: movers.losers[0].dayChangePercent ?? 0 }
+            : sampleOn
+              ? { symbol: DEMO_MOVERS.losers[0].symbol, pct: DEMO_MOVERS.losers[0].dayChangePercent }
+              : undefined
+        }
+      />
+      </aside>
+      </div>
+
+      {(geoRows.length > 0 || secRows.length > 0) && (
+        <>
+          <div className="a-header">Diversification</div>
+          <section className="a-gcard pad">
+            <div
+              className="a-seg flat"
+              style={{ '--i': split === 'geo' ? 0 : 1, '--n': 2 } as React.CSSProperties}
+            >
+              <span className="a-thumb" />
+              <button
+                type="button"
+                className={`a-segbtn ${split === 'geo' ? 'on' : ''}`}
+                onClick={() => setSplit('geo')}
+              >
+                By country
+              </button>
+              <button
+                type="button"
+                className={`a-segbtn ${split === 'sector' ? 'on' : ''}`}
+                onClick={() => setSplit('sector')}
+              >
+                By sector
+              </button>
+            </div>
+            <div className="a-splitwrap">
+              <SplitBar
+                rows={split === 'geo' ? geoRows : secRows}
+                money={(n) => chf(n, false, currency)}
+              />
+            </div>
+          </section>
+        </>
+      )}
+
+      <HoldingsGroups
+        gross={grossNow}
+        debt={debtNow}
+        currency={currency}
+        collapsed={collapsed}
+        onToggle={(id) => setCollapsed((s) => ({ ...s, [id]: !s[id] }))}
       />
 
-      <div className="measure space-y-12 px-5 pt-10 sm:px-8 sm:pt-12">
-        <LedgerStrip
-          costBasis={overview?.costBasis}
-          unrealizedPnl={overview?.unrealizedPnl}
-          unrealizedPnlPercent={overview?.unrealizedPnlPercent}
-          cashValue={overview?.cashValue}
-          cashPercent={overview?.cashPercent}
-        />
-
-        {/* Partial failure is stated once, at the top, with a way out. */}
-        {failedSources.length > 0 && (
-          <Banner
-            tone="warn"
-            title={`${failedSources.length} of ${sources.length} sources didn’t report`}
-            action={
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/accounts">Review accounts</Link>
-              </Button>
-            }
-          >
-            Your total excludes{' '}
-            {failedSources.map((s) => s.label).join(', ')}. Everything else is
-            current.
-          </Banner>
-        )}
-
-        {isStale && failedSources.length === 0 && (
-          <Banner
-            tone="info"
-            title="These figures are more than a day old"
-            action={
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
-                Refresh now
-              </Button>
-            }
-          >
-            <FreshnessNote iso={portfolio.lastUpdated} prefix="Last read" />
-          </Banner>
-        )}
-
-        <HoldingsTable headingId="holdings-heading" limit={12} />
-        <MoversStrip headingId="movers-heading" />
-        <NewsList headingId="news-heading" limit={8} />
-        <PositionsList positions={portfolio.positions} />
-        {sources.length > 0 && <SourcesSection sources={sources} />}
-      </div>
-    </article>
+      <Link to="/accounts" className="a-add">
+        <Plus size={17} strokeWidth={2.5} />
+        Add account
+      </Link>
+    </>
   )
 }

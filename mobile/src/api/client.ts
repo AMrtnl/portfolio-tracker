@@ -81,7 +81,7 @@ export function configureApiAuth(options: {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
   /** Skip the global 401 handler — used by the login call itself. */
   skipAuthHandling?: boolean;

@@ -45,7 +45,30 @@ function compactScale(value: number): { divisor: number; suffix: string } | null
   return null;
 }
 
-export function formatPercent(value: number | string | null | undefined): string {
+export function formatFigure(
+  value: number,
+  opts?: { hidden?: boolean; signed?: boolean },
+): string {
+  if (opts?.hidden) return '••••••';
+  const n = Number.isFinite(value) ? value : 0;
+  const rounded = Math.abs(n) < 100 ? Math.round(n * 10) / 10 : Math.round(n);
+  let formatted: string;
+  try {
+    formatted = new Intl.NumberFormat('de-CH', {
+      maximumFractionDigits:
+        Math.abs(rounded) < 100 && !Number.isInteger(rounded) ? 1 : 0,
+      minimumFractionDigits: 0,
+    }).format(Math.abs(rounded));
+  } catch {
+    formatted = Math.abs(rounded).toLocaleString();
+  }
+  const sign = opts?.signed ? (n < 0 ? '−' : '+') : n < 0 ? '−' : '';
+  return `${sign}${formatted}`;
+}
+
+export function formatPercent(
+  value: number | string | null | undefined,
+): string {
   const num = typeof value === 'string' ? parseFloat(value) : (value ?? NaN);
   if (!Number.isFinite(num)) return '—';
   return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;

@@ -1,4 +1,5 @@
 import { cn, formatCurrency, formatPercent, splitMoney } from '@/lib/utils'
+import { usePrivacy } from '@/wealth/PrivacyContext'
 
 type AmountSize = 'hero' | 'lg' | 'md' | 'sm'
 
@@ -38,6 +39,10 @@ export function Amount({
   className,
   splitFraction,
 }: AmountProps) {
+  const { hidden } = usePrivacy()
+  if (hidden) {
+    return <span className={cn('num', SIZE[size], className)}>••••••</span>
+  }
   const shouldSplit = splitFraction ?? (size === 'hero' || size === 'lg')
 
   if (!shouldSplit) {
@@ -93,12 +98,17 @@ export function Delta({
   showArrow = false,
   className,
 }: DeltaProps) {
+  const { hidden } = usePrivacy()
+  if (hidden) {
+    return <span className={cn('num', DELTA_SIZE[size], className)}>••</span>
+  }
   const basis = amount ?? percent ?? 0
   const positive = basis >= 0
 
   const parts: string[] = []
   if (amount != null && Number.isFinite(amount)) {
-    parts.push(formatCurrency(amount, { currency }))
+    const signed = `${amount > 0 ? '+' : ''}${formatCurrency(amount, { currency })}`
+    parts.push(signed)
   }
   if (percent != null && Number.isFinite(percent)) {
     parts.push(parts.length ? `(${formatPercent(percent)})` : formatPercent(percent))

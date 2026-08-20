@@ -1,18 +1,26 @@
 import {
+  useMutation,
   useQueries,
   useQuery,
+  useQueryClient,
   type UseQueryOptions,
 } from '@tanstack/react-query';
 import { apiRequest, ApiError } from './client';
 import type {
   AccountsResponse,
   ActivitiesResponse,
+  BillingCycle,
+  CashflowResponse,
   ConnectionsResponse,
+  MoneyTransaction,
   OrdersResponse,
   PortfolioSummary,
   PublicAccount,
   SnapAccountDetailVM,
   SnapStatus,
+  Subscription,
+  SubscriptionsResponse,
+  TxKind,
 } from './types';
 
 export const queryKeys = {
@@ -26,6 +34,9 @@ export const queryKeys = {
     ['snaptrade', 'account', externalId, 'orders'] as const,
   activities: (externalId: string) =>
     ['snaptrade', 'account', externalId, 'activities'] as const,
+  cashflow: ['money', 'cashflow'] as const,
+  transactions: ['money', 'transactions'] as const,
+  subscriptions: ['money', 'subscriptions'] as const,
 };
 
 /** Retrying a 503 "not configured" or a 401 is pointless. */
@@ -48,10 +59,11 @@ const shared = {
  * `Promise.allSettled`, so a single broken account still yields data plus a
  * per-source error — surfaced rather than hidden.
  */
-export function usePortfolio() {
+export function usePortfolio(enabled = true) {
   return useQuery({
     queryKey: queryKeys.portfolio,
     queryFn: () => apiRequest<PortfolioSummary>('/api/portfolio'),
+    enabled,
     ...shared,
   });
 }
@@ -201,4 +213,120 @@ export function useCombinedActivityFeed(accounts: PublicAccount[] | undefined) {
     /** Nothing loaded at all — distinct from "loaded but empty". */
     isTotalFailure: all.length > 0 && all.every((query) => query.isError),
   };
+}
+
+function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: ['money'] });
+}
+
+function invalidateBook(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: queryKeys.accounts });
+  void qc.invalidateQueries({ queryKey: queryKeys.portfolio });
+}
+
+export function useCashflow(months = 6) {
+  return useQuery({
+    queryKey: [...queryKeys.cashflow, months],
+    queryFn: () =>
+      apiRequest<CashflowResponse>(`/api/money/cashflow?months=${months}`),
+    ...shared,
+  });
+}
+
+export function useTransactions() {
+  return useQuery({
+    queryKey: queryKeys.transactions,
+    queryFn: async () => {
+      const data = await apiRequest<{ transactions: MoneyTransaction[] }>(
+        '/api/money/transactions',
+      );
+      return data.transactions;
+    },
+    ...shared,
+  });
+}
+
+export function useAddTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      date: string;
+      kind: TxKind;
+      amount: number;
+      category: string;
+      note?: string;
+    }) =>
+      apiRequest<MoneyTransaction>('/api/money/transactions', {
+        method: 'POST',
+        body: payload,
+      }),
+    onSuccess: () => invalidateMoney(qc),
+  });
+}
+
+export function useDeleteTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiRequest(`/api/money/transactions/${id}`, { method: 'DELETE' }),
+    onSuccess: () => invalidateMoney(qc),
+  });
+}
+
+export function useSubscriptions() {
+  return useQuery({
+    queryKey: queryKeys.subscriptions,
+    queryFn: () => apiRequest<SubscriptionsResponse>('/api/money/subscriptions'),
+    ...shared,
+  });
+}
+
+export function useAddSubscription() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      name: string;
+      plan?: string;
+      amount: number;
+      cycle: BillingCycle;
+      day: number;
+      month?: number;
+      cat: string;
+    }) =>
+      apiRequest<Subscription>('/api/money/subscriptions', {
+        method: 'POST',
+        body: payload,
+      }),
+    onSuccess: () => invalidateMoney(qc),
+  });
+}
+
+export function useDeleteSubscription() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiRequest(`/api/money/subscriptions/${id}`, { method: 'DELETE' }),
+    onSuccess: () => invalidateMoney(qc),
+  });
+}
+
+export function useAddManualAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      label: string;
+      institution?: string;
+      notes?: string;
+      currency?: string;
+      balance: number;
+      type?: PublicAccount['type'];
+      kind?: 'asset' | 'liability';
+      bookClass?: string;
+    }) =>
+      apiRequest<PublicAccount>('/api/accounts/manual', {
+        method: 'POST',
+        body: payload,
+      }),
+    onSuccess: () => invalidateBook(qc),
+  });
 }

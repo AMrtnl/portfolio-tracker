@@ -145,6 +145,6 @@ const styles = StyleSheet.create({
   },
   bannerIcon: { marginTop: 2 },
   bannerBody: { flex: 1, gap: 3 },
-  bannerTitle: { color: '#8A6714' },
-  bannerLine: { color: '#7A5C13' },
+  bannerTitle: { color: color.warn },
+  bannerLine: { color: color.mutedForeground },
 });

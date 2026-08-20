@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: color.border,
   },
-  pressed: { backgroundColor: 'rgba(224, 235, 232, 0.55)' },
+  pressed: { backgroundColor: 'rgba(255, 255, 255, 0.06)' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

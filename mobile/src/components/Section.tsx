@@ -95,8 +95,8 @@ const styles = StyleSheet.create({
     borderColor: color.border,
   },
   panel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.72)',
-    borderRadius: radius.lg,
+    backgroundColor: color.surface,
+    borderRadius: radius.xl,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: color.border,
     padding: space.lg,

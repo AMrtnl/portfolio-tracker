@@ -5,42 +5,39 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * One money language across the app: de-CH grouping (1'120'000), no symbol,
+ * true minus sign, cents only where they carry information (values under
+ * 1000, e.g. prices) or when `digits` is set explicitly.
+ */
 export function formatCurrency(
   value: number | string,
   opts?: { compact?: boolean; digits?: number; currency?: string },
 ): string {
   const num = typeof value === 'string' ? parseFloat(value) : value
-  const currency = (opts?.currency || 'USD').toUpperCase()
-  if (!Number.isFinite(num)) {
-    try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency,
-        minimumFractionDigits: 2,
-      }).format(0)
-    } catch {
-      return `0.00 ${currency}`
-    }
-  }
+  void opts?.currency
+  if (!Number.isFinite(num)) return '0'
 
+  const digits =
+    opts?.digits ?? (Math.abs(num) >= 1000 || Number.isInteger(num) ? 0 : 2)
   try {
     if (opts?.compact && Math.abs(num) >= 1000) {
       return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency,
         notation: 'compact',
         maximumFractionDigits: 2,
-      }).format(num)
+      })
+        .format(num)
+        .replace(/^-/, '−')
     }
 
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: opts?.digits ?? 2,
-      maximumFractionDigits: opts?.digits ?? 2,
-    }).format(num)
+    return new Intl.NumberFormat('de-CH', {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    })
+      .format(num)
+      .replace(/^-/, '−')
   } catch {
-    return `${num.toFixed(opts?.digits ?? 2)} ${currency}`
+    return num.toFixed(digits).replace(/^-/, '−')
   }
 }
 
