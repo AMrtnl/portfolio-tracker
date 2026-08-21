@@ -887,7 +887,7 @@ function AccountRow({ account }: { account: Account }) {
       : 'Not synced yet'
 
   return (
-    <li className="flex items-center gap-3 border-b border-border/50 py-3 last:border-0">
+    <li className="flex items-center gap-3 border-b border-border/50 px-1.5 py-2.5 last:border-0">
       <LogoAvatar
         institution={account.institution}
         name={account.label}
@@ -932,26 +932,27 @@ function AccountRow({ account }: { account: Account }) {
             </button>
           </div>
         ) : (
-          <p className="truncate text-sm font-semibold">{account.label}</p>
+          <p className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+            <span className="truncate">{account.label}</span>
+            {demo && <span className="a-tag cycle shrink-0">Sample</span>}
+          </p>
         )}
 
-        <p className="truncate text-xs text-muted-foreground">
-          {[typeLabel(account), institution].filter(Boolean).join(' · ')}
-          {idDisplay && <span className="num"> · {idDisplay}</span>}
-        </p>
-        <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground/90">
+        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
           <span
             aria-hidden
             className={cn('h-1.5 w-1.5 shrink-0 rounded-full', statusTone)}
           />
           <span className="truncate">
+            {[typeLabel(account), institution].filter(Boolean).join(' · ')}
+            {idDisplay && <span className="num"> · {idDisplay}</span>}
+            {' · '}
             {demo
-              ? 'Sample account'
+              ? 'Sample book'
               : failed
                 ? account.lastError || 'Needs attention'
                 : syncedNote}
           </span>
-          {demo && <span className="a-tag cycle">Sample</span>}
           {!demo && failed && (
             <Link
               to="/brokerage"
@@ -1065,14 +1066,19 @@ function AccountGroups({ accounts }: { accounts: Account[] }) {
         const headingId = `class-${c.id}`
         return (
           <section key={c.id} className="a-gcard" aria-labelledby={headingId}>
-            <div className="flex items-baseline justify-between gap-3 px-3 pt-3 pb-1">
-              <h3 id={headingId} className="text-[13px] font-bold">
+            <div className="flex items-center justify-between gap-3 px-3.5 pt-3.5 pb-1.5">
+              <h3 id={headingId} className="flex items-center gap-2 text-[15px] font-bold tracking-tight">
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ background: c.color }}
+                  aria-hidden
+                />
                 {c.name}
-                <span className="ml-2 font-medium text-white/40">
-                  {items.length} {items.length === 1 ? 'account' : 'accounts'}
+                <span className="text-xs font-semibold text-white/40">
+                  {items.length === 1 ? '1 account' : `${items.length} accounts`}
                 </span>
               </h3>
-              <span className="num text-xs font-bold">
+              <span className="num text-[13px] font-bold">
                 {formatCurrency(subtotal, { compact: true })}
               </span>
             </div>
@@ -1086,14 +1092,18 @@ function AccountGroups({ accounts }: { accounts: Account[] }) {
       })}
       {loans.length > 0 && (
         <section className="a-gcard" aria-labelledby="class-loans">
-          <div className="flex items-baseline justify-between gap-3 px-3 pt-3 pb-1">
-            <h3 id="class-loans" className="text-[13px] font-bold">
+          <div className="flex items-center justify-between gap-3 px-3.5 pt-3.5 pb-1.5">
+            <h3 id="class-loans" className="flex items-center gap-2 text-[15px] font-bold tracking-tight">
+              <span
+                className="a-tiledot hatch h-2.5 w-2.5 shrink-0"
+                aria-hidden
+              />
               Loans
-              <span className="ml-2 font-medium text-white/40">
-                {loans.length} {loans.length === 1 ? 'account' : 'accounts'}
+              <span className="text-xs font-semibold text-white/40">
+                {loans.length === 1 ? '1 account' : `${loans.length} accounts`}
               </span>
             </h3>
-            <span className="num text-xs font-bold text-[#FF453A]">
+            <span className="num text-[13px] font-bold text-[#FF453A]">
               −{formatCurrency(
                 loans.reduce((s, a) => s + accountValue(a), 0),
                 { compact: true },
@@ -1168,10 +1178,17 @@ export function Accounts() {
   return (
     <article>
       {step === null && (
-        <button type="button" className="a-add" onClick={() => setStep('chooser')}>
-          <Plus size={17} strokeWidth={2.5} />
-          Add account
-        </button>
+        <div className="a-pagebar">
+          <div className="a-header">Connected accounts</div>
+          <button
+            type="button"
+            className="ui-btn tinted sm"
+            onClick={() => setStep('chooser')}
+          >
+            <Plus size={15} strokeWidth={2.5} />
+            Add account
+          </button>
+        </div>
       )}
 
       {isLoading ? (

@@ -576,6 +576,11 @@ button.a-arow { cursor: pointer; }
 }
 
 .a-tile.sm { width: 32px; height: 32px; border-radius: 11px; }
+.a-pagebar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin: 0 0 12px;
+}
+.a-pagebar .a-header { margin: 0; }
 .a-healthrow {
   display: flex; align-items: center; gap: 10px; padding: 8px 6px;
   font-size: 13px; font-weight: 600; color: rgba(235,235,245,.7);
@@ -612,23 +617,30 @@ button.a-arow { cursor: pointer; }
 }
 .a-mover.tap:hover { background: rgba(255,255,255,.05); }
 
-/* ── quick-view slide-over ── */
+/* ── quick-view floating sheet, centered ── */
 .a-qlook {
   position: fixed; inset: 0; z-index: 80;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(4px);
+  background: rgba(2,2,6,.6);
+  backdrop-filter: blur(10px) saturate(130%);
   animation: a-qfade .2s ease both;
+  display: flex; align-items: flex-start; justify-content: center;
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 6vh 16px 48px;
 }
 @keyframes a-qfade { from { opacity: 0; } }
 .a-qpanel {
-  position: absolute; top: 0; right: 0; bottom: 0;
-  width: min(430px, 100%); overflow-y: auto; overscroll-behavior: contain;
-  background: linear-gradient(180deg, #15151a 0%, #0b0b0e 42%);
-  border-left: .5px solid rgba(255,255,255,.1);
-  padding: 14px 18px 30px;
-  animation: a-qslide .3s cubic-bezier(.2,.7,.3,1) both;
+  width: min(560px, 100%); height: fit-content;
+  background: rgba(22,22,27,.96);
+  border: .5px solid rgba(255,255,255,.12);
+  border-radius: 30px;
+  box-shadow: 0 42px 110px rgba(0,0,0,.65);
+  padding: 16px 22px 28px;
+  animation: a-qpop .32s cubic-bezier(.2,.7,.3,1) both;
 }
-@keyframes a-qslide { from { transform: translateX(48px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes a-qpop {
+  from { opacity: 0; transform: translateY(20px) scale(.975); }
+  to { opacity: 1; transform: none; }
+}
 .a-qhead {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 8px; min-height: 34px;
@@ -1187,11 +1199,15 @@ a.ui-btn.secondary { color: #fff; }
   }
   .a-ins { width: auto; flex: none; }
 
+  /* Balanced two-column masonry: short cards never leave a hole beside
+     tall ones, and the last card flows into whichever column is shorter. */
   .a-holdings-cols {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    align-items: start;
+    columns: 2;
+    column-gap: 10px;
+  }
+  .a-holdings-cols > section {
+    break-inside: avoid;
+    margin-bottom: 10px;
   }
 
   .a-desk-primary .a-value { font-size: 46px; }
