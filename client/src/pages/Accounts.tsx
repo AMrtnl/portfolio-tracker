@@ -12,7 +12,6 @@ import {
   X,
   Loader2,
   ArrowRight,
-  ArrowLeft,
   RefreshCw,
   Wallet,
   Building2,
@@ -50,6 +49,7 @@ import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccoun
 import { CLASSES } from '@/wealth/tokens'
 import { isDemoId } from '@/wealth/demo'
 import { LogoAvatar } from '@/wealth/logos'
+import { FloatSheet } from '@/wealth/FloatSheet'
 
 type AddStep =
   | 'chooser'
@@ -84,19 +84,6 @@ function typeLabel(a: Account): string {
   }
 }
 
-function BackLink({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-    >
-      <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-      Back
-    </button>
-  )
-}
-
 function FormError({ error, fallback }: { error: unknown; fallback: string }) {
   const message =
     (error as { response?: { data?: { message?: string; error?: string } } })
@@ -109,7 +96,7 @@ function FormError({ error, fallback }: { error: unknown; fallback: string }) {
 
 /* ---------- Add forms ---------- */
 
-function CryptoForm({ onDone, onBack }: { onDone?: () => void; onBack: () => void }) {
+function CryptoForm({ onDone }: { onDone?: () => void }) {
   const [label, setLabel] = useState('')
   const [mnemonic, setMnemonic] = useState('')
   const [showMnemonic, setShowMnemonic] = useState(false)
@@ -127,7 +114,6 @@ function CryptoForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-label="Add crypto wallet">
-      <BackLink onClick={onBack} />
 
       <div className="space-y-1.5">
         <label className="text-sm font-medium" htmlFor="acct-label">
@@ -215,7 +201,7 @@ function CryptoForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
   )
 }
 
-function ManualForm({ onDone, onBack }: { onDone?: () => void; onBack: () => void }) {
+function ManualForm({ onDone }: { onDone?: () => void }) {
   const [label, setLabel] = useState('')
   const [institution, setInstitution] = useState('')
   const [symbol, setSymbol] = useState('')
@@ -267,7 +253,6 @@ function ManualForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-label="Add manual account">
-      <BackLink onClick={onBack} />
 
       <div className="space-y-3">
         <div className="space-y-1.5">
@@ -399,11 +384,9 @@ function ManualForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
 function SimpleBalanceForm({
   kind,
   onDone,
-  onBack,
 }: {
   kind: 'cash' | 'pension' | 'estate' | 'loan'
   onDone?: () => void
-  onBack: () => void
 }) {
   const add = useAddManualAccount()
   const [label, setLabel] = useState('')
@@ -478,7 +461,6 @@ function SimpleBalanceForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-label={copy.title}>
-      <BackLink onClick={onBack} />
       <div className="space-y-1.5">
         <label className="text-sm font-medium" htmlFor="simple-label">
           Name
@@ -572,11 +554,11 @@ function AddFlow({
   onBack: () => void
   onDone?: () => void
 }) {
-  if (step === 'crypto') return <CryptoForm onDone={onDone} onBack={onBack} />
-  if (step === 'manual') return <ManualForm onDone={onDone} onBack={onBack} />
+  if (step === 'crypto') return <CryptoForm onDone={onDone} />
+  if (step === 'manual') return <ManualForm onDone={onDone} />
   if (step === 'broker') return <BrokerForm onDone={onDone} onBack={onBack} />
   if (step === 'cash' || step === 'pension' || step === 'estate' || step === 'loan') {
-    return <SimpleBalanceForm kind={step} onDone={onDone} onBack={onBack} />
+    return <SimpleBalanceForm kind={step} onDone={onDone} />
   }
   return <AddChooser onPick={onPick} />
 }
@@ -599,18 +581,12 @@ function BrokerForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
 
   return (
     <div className="space-y-5" aria-label="Import brokerage">
-      <BackLink onClick={onBack} />
 
-      <div>
-        <h2 className="font-display text-lg tracking-tight">
-          Brokerage via SnapTrade
-        </h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          Import accounts already linked to your SnapTrade Personal key,
-          read-only. Best for US, CA, UK, and EU brokers — use a manual account
-          for unsupported Swiss banks.
-        </p>
-      </div>
+      <p className="a-qlead">
+        Import accounts already linked to your SnapTrade Personal key,
+        read-only. Best for US, CA, UK, and EU brokers — use a manual account
+        for unsupported Swiss banks.
+      </p>
 
       {!snap?.configured ? (
         <div className="space-y-2.5 rounded-md border border-border/70 bg-secondary/40 px-4 py-3.5 text-sm">
@@ -744,30 +720,27 @@ function AddChooser({
   const { data: providers } = useProviders()
   const snapConfigured = providers?.find((p) => p.id === 'snaptrade')?.configured
 
-  const options: Array<{
+  interface AddOption {
     id: Exclude<AddStep, 'chooser'>
     title: string
     subtitle: string
     icon: typeof Wallet
     color: string
     badge?: string
-  }> = [
-    {
-      id: 'cash',
-      title: 'Cash',
-      subtitle: 'Checking, savings, or a wallet of cash',
-      icon: Landmark,
-      color: '#4BD57E',
-    },
+    badgeTone?: 'gain' | 'warn'
+  }
+
+  const live: AddOption[] = [
     {
       id: 'broker',
       title: 'Brokerage',
       subtitle: snapConfigured
         ? 'Import accounts already connected in SnapTrade'
-        : 'SnapTrade — needs API keys, or add holdings by hand',
+        : 'SnapTrade — needs API keys first',
       icon: Building2,
       color: '#FFD84D',
       badge: snapConfigured ? 'Ready' : 'Needs keys',
+      badgeTone: snapConfigured ? 'gain' : 'warn',
     },
     {
       id: 'crypto',
@@ -775,6 +748,16 @@ function AddChooser({
       subtitle: 'Hyperliquid perps and spot, via recovery phrase',
       icon: Wallet,
       color: '#A57BFF',
+    },
+  ]
+
+  const byHand: AddOption[] = [
+    {
+      id: 'cash',
+      title: 'Cash',
+      subtitle: 'Checking, savings, or a wallet of cash',
+      icon: Landmark,
+      color: '#4BD57E',
     },
     {
       id: 'pension',
@@ -806,32 +789,41 @@ function AddChooser({
     },
   ]
 
+  const row = (opt: AddOption) => (
+    <button
+      key={opt.id}
+      type="button"
+      onClick={() => onPick(opt.id)}
+      className="a-arow tap"
+    >
+      <span
+        className="a-av"
+        style={{ background: `${opt.color}22`, color: opt.color }}
+      >
+        <opt.icon size={16} strokeWidth={2.2} aria-hidden />
+      </span>
+      <span className="a-atext">
+        <b>{opt.title}</b>
+        <em>{opt.subtitle}</em>
+      </span>
+      {opt.badge && (
+        <span className={`ui-tag ${opt.badgeTone ?? 'flat'}`}>{opt.badge}</span>
+      )}
+      <ArrowRight size={15} strokeWidth={2.5} className="a-rowchev" aria-hidden />
+    </button>
+  )
+
   return (
-    <div className="a-arows">
-      {options.map((opt) => (
-        <button
-          key={opt.id}
-          type="button"
-          onClick={() => onPick(opt.id)}
-          className="a-arow tap"
-        >
-          <span
-            className="a-av"
-            style={{ background: `${opt.color}22`, color: opt.color }}
-          >
-            <opt.icon size={16} strokeWidth={2.2} aria-hidden />
-          </span>
-          <span className="a-atext">
-            <b>
-              {opt.title}
-              {opt.badge ? ` · ${opt.badge}` : ''}
-            </b>
-            <em>{opt.subtitle}</em>
-          </span>
-          <ArrowRight size={15} strokeWidth={2.5} className="a-rowchev" aria-hidden />
-        </button>
-      ))}
-    </div>
+    <>
+      <p className="a-qlead">
+        Everything lands on the same book — synced accounts refresh themselves,
+        manual ones you update when things change.
+      </p>
+      <div className="a-header">Syncs itself</div>
+      <section className="a-gcard">{live.map(row)}</section>
+      <div className="a-header">Tracked by hand</div>
+      <section className="a-gcard">{byHand.map(row)}</section>
+    </>
   )
 }
 
@@ -1123,6 +1115,17 @@ function AccountGroups({ accounts }: { accounts: Account[] }) {
 
 /* ---------- Page ---------- */
 
+const STEP_TITLES: Record<AddStep, string> = {
+  chooser: 'Add an account',
+  crypto: 'Crypto wallet',
+  broker: 'Brokerage',
+  manual: 'Holdings by hand',
+  cash: 'Cash account',
+  pension: 'Pension',
+  estate: 'Real estate',
+  loan: 'Loan or mortgage',
+}
+
 export function Accounts() {
   const { data: accounts, isLoading } = useAccounts()
   const [step, setStep] = useState<AddStep | null>(null)
@@ -1133,64 +1136,13 @@ export function Accounts() {
     document.title = hasAccounts ? 'Accounts' : 'Connect'
   }, [hasAccounts])
 
-  // With nothing connected the chooser *is* the page; otherwise it's opt-in.
-  useEffect(() => {
-    if (!isLoading && !hasAccounts && step === null) setStep('chooser')
-  }, [isLoading, hasAccounts, step])
-
   function handleAdded() {
     setStep(null)
     if (!hasAccounts) navigate('/')
   }
 
-  /* ---- First run: a single focused task, no dashboard chrome ---- */
-  if (!isLoading && !hasAccounts) {
-    return (
-      <article>
-        <div className="ui-empty">
-          <div className="ui-empty-icon">
-            <Wallet className="h-5 w-5" />
-          </div>
-          <b>One picture of everything you own and owe</b>
-          <p>Cash, brokers, crypto, pension, property, and loans on a single book.</p>
-        </div>
-
-        <section className="a-gcard pad">
-            <h2 id="add-account-heading" className="sr-only">
-              Choose an account type
-            </h2>
-            <AddFlow
-              step={step ?? 'chooser'}
-              onPick={setStep}
-              onBack={() => setStep('chooser')}
-              onDone={handleAdded}
-            />
-        </section>
-
-        <p className="a-footnote">
-          Secrets stay on the server. Recovery phrases are encrypted at rest.
-        </p>
-      </article>
-    )
-  }
-
-  /* ---- Managing existing accounts ---- */
   return (
     <article>
-      {step === null && (
-        <div className="a-pagebar">
-          <div className="a-header">Connected accounts</div>
-          <button
-            type="button"
-            className="ui-btn tinted sm"
-            onClick={() => setStep('chooser')}
-          >
-            <Plus size={15} strokeWidth={2.5} />
-            Add account
-          </button>
-        </div>
-      )}
-
       {isLoading ? (
         <>
           <p role="status" aria-live="polite" className="sr-only">
@@ -1198,48 +1150,71 @@ export function Accounts() {
           </p>
           <SkeletonRows rows={3} />
         </>
-      ) : (
+      ) : hasAccounts ? (
         <>
-          {/* Two columns only while adding: the list keeps the full measure
-           * the rest of the time rather than carrying filler beside it. */}
-          <div className="space-y-3">
-            <section aria-labelledby="connected-accounts-heading">
-              <h2 id="connected-accounts-heading" className="sr-only">
-                Connected accounts
-              </h2>
-              <AccountGroups accounts={accounts!} />
-            </section>
-
-            {step !== null && (
-              <section className="a-gcard pad">
-                <div className="mb-3 flex items-baseline justify-between gap-3">
-                  <h2 id="add-account-heading" className="text-[15px] font-bold">
-                    Add an account
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() => setStep(null)}
-                    className="a-navbtn"
-                    aria-label="Close add account panel"
-                  >
-                    <X className="h-4 w-4" aria-hidden />
-                  </button>
-                </div>
-                <AddFlow
-                  step={step}
-                  onPick={setStep}
-                  onBack={() => setStep('chooser')}
-                  onDone={handleAdded}
-                />
-              </section>
-            )}
+          <div className="a-pagebar">
+            <div className="a-header">Connected accounts</div>
+            <button
+              type="button"
+              className="ui-btn tinted sm"
+              onClick={() => setStep('chooser')}
+            >
+              <Plus size={15} strokeWidth={2.5} />
+              Add account
+            </button>
           </div>
+
+          <section aria-labelledby="connected-accounts-heading">
+            <h2 id="connected-accounts-heading" className="sr-only">
+              Connected accounts
+            </h2>
+            <AccountGroups accounts={accounts!} />
+          </section>
+
+          <p className="a-footnote">
+            Secrets stay on the server. Recovery phrases are encrypted at rest.
+          </p>
+        </>
+      ) : (
+        /* ---- First run: one focused task, no dashboard chrome ---- */
+        <>
+          <div className="ui-empty">
+            <div className="ui-empty-icon">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <b>One picture of everything you own and owe</b>
+            <p>Cash, brokers, crypto, pension, property, and loans on a single book.</p>
+          </div>
+
+          <button type="button" className="a-add" onClick={() => setStep('chooser')}>
+            <Plus size={17} strokeWidth={2.5} />
+            Add your first account
+          </button>
 
           <p className="a-footnote">
             Secrets stay on the server. Recovery phrases are encrypted at rest.
           </p>
         </>
       )}
+
+      <FloatSheet
+        open={step !== null}
+        title={step ? STEP_TITLES[step] : undefined}
+        onClose={() => setStep(null)}
+        onBack={step && step !== 'chooser' ? () => setStep('chooser') : undefined}
+        onEscape={
+          step && step !== 'chooser' ? () => setStep('chooser') : () => setStep(null)
+        }
+      >
+        {step && (
+          <AddFlow
+            step={step}
+            onPick={setStep}
+            onBack={() => setStep('chooser')}
+            onDone={handleAdded}
+          />
+        )}
+      </FloatSheet>
     </article>
   )
 }

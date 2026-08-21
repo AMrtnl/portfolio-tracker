@@ -2,13 +2,13 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ArrowUpRight, ChevronRight } from 'lucide-react'
+import { FloatSheet } from '@/wealth/FloatSheet'
 import { useAccounts, type Account } from '@/hooks/useAccounts'
 import {
   useHistory,
@@ -431,56 +431,26 @@ export function QuickLookProvider({ children }: { children: ReactNode }) {
   const back = useCallback(() => setStack((s) => s.slice(0, -1)), [])
 
   const top = stack[stack.length - 1]
-
-  useEffect(() => {
-    if (!top) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setStack((s) => s.slice(0, -1))
-    }
-    window.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
-    }
-  }, [top])
-
   const value = useMemo(() => ({ look, close }), [look, close])
 
   return (
     <QuickLookContext.Provider value={value}>
       {children}
-      {top && (
-        <div className="a-qlook" onClick={close}>
-          <aside
-            className="a-qpanel"
-            role="dialog"
-            aria-label="Quick view"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="a-qhead">
-              {stack.length > 1 ? (
-                <button type="button" className="a-back" onClick={back}>
-                  <ChevronLeft size={19} strokeWidth={2.5} />
-                  Back
-                </button>
-              ) : (
-                <span />
-              )}
-              <button type="button" className="a-navbtn" onClick={close} aria-label="Close">
-                <X size={16} strokeWidth={2.5} />
-              </button>
-            </header>
-            {top.kind === 'class' ? (
-              <ClassLook id={top.id} onLook={look} onClose={close} />
-            ) : top.kind === 'account' ? (
-              <AccountLook id={top.id} onLook={look} onClose={close} />
-            ) : (
-              <HoldingLook symbol={top.symbol} onClose={close} />
-            )}
-          </aside>
-        </div>
-      )}
+      <FloatSheet
+        open={Boolean(top)}
+        onClose={close}
+        onBack={stack.length > 1 ? back : undefined}
+        onEscape={back}
+      >
+        {top &&
+          (top.kind === 'class' ? (
+            <ClassLook id={top.id} onLook={look} onClose={close} />
+          ) : top.kind === 'account' ? (
+            <AccountLook id={top.id} onLook={look} onClose={close} />
+          ) : (
+            <HoldingLook symbol={top.symbol} onClose={close} />
+          ))}
+      </FloatSheet>
     </QuickLookContext.Provider>
   )
 }
