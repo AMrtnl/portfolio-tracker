@@ -1357,3 +1357,33 @@ a.ui-btn.secondary { color: #fff; }
   .a-shell { padding: 32px 48px 56px; }
 }
 
+
+/* ---- Goals ---- */
+.a-goals { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.a-goalcard { display: flex; flex-direction: column; gap: 12px; padding: 14px 14px 12px !important; }
+.a-goalhead { display: flex; align-items: center; gap: 12px; }
+.a-goalhead .a-atext { flex: 1; min-width: 0; }
+.a-goalhead .a-atext b { display: flex; align-items: center; gap: 8px; }
+.a-goalvalue { display: flex; align-items: baseline; gap: 8px; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.a-goalvalue em { font-style: normal; font-size: 13px; font-weight: 600; color: rgba(235,235,245,.45); }
+.a-goalmeta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.a-goalmeta div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.a-goalmeta span { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: rgba(235,235,245,.4); }
+.a-goalmeta b { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-goalfoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.a-goalfund { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.a-goalfund button { font: inherit; font-size: 12px; font-weight: 700; color: rgba(235,235,245,.7); background: rgba(118,118,128,.2); border: 0; border-radius: 999px; padding: 5px 10px; cursor: pointer; }
+.a-goalfund button:hover { color: #fff; background: rgba(118,118,128,.34); }
+.a-goalempty { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 22px 18px !important; }
+.a-goalempty b { font-size: 17px; }
+.a-goalempty .a-insnote { max-width: 46ch; }
+.a-fields.spaced { margin-top: 12px; }
+
+/* ---- Budget targets ---- */
+.a-catval em { font-style: normal; font-weight: 600; color: rgba(235,235,245,.4); }
+.a-catbar i.over { background: #FF453A !important; }
+.a-budgetrow { display: grid; grid-template-columns: 1fr 120px; gap: 10px; align-items: center; padding: 8px 6px; }
+.a-budgetrow .a-atext b { display: flex; align-items: center; gap: 8px; }
+.a-budgetrow input { width: 100%; font: inherit; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; background: rgba(118,118,128,.18); border: .5px solid rgba(255,255,255,.07); border-radius: 12px; padding: 8px 10px; text-align: right; outline: none; }
+.a-budgetrow input:focus { border-color: rgba(10,132,255,.6); }
+.a-budgetrow input::placeholder { color: rgba(235,235,245,.25); }

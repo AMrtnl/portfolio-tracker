@@ -6,6 +6,7 @@ import { useMoney } from '@/wealth/format'
 import { Money } from '@/wealth/Money'
 import { GAIN, LOSS } from '@/wealth/tokens'
 import { isDemoId } from '@/wealth/demo'
+import { useBudgets, useSetBudgets, type MoneyCategory } from '@/hooks/useMoneyLedger'
 import {
   useAddTransaction,
   useCashflow,
@@ -63,6 +64,8 @@ export function Cashflow() {
   const [date, setDate] = useState(todayIso)
   const [note, setNote] = useState('')
   const [csv, setCsv] = useState('')
+  const [targetsOpen, setTargetsOpen] = useState(false)
+  const { data: budgets = {} } = useBudgets()
 
   // The server guesses a category from the note; it only fills the field
   // until the user picks one by hand.
@@ -298,28 +301,51 @@ export function Cashflow() {
         <aside className="a-desk-aside">
           {spendTotal > 0 && (
             <>
-              <div className="a-header">Where it goes</div>
+              <div className="a-pagebar">
+                <div className="a-header">Where it goes</div>
+                <button type="button" className="a-more" onClick={() => setTargetsOpen(true)}>
+                  Targets
+                </button>
+              </div>
               <section className="a-gcard pad">
                 {[...(data?.categories ?? [])]
                   .sort((a, b) => b.amount - a.amount)
-                  .map((c) => (
-                    <div key={c.id} className="a-catrow">
-                      <span className="a-catname">
-                        <span className="a-dot" style={{ background: c.color }} />
-                        {c.name}
-                      </span>
-                      <span className="a-catbar">
-                        <i
-                          style={{
-                            width: `${(c.amount / spendTotal) * 100}%`,
-                            background: c.color,
-                          }}
-                        />
-                      </span>
-                      <span className="a-catval">{chf(c.amount)}</span>
-                    </div>
-                  ))}
+                  .map((c) => {
+                    const budget = budgets[c.id]
+                    const over = budget != null && c.amount > budget
+                    // With a target the bar fills against it; otherwise against the month.
+                    const width = budget
+                      ? Math.min(c.amount / budget, 1) * 100
+                      : spendTotal
+                        ? (c.amount / spendTotal) * 100
+                        : 0
+                    return (
+                      <div key={c.id} className="a-catrow">
+                        <span className="a-catname">
+                          <span className="a-dot" style={{ background: c.color }} />
+                          {c.name}
+                        </span>
+                        <span className="a-catbar">
+                          <i
+                            className={over ? 'over' : undefined}
+                            style={{ width: `${width}%`, background: c.color }}
+                          />
+                        </span>
+                        <span className="a-catval">
+                          {chf(c.amount)}
+                          {budget ? <em> / {chf(budget)}</em> : null}
+                        </span>
+                      </div>
+                    )
+                  })}
               </section>
+              <BudgetTargetsSheet
+                open={targetsOpen}
+                onClose={() => setTargetsOpen(false)}
+                categories={cats?.spend ?? []}
+                averages={data?.averages ?? {}}
+                budgets={budgets}
+              />
             </>
           )}
         </aside>
@@ -492,5 +518,96 @@ export function Cashflow() {
         )}
       </FloatSheet>
     </>
+  )
+}
+
+/** Monthly ceiling per spend category, shown against the running average. */
+function BudgetTargetsSheet({
+  open,
+  onClose,
+  categories,
+  averages,
+  budgets,
+}: {
+  open: boolean
+  onClose: () => void
+  categories: MoneyCategory[]
+  averages: Record<string, number>
+  budgets: Record<string, number>
+}) {
+  const { chf, unit } = useMoney()
+  const save = useSetBudgets()
+  // Drafts start from what is saved and only diverge once the user types.
+  const [draft, setDraft] = useState<Record<string, string> | null>(null)
+  const values =
+    draft ??
+    Object.fromEntries(
+      categories.map((c) => [c.id, budgets[c.id] != null ? String(budgets[c.id]) : '']),
+    )
+
+  function close() {
+    setDraft(null)
+    save.reset()
+    onClose()
+  }
+
+  function submit() {
+    const patch: Record<string, number | null> = {}
+    for (const c of categories) {
+      const raw = (values[c.id] ?? '').trim()
+      if (raw === '') {
+        if (budgets[c.id] != null) patch[c.id] = null
+        continue
+      }
+      const n = parseFloat(raw)
+      if (Number.isFinite(n) && n >= 0) patch[c.id] = n
+    }
+    save.mutate(patch, { onSuccess: close })
+  }
+
+  return (
+    <FloatSheet open={open} title="Budget targets" onClose={close}>
+      <p className="a-qlead">
+        A monthly ceiling per category. The bars in &ldquo;Where it goes&rdquo; fill against
+        it and turn red when a month runs over.
+      </p>
+      <section className="a-gcard">
+        {categories.map((c) => (
+          <div key={c.id} className="a-budgetrow">
+            <span className="a-atext">
+              <b>
+                <span className="a-dot" style={{ background: c.color }} />
+                {c.name}
+              </b>
+              <em>
+                {averages[c.id]
+                  ? `Averages ${chf(averages[c.id])} a month`
+                  : 'Nothing in this period'}
+              </em>
+            </span>
+            <input
+              inputMode="decimal"
+              placeholder={unit()}
+              value={values[c.id] ?? ''}
+              onChange={(e) => setDraft({ ...values, [c.id]: e.target.value })}
+              aria-label={`${c.name} monthly target`}
+            />
+          </div>
+        ))}
+      </section>
+      {save.isError && (
+        <p className="a-insnote" role="alert">
+          Could not save the targets.
+        </p>
+      )}
+      <button
+        type="button"
+        className="ui-btn primary md full"
+        disabled={save.isPending}
+        onClick={submit}
+      >
+        {save.isPending ? 'Saving…' : 'Save targets'}
+      </button>
+    </FloatSheet>
   )
 }

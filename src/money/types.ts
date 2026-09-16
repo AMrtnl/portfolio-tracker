@@ -29,4 +29,6 @@ export interface MoneyFile {
   version: 1;
   transactions: MoneyTransaction[];
   subscriptions: Subscription[];
+  /** Monthly spending targets per spend category id. */
+  budgets?: Record<string, number>;
 }

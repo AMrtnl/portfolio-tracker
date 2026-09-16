@@ -48,6 +48,8 @@ export class MoneyStore {
             subscriptions: Array.isArray(parsed.subscriptions)
               ? parsed.subscriptions
               : [],
+            budgets:
+              parsed.budgets && typeof parsed.budgets === 'object' ? parsed.budgets : {},
           };
         }
       }
@@ -64,6 +66,31 @@ export class MoneyStore {
 
   listTransactions(): MoneyTransaction[] {
     return [...this.data.transactions].sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  getBudgets(): Record<string, number> {
+    return { ...(this.data.budgets ?? {}) };
+  }
+
+  /** Sets monthly targets per category; null or zero clears one. */
+  setBudgets(patch: Record<string, number | null>): Record<string, number> {
+    const next = { ...(this.data.budgets ?? {}) };
+    for (const [rawId, value] of Object.entries(patch)) {
+      const id = rawId.trim();
+      if (!id) continue;
+      if (value === null || value === 0) {
+        delete next[id];
+        continue;
+      }
+      const amount = Number(value);
+      if (!Number.isFinite(amount) || amount < 0) {
+        throw new Error(`budget for ${id} must be a positive number`);
+      }
+      next[id] = amount;
+    }
+    this.data.budgets = next;
+    this.save();
+    return { ...next };
   }
 
   private buildTransaction(input: TransactionInput): MoneyTransaction {

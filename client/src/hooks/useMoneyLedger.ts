@@ -52,8 +52,33 @@ export interface CashflowMonth {
 export interface CashflowResponse {
   months: CashflowMonth[]
   categories: Array<{ id: string; name: string; color: string; amount: number }>
+  /** Monthly spend average per category over the requested window. */
+  averages?: Record<string, number>
   hasActivity: boolean
   retrievedAt: string
+}
+
+/** Monthly spending targets per category id. */
+export function useBudgets() {
+  return useQuery<Record<string, number>>({
+    queryKey: ['money', 'budgets'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/money/budgets')
+      return data.budgets as Record<string, number>
+    },
+    placeholderData: {},
+  })
+}
+
+export function useSetBudgets() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (budgets: Record<string, number | null>) => {
+      const { data } = await axios.put('/api/money/budgets', { budgets })
+      return data.budgets as Record<string, number>
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['money', 'budgets'] }),
+  })
 }
 
 const SPEND_FALLBACK: MoneyCategory[] = [

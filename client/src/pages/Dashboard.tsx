@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, CaretRight, Plus } from '@phosphor-icons/react'
 import { useSubscriptions, useTransactions } from '@/hooks/useMoneyLedger'
+import { useGoals } from '@/hooks/useGoals'
+import { GOAL_COLORS, STATE_COPY, goalStatus, monthLabel } from '@/wealth/goals'
 import { useSettings } from '@/hooks/useSettings'
 import { HEADLINE_COPY } from '@/wealth/PreferencesSheet'
 import {
@@ -132,6 +134,22 @@ export function Dashboard() {
   const { data: txs } = useTransactions()
   const { data: subData } = useSubscriptions()
   const { data: settings } = useSettings()
+  const { data: goals = [] } = useGoals()
+  const goalRows = useMemo(
+    () =>
+      goals.slice(0, 3).map((goal, i) => {
+        const current = goal.accountIds.reduce((s, id) => {
+          const a = accounts?.find((x) => x.id === id)
+          return s + (a ? Math.max(accountValue(a), 0) : 0)
+        }, 0)
+        return {
+          goal,
+          status: goalStatus(goal, current),
+          color: GOAL_COLORS[i % GOAL_COLORS.length],
+        }
+      }),
+    [goals, accounts],
+  )
   const metric = settings?.headlineMetric ?? 'net'
   const realAccounts = (accounts ?? []).filter((a) => !isDemoId(a.id)).length
   const realTxs = (txs ?? []).filter((t) => !isDemoId(t.id)).length
@@ -584,6 +602,34 @@ export function Dashboard() {
             ))}
           </div>
         </section>
+
+        {goalRows.length > 0 && (
+          <>
+            <div className="a-header">Goals</div>
+            <section className="a-gcard">
+              {goalRows.map(({ goal, status, color }) => (
+                <Link key={goal.id} to="/goals" className="a-arow tap">
+                  <Ring pct={status.pct} color={color} size={36} stroke={4.5} label="" />
+                  <span className="a-atext">
+                    <b>{goal.name}</b>
+                    <em>
+                      {status.state === 'funded'
+                        ? 'Funded'
+                        : status.state === 'behind'
+                          ? 'Behind — needs more each month'
+                          : status.etaDate
+                            ? `On course for ${monthLabel(status.etaDate)}`
+                            : STATE_COPY[status.state].label}
+                    </em>
+                  </span>
+                  <span className={`a-tag ${STATE_COPY[status.state].tone}`}>
+                    {status.pct.toFixed(0)}%
+                  </span>
+                </Link>
+              ))}
+            </section>
+          </>
+        )}
 
         <div className="a-header">Market recap</div>
         <section className="a-gcard pad">

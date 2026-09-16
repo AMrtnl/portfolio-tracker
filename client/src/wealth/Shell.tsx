@@ -7,7 +7,7 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom'
-import { ArrowsLeftRight, Briefcase, CalendarBlank, CaretDoubleLeft, CaretDoubleRight, Eye, EyeSlash, Stack, ChartPieSlice, ArrowsClockwise, MagnifyingGlass, Wallet, GearSix } from '@phosphor-icons/react'
+import { ArrowsLeftRight, Briefcase, CalendarBlank, CaretDoubleLeft, CaretDoubleRight, Eye, EyeSlash, Stack, ChartPieSlice, ArrowsClockwise, MagnifyingGlass, Wallet, GearSix, Target } from '@phosphor-icons/react'
 import { Dashboard } from '@/pages/Dashboard'
 import { Accounts } from '@/pages/Accounts'
 import { Brokerage } from '@/pages/Brokerage'
@@ -15,6 +15,7 @@ import { Analysis } from '@/pages/Analysis'
 import { HoldingDetail } from '@/pages/HoldingDetail'
 import { Cashflow } from '@/pages/Cashflow'
 import { Subscriptions } from '@/pages/Subscriptions'
+import { Goals } from '@/pages/Goals'
 import { useWalletStatus } from '@/hooks/useWalletStatus'
 import { useAccounts, type Account } from '@/hooks/useAccounts'
 import { PreferencesSheet } from '@/wealth/PreferencesSheet'
@@ -47,6 +48,7 @@ function titleFor(pathname: string): string {
   if (pathname.startsWith('/brokerage')) return 'Brokerage'
   if (pathname.startsWith('/cashflow')) return 'Cash flow'
   if (pathname.startsWith('/subscriptions')) return 'Subscriptions'
+  if (pathname.startsWith('/goals')) return 'Goals'
   return 'Wealth'
 }
 
@@ -55,6 +57,7 @@ const TABS: TabItem[] = [
   { to: '/analysis', label: 'Analysis', Icon: ChartPieSlice, keys: 'allocation income benchmark concentration' },
   { to: '/cashflow', label: 'Cash flow', Icon: ArrowsLeftRight, keys: 'cashflow transactions spending income' },
   { to: '/subscriptions', label: 'Subscriptions', Icon: CalendarBlank, keys: 'recurring charges calendar' },
+  { to: '/goals', label: 'Goals', Icon: Target, keys: 'savings targets projections deposit' },
   { to: '/accounts', label: 'Accounts', Icon: Stack, keys: 'banks wallets connections property loans' },
 ]
 
@@ -72,8 +75,8 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
   { label: 'Overview', tabs: [TABS[0], TABS[1]] },
-  { label: 'Money', tabs: [TABS[2], TABS[3]] },
-  { label: 'Setup', tabs: [TABS[4], BROKERAGE_TAB] },
+  { label: 'Money', tabs: [TABS[2], TABS[3], TABS[4]] },
+  { label: 'Setup', tabs: [TABS[5], BROKERAGE_TAB] },
 ]
 
 const PAGE_TARGETS: TabItem[] = [...TABS, BROKERAGE_TAB]
@@ -420,6 +423,8 @@ export function AppShell() {
         ? accountCount
           ? `${accountCount} ${accountCount === 1 ? 'account' : 'accounts'}`
           : 'Cash, brokers, property, and loans'
+        : location.pathname.startsWith('/goals')
+          ? 'Targets, dates, and what it takes each month'
         : location.pathname.startsWith('/brokerage')
           ? 'Orders, activity, and SnapTrade accounts'
           : location.pathname.startsWith('/cashflow')
@@ -553,6 +558,7 @@ export function AppShell() {
                 />
                 <Route path="/cashflow" element={<Cashflow />} />
                 <Route path="/subscriptions" element={<Subscriptions />} />
+                <Route path="/goals" element={<Goals />} />
                 <Route path="/accounts" element={<Accounts />} />
                 <Route path="/brokerage" element={<Brokerage />} />
                 <Route path="/wallets" element={<Navigate to="/accounts" replace />} />

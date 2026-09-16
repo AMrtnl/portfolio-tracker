@@ -44,6 +44,7 @@ import {
   startHistoryScheduler,
 } from './analytics';
 import { createMoneyRouter } from './money';
+import { createGoalsRouter } from './goals';
 import { FxConverter } from './market/fx';
 import { DISPLAY_CURRENCIES, HEADLINE_METRICS, getSettings, updateSettings } from './settings';
 
@@ -682,6 +683,7 @@ app.get('/api/portfolio', async (_req: Request, res: Response) => {
 app.use('/api/analytics', createAnalyticsRouter(store));
 app.use('/api/market', createMarketRouter(store));
 app.use('/api/money', createMoneyRouter());
+app.use('/api/goals', createGoalsRouter());
 
 // ---- Static client (production single-service deploy) ----
 

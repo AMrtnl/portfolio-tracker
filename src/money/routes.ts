@@ -179,6 +179,7 @@ export function createMoneyRouter(): Router {
     const byKey = new Map(buckets.map((b) => [b.key, b]));
     const latest = buckets[buckets.length - 1];
     const spendByCat = new Map<string, number>();
+    const windowByCat = new Map<string, number>();
 
     for (const t of moneyStore.listTransactions()) {
       const key = t.date.slice(0, 7);
@@ -186,10 +187,17 @@ export function createMoneyRouter(): Router {
       if (!bucket) continue;
       if (t.kind === 'income') bucket.income += t.amount;
       else bucket.spend += t.amount;
-      if (t.kind === 'spend' && key === latest.key) {
-        spendByCat.set(t.category, (spendByCat.get(t.category) || 0) + t.amount);
+      if (t.kind === 'spend') {
+        windowByCat.set(t.category, (windowByCat.get(t.category) || 0) + t.amount);
+        if (key === latest.key) {
+          spendByCat.set(t.category, (spendByCat.get(t.category) || 0) + t.amount);
+        }
       }
     }
+
+    // Monthly average per category over the window, for budget targets.
+    const averages: Record<string, number> = {};
+    for (const [id, total] of windowByCat) averages[id] = total / months;
 
     const categories = [...spendByCat.entries()]
       .map(([id, amount]) => {
@@ -203,9 +211,27 @@ export function createMoneyRouter(): Router {
     res.json({
       months: buckets,
       categories,
+      averages,
       hasActivity,
       retrievedAt: new Date().toISOString(),
     });
+  });
+
+  router.get('/budgets', (_req: Request, res: Response) => {
+    res.json({ budgets: moneyStore.getBudgets() });
+  });
+
+  /** PUT { budgets: { [categoryId]: monthlyAmount | null } } — null clears. */
+  router.put('/budgets', (req: Request, res: Response) => {
+    const body = req.body as { budgets?: Record<string, number | null> };
+    if (!body?.budgets || typeof body.budgets !== 'object' || Array.isArray(body.budgets)) {
+      return res.status(400).json({ error: 'budgets must be an object of category → amount' });
+    }
+    try {
+      res.json({ budgets: moneyStore.setBudgets(body.budgets) });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
+    }
   });
 
   router.get('/subscriptions', (_req: Request, res: Response) => {
