@@ -6,6 +6,8 @@ import {
   spendCat,
 } from './categories';
 import { moneyStore } from './store';
+import { detectRecurring, suggestCategory } from './detect';
+import { parseStatement } from './import';
 import type { BillingCycle, TxKind } from './types';
 
 const MONTH_LABELS = [
@@ -47,6 +49,13 @@ export function createMoneyRouter(): Router {
     res.json({ transactions: rows });
   });
 
+  /** Category guess for a note, so the form can fill itself in as you type. */
+  router.get('/categorize', (req: Request, res: Response) => {
+    const note = typeof req.query.note === 'string' ? req.query.note : '';
+    const kind: TxKind = req.query.kind === 'income' ? 'income' : 'spend';
+    res.json({ category: suggestCategory(note, kind) });
+  });
+
   router.post('/transactions', (req: Request, res: Response) => {
     const body = req.body as {
       date?: string;
@@ -55,12 +64,16 @@ export function createMoneyRouter(): Router {
       category?: string;
       note?: string;
     };
+    const kind: TxKind = body.kind || 'spend';
+    const wantsGuess = !body.category || body.category === 'auto';
     try {
       const row = moneyStore.addTransaction({
         date: body.date || new Date().toISOString().slice(0, 10),
-        kind: body.kind || 'spend',
+        kind,
         amount: Number(body.amount),
-        category: body.category || 'other',
+        category: wantsGuess
+          ? suggestCategory(body.note, kind) ?? (kind === 'income' ? 'other-income' : 'other')
+          : String(body.category),
         note: body.note,
       });
       res.status(201).json(row);
@@ -69,6 +82,53 @@ export function createMoneyRouter(): Router {
         error: err instanceof Error ? err.message : 'Invalid transaction',
       });
     }
+  });
+
+  /**
+   * Bank statement import: paste or upload a CSV, get transactions back
+   * already categorised. Rows identical to an existing transaction (same
+   * day, kind, amount, and note) are skipped so re-importing is safe.
+   */
+  router.post('/import', (req: Request, res: Response) => {
+    const body = req.body as { text?: string };
+    const text = typeof body.text === 'string' ? body.text : '';
+    if (!text.trim()) {
+      return res.status(400).json({ error: 'Paste or upload a CSV statement first.' });
+    }
+    if (text.length > 2_000_000) {
+      return res.status(413).json({ error: 'That file is too large — split it by month.' });
+    }
+    const parsed = parseStatement(text);
+    const existing = new Set(
+      moneyStore
+        .listTransactions()
+        .map((t) => `${t.date}|${t.kind}|${t.amount}|${(t.note || '').toLowerCase()}`),
+    );
+    let imported = 0;
+    let skipped = 0;
+    for (const row of parsed.rows) {
+      const sig = `${row.date}|${row.kind}|${row.amount}|${row.note.toLowerCase()}`;
+      if (existing.has(sig)) {
+        skipped++;
+        continue;
+      }
+      moneyStore.addTransaction({
+        date: row.date,
+        kind: row.kind,
+        amount: row.amount,
+        category: row.category,
+        note: row.note || undefined,
+      });
+      existing.add(sig);
+      imported++;
+    }
+    res.json({
+      imported,
+      skipped,
+      unreadable: parsed.errors.length,
+      errors: parsed.errors.slice(0, 5),
+      mapping: parsed.mapping,
+    });
   });
 
   router.delete('/transactions/:id', (req: Request, res: Response) => {
@@ -138,6 +198,17 @@ export function createMoneyRouter(): Router {
     res.json({
       subscriptions: moneyStore.listSubscriptions(),
       categories: SUB_CATEGORIES,
+    });
+  });
+
+  /** Recurring charges spotted in the ledger that are not tracked yet. */
+  router.get('/subscriptions/suggestions', (_req: Request, res: Response) => {
+    res.json({
+      suggestions: detectRecurring(
+        moneyStore.listTransactions(),
+        moneyStore.listSubscriptions(),
+      ),
+      retrievedAt: new Date().toISOString(),
     });
   });
 
