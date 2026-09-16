@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { CaretRight } from '@phosphor-icons/react'
 import {
   useAllocation,
   useBenchmark,
@@ -20,6 +20,7 @@ import {
   SplitBar,
 } from '@/wealth/charts'
 import { useMoney } from '@/wealth/format'
+import { Money } from '@/wealth/Money'
 import { useQuickLook } from '@/wealth/QuickLook'
 import { toSplitRows } from '@/wealth/Insights'
 import { FLAGS, LogoAvatar } from '@/wealth/logos'
@@ -61,7 +62,7 @@ function monthLabel(month: string): string {
 }
 
 export function Analysis() {
-  const { chf, pctStr } = useMoney()
+  const { chf, pctStr, unit } = useMoney()
   const { look } = useQuickLook()
   const [range, setRange] = useState<(typeof RANGES)[number]['k']>('3M')
   const [cut, setCut] = useState<AllocationDimension>('assetClass')
@@ -167,7 +168,10 @@ export function Analysis() {
             <div className="a-caption">
               {cur != null && points[cur] ? longDate(points[cur].date) : 'Portfolio value'}
             </div>
-            <div className="a-value">{chf(shown, false, currency)}</div>
+            <div className="a-value">
+              <span className="a-unit">{unit()}</span>
+              <Money value={shown} currency={currency} animated={cur == null} />
+            </div>
             {cur == null && periodDelta != null ? (
               <div className={`a-delta ${periodDelta >= 0 ? 'gain' : 'loss'}`}>
                 {chf(periodDelta, true, currency)}
@@ -217,11 +221,11 @@ export function Analysis() {
       <div className="a-stats">
         <div className="a-stat">
           <span>Invested</span>
-          <b>{chf(overview?.investedValue ?? total, false, currency)}</b>
+          <b><Money value={overview?.investedValue ?? total} currency={currency} /></b>
         </div>
         <div className="a-stat">
           <span>Cash</span>
-          <b>{chf(overview?.cashValue ?? 0, false, currency)}</b>
+          <b><Money value={overview?.cashValue ?? 0} currency={currency} /></b>
         </div>
         <div className="a-stat">
           <span>Unrealized P&L</span>
@@ -296,7 +300,7 @@ export function Analysis() {
                           <span className="a-anum">
                             <b>{chf(r.amount, false, currency)}</b>
                           </span>
-                          <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
+                          <CaretRight size={15} className="a-rowchev" />
                         </button>
                       )
                     })}
@@ -374,7 +378,7 @@ export function Analysis() {
                     <b>{chf(p.value, false, currency)}</b>
                     <em>{share.toFixed(1)}%</em>
                   </span>
-                  <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
+                  <CaretRight size={15} className="a-rowchev" />
                 </button>
               )
             })}

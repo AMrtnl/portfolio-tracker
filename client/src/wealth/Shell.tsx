@@ -7,20 +7,7 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom'
-import {
-  ArrowLeftRight,
-  Briefcase,
-  CalendarDays,
-  ChevronsLeft,
-  ChevronsRight,
-  Eye,
-  EyeOff,
-  Layers,
-  PieChart,
-  RotateCw,
-  Search,
-  Wallet,
-} from 'lucide-react'
+import { ArrowsLeftRight, Briefcase, CalendarBlank, CaretDoubleLeft, CaretDoubleRight, Eye, EyeSlash, Stack, ChartPieSlice, ArrowsClockwise, MagnifyingGlass, Wallet, GearSix } from '@phosphor-icons/react'
 import { Dashboard } from '@/pages/Dashboard'
 import { Accounts } from '@/pages/Accounts'
 import { Brokerage } from '@/pages/Brokerage'
@@ -30,6 +17,7 @@ import { Cashflow } from '@/pages/Cashflow'
 import { Subscriptions } from '@/pages/Subscriptions'
 import { useWalletStatus } from '@/hooks/useWalletStatus'
 import { useAccounts, type Account } from '@/hooks/useAccounts'
+import { PreferencesSheet } from '@/wealth/PreferencesSheet'
 import { useSubscriptions } from '@/hooks/useMoneyLedger'
 import { usePrivacy } from '@/wealth/PrivacyContext'
 import { useDemo } from '@/wealth/DemoContext'
@@ -64,10 +52,10 @@ function titleFor(pathname: string): string {
 
 const TABS: TabItem[] = [
   { to: '/', label: 'Wealth', Icon: Wallet, end: true, keys: 'home dashboard net worth overview' },
-  { to: '/analysis', label: 'Analysis', Icon: PieChart, keys: 'allocation income benchmark concentration' },
-  { to: '/cashflow', label: 'Cash flow', Icon: ArrowLeftRight, keys: 'cashflow transactions spending income' },
-  { to: '/subscriptions', label: 'Subscriptions', Icon: CalendarDays, keys: 'recurring charges calendar' },
-  { to: '/accounts', label: 'Accounts', Icon: Layers, keys: 'banks wallets connections property loans' },
+  { to: '/analysis', label: 'Analysis', Icon: ChartPieSlice, keys: 'allocation income benchmark concentration' },
+  { to: '/cashflow', label: 'Cash flow', Icon: ArrowsLeftRight, keys: 'cashflow transactions spending income' },
+  { to: '/subscriptions', label: 'Subscriptions', Icon: CalendarBlank, keys: 'recurring charges calendar' },
+  { to: '/accounts', label: 'Accounts', Icon: Stack, keys: 'banks wallets connections property loans' },
 ]
 
 const BROKERAGE_TAB: TabItem = {
@@ -101,7 +89,7 @@ function RailTab({ tab }: { tab: TabItem }) {
     >
       {({ isActive }) => (
         <>
-          <Icon size={21} strokeWidth={isActive ? 2.4 : 1.9} />
+          <Icon size={21} weight={isActive ? 'duotone' : 'regular'} />
           <span>{label}</span>
         </>
       )}
@@ -218,7 +206,7 @@ function TopSearch() {
         group: 'Pages',
         label: t.label,
         sub: 'Page',
-        icon: <Icon size={17} strokeWidth={2} />,
+        icon: <Icon size={17} />,
         run: () => {
           navigate(t.to)
           done()
@@ -318,7 +306,7 @@ function TopSearch() {
           items[hi]?.run()
         }}
       >
-        <Search size={15} strokeWidth={2.2} aria-hidden />
+        <MagnifyingGlass size={15} aria-hidden />
         <input
           ref={inputRef}
           type="search"
@@ -395,6 +383,7 @@ export function AppShell() {
   const { hidden, toggle } = usePrivacy()
   const { enabled: sampleOn, toggle: toggleSample } = useDemo()
   const [syncOpen, setSyncOpen] = useState(false)
+  const [prefsOpen, setPrefsOpen] = useState(false)
   const [railMin, setRailMin] = useState(
     () => localStorage.getItem('meridian.railMin') === '1',
   )
@@ -475,9 +464,9 @@ export function AppShell() {
           title={railMin ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {railMin ? (
-            <ChevronsRight size={19} strokeWidth={2} />
+            <CaretDoubleRight size={19} />
           ) : (
-            <ChevronsLeft size={19} strokeWidth={2} />
+            <CaretDoubleLeft size={19} />
           )}
           <span>Collapse</span>
         </button>
@@ -505,9 +494,9 @@ export function AppShell() {
               aria-label={hidden ? 'Show balances' : 'Hide balances'}
             >
               {hidden ? (
-                <EyeOff size={17} strokeWidth={2} />
+                <EyeSlash size={17} />
               ) : (
-                <Eye size={17} strokeWidth={2} />
+                <Eye size={17} />
               )}
             </button>
             <button
@@ -516,8 +505,16 @@ export function AppShell() {
               onClick={() => setSyncOpen(true)}
               aria-label="Connections"
             >
-              <RotateCw size={17} strokeWidth={2} />
+              <ArrowsClockwise size={17} />
               {needsAttention && <i className="a-navbadge" />}
+            </button>
+            <button
+              type="button"
+              className="a-navbtn"
+              onClick={() => setPrefsOpen(true)}
+              aria-label="Preferences"
+            >
+              <GearSix size={17} />
             </button>
           </div>
         </header>
@@ -573,6 +570,7 @@ export function AppShell() {
       </div>
 
       <SyncSheet open={syncOpen} onClose={() => setSyncOpen(false)} />
+      <PreferencesSheet open={prefsOpen} onClose={() => setPrefsOpen(false)} />
 
       <TabBar />
     </div>

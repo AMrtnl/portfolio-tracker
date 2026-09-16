@@ -41,6 +41,8 @@ import {
   startHistoryScheduler,
 } from './analytics';
 import { createMoneyRouter } from './money';
+import { FxConverter } from './market/fx';
+import { DISPLAY_CURRENCIES, HEADLINE_METRICS, getSettings, updateSettings } from './settings';
 
 dotenv.config();
 
@@ -133,6 +135,35 @@ app.use('/api', requireApiAuth);
 
 app.get('/api/providers', (_req: Request, res: Response) => {
   res.json({ providers: listProviders() });
+});
+
+// ---- preferences ----
+
+/**
+ * Settings plus the FX rates the client needs to show account balances
+ * (stored in USD) in the display currency. `rates[X]` is how many units of
+ * the display currency one unit of X buys; a missing key means no rate.
+ */
+app.get('/api/settings', async (_req: Request, res: Response) => {
+  const settings = getSettings();
+  const fx = await FxConverter.load(settings.displayCurrency, [...DISPLAY_CURRENCIES]);
+  res.json({
+    ...settings,
+    currencies: DISPLAY_CURRENCIES,
+    metrics: HEADLINE_METRICS,
+    rates: fx.ratesUsed(),
+    warnings: fx.warnings,
+  });
+});
+
+app.put('/api/settings', (req: Request, res: Response) => {
+  try {
+    const next = updateSettings(req.body || {});
+    invalidatePortfolioSnapshot();
+    res.json(next);
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : 'Invalid settings' });
+  }
 });
 
 // ---- accounts ----

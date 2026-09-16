@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { AlertTriangle, Info, XOctagon } from 'lucide-react'
+import { Warning, Info, WarningOctagon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 
 /* ------------------------------------------------------------------ *
@@ -21,13 +21,13 @@ const TONE: Record<
   },
   warn: {
     wrap: 'ui-banner warn border-0',
-    icon: AlertTriangle,
+    icon: Warning,
     iconClass: 'text-warn',
     role: 'alert',
   },
   error: {
     wrap: 'ui-banner warn border-0',
-    icon: XOctagon,
+    icon: WarningOctagon,
     iconClass: 'text-loss',
     role: 'alert',
   },
@@ -298,7 +298,7 @@ export function PartialBadge({
         className,
       )}
     >
-      <AlertTriangle className="h-3 w-3" aria-hidden />
+      <Warning className="h-3 w-3" aria-hidden />
       {children}
     </span>
   )

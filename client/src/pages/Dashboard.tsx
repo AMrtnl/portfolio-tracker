@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, ChevronRight, Plus } from 'lucide-react'
+import { Check, CaretRight, Plus } from '@phosphor-icons/react'
 import { useSubscriptions, useTransactions } from '@/hooks/useMoneyLedger'
+import { useSettings } from '@/hooks/useSettings'
+import { HEADLINE_COPY } from '@/wealth/PreferencesSheet'
 import {
   useAllocation,
   useConcentration,
@@ -17,6 +19,7 @@ import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccoun
 import { CandleChart, Ring, SplitBar, StackedChart, type Candle, type ChartSeries } from '@/wealth/charts'
 import { useQuickLook } from '@/wealth/QuickLook'
 import { useMoney } from '@/wealth/format'
+import { Money } from '@/wealth/Money'
 import { HoldingsGroups } from '@/wealth/HoldingsGroups'
 import { toSplitRows } from '@/wealth/Insights'
 import { CLASSES, GEO_COLORS, RANGES, SECTOR_COLORS, classOf } from '@/wealth/tokens'
@@ -96,13 +99,13 @@ function SetupChecklist({
       {steps.map((s, i) => (
         <Link key={s.title} to={s.to} className={`a-step ${s.done ? 'done' : ''}`}>
           <span className="a-stepnum">
-            {s.done ? <Check size={14} strokeWidth={3} /> : i + 1}
+            {s.done ? <Check size={14} /> : i + 1}
           </span>
           <span className="a-atext">
             <b>{s.title}</b>
             <em>{s.sub}</em>
           </span>
-          <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
+          <CaretRight size={15} className="a-rowchev" />
         </Link>
       ))}
     </section>
@@ -128,6 +131,8 @@ export function Dashboard() {
   const { data: news } = useNews(6)
   const { data: txs } = useTransactions()
   const { data: subData } = useSubscriptions()
+  const { data: settings } = useSettings()
+  const metric = settings?.headlineMetric ?? 'net'
   const realAccounts = (accounts ?? []).filter((a) => !isDemoId(a.id)).length
   const realTxs = (txs ?? []).filter((t) => !isDemoId(t.id)).length
   const realSubs = (subData?.subscriptions ?? []).filter((s) => !isDemoId(s.id)).length
@@ -215,10 +220,26 @@ export function Dashboard() {
     [netSeries],
   )
 
-  const n = Math.max(netSeries.length, 1)
+  const liquidNow =
+    (classTotals.cash || 0) +
+    (classTotals.stocks || 0) +
+    (classTotals.bonds || 0) +
+    (classTotals.crypto || 0)
+  const liquidShare = grossNow ? liquidNow / grossNow : 0
+  // The headline follows the preference: net worth, liquid financial
+  // assets, or gross assets — each scrubbed along the same history.
+  const headlineSeries =
+    metric === 'net'
+      ? netSeries
+      : metric === 'gross'
+        ? assetSeries
+        : assetSeries.map((v) => v * liquidShare)
+  const n = Math.max(headlineSeries.length, 1)
   const idx = cur ?? n - 1
-  const net = netSeries[idx] ?? grossNow - debtNow
-  const start = netSeries[0] ?? net
+  const net =
+    headlineSeries[idx] ??
+    (metric === 'net' ? grossNow - debtNow : metric === 'gross' ? grossNow : liquidNow)
+  const start = headlineSeries[0] ?? net
   const delta = net - start
   const pct = start ? (delta / start) * 100 : 0
   const up = delta >= 0
@@ -240,11 +261,7 @@ export function Dashboard() {
     SECTOR_COLORS,
   )
   const top = concentration?.top?.[0] ?? (sampleOn ? DEMO_CONCENTRATION.top[0] : undefined)
-  const liquid =
-    (classTotals.cash || 0) +
-    (classTotals.stocks || 0) +
-    (classTotals.bonds || 0) +
-    (classTotals.crypto || 0)
+  const liquid = liquidNow
   const moverRows = [
     ...(movers?.gainers ?? []).slice(0, 3),
     ...(movers?.losers ?? []).slice(0, 3),
@@ -294,7 +311,7 @@ export function Dashboard() {
           see the layout filled in.
         </p>
         <Link to="/accounts" className="a-add">
-          <Plus size={17} strokeWidth={2.5} />
+          <Plus size={17} />
           Add account
         </Link>
       </>
@@ -335,11 +352,11 @@ export function Dashboard() {
         <div className="a-herotop">
           <div className="a-hero bare">
             <div className="a-caption">
-              {cur != null && points[cur] ? dates.long(cur) : 'Net worth'}
+              {cur != null && points[cur] ? dates.long(cur) : HEADLINE_COPY[metric].label}
             </div>
             <div className="a-value">
               <span className="a-unit">{unit(currency)}</span>
-              {chf(net, false, currency)}
+              <Money value={net} currency={currency} animated={cur == null} />
             </div>
             <div className={`a-delta ${up ? 'gain' : 'loss'}`}>
               {chf(delta, true, currency)} · {pctStr(pct)}
@@ -465,7 +482,7 @@ export function Dashboard() {
                   {chf(v, false, currency)} · {share.toFixed(0)}%
                 </em>
               </span>
-              <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
+              <CaretRight size={15} className="a-rowchev" />
             </button>
           )
         })}
@@ -474,15 +491,15 @@ export function Dashboard() {
       <div className="a-stats">
         <div className="a-stat">
           <span>Assets</span>
-          <b>{chf(grossNow, false, currency)}</b>
+          <b><Money value={grossNow} currency={currency} /></b>
         </div>
         <div className="a-stat">
           <span>Debt</span>
-          <b className="loss">{chf(-debtNow, false, currency)}</b>
+          <b className="loss"><Money value={-debtNow} currency={currency} /></b>
         </div>
         <div className="a-stat">
           <span>Today</span>
-          <b className={dayAbs >= 0 ? 'gain' : 'loss'}>{chf(dayAbs, true, currency)}</b>
+          <b className={dayAbs >= 0 ? 'gain' : 'loss'}><Money value={dayAbs} currency={currency} sign /></b>
         </div>
       </div>
 
@@ -640,7 +657,7 @@ export function Dashboard() {
       />
 
       <Link to="/accounts" className="a-add">
-        <Plus size={17} strokeWidth={2.5} />
+        <Plus size={17} />
         Add account
       </Link>
     </>

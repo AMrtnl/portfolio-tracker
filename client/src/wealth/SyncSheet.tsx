@@ -1,4 +1,4 @@
-import { Check, RotateCw, X } from 'lucide-react'
+import { Check, ArrowsClockwise, X } from '@phosphor-icons/react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { freshness, providerName, relativeTime } from '@/lib/utils'
@@ -19,14 +19,14 @@ function SyncDot({ account, spinning }: { account: Account; spinning: boolean })
   if (spinning) {
     return (
       <span className="s-dot spin">
-        <RotateCw size={13} strokeWidth={2.6} />
+        <ArrowsClockwise size={13} />
       </span>
     )
   }
   if (account.status === 'error') {
     return (
       <span className="s-dot err">
-        <X size={13} strokeWidth={3} />
+        <X size={13} />
       </span>
     )
   }
@@ -36,7 +36,7 @@ function SyncDot({ account, spinning }: { account: Account; spinning: boolean })
   if (account.status === 'connected') {
     return (
       <span className="s-dot ok">
-        <Check size={13} strokeWidth={3} />
+        <Check size={13} />
       </span>
     )
   }

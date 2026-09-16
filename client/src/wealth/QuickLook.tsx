@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, ChevronRight } from 'lucide-react'
+import { ArrowUpRight, CaretRight } from '@phosphor-icons/react'
 import { FloatSheet } from '@/wealth/FloatSheet'
 import { useAccounts, type Account } from '@/hooks/useAccounts'
 import {
@@ -19,6 +19,7 @@ import {
 import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccount'
 import { DetailChart } from '@/wealth/charts'
 import { useMoney } from '@/wealth/format'
+import { Money } from '@/wealth/Money'
 import { LogoAvatar } from '@/wealth/logos'
 import { CLASS_BY_KEY, classOf, type AssetClassId } from '@/wealth/tokens'
 import { useMergedHoldings } from '@/wealth/useMergedHoldings'
@@ -72,7 +73,7 @@ function HoldingRow({
       <span className="a-anum">
         <b>{chf(h.marketValue, false, h.currency || currency)}</b>
       </span>
-      <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
+      <CaretRight size={15} className="a-rowchev" />
     </button>
   )
 }
@@ -136,7 +137,7 @@ function ClassLook({
         <div className="a-caption">
           {cur != null && points[cur] ? shortDate(points[cur].date) : 'Value'}
         </div>
-        <div className="a-value">{chf(shown)}</div>
+        <div className="a-value"><Money value={shown} animated={cur == null} /></div>
       </div>
 
       {values.length >= 2 && (
@@ -168,7 +169,7 @@ function ClassLook({
                 <span className="a-anum">
                   <b>{chf(accountValue(a))}</b>
                 </span>
-                <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
+                <CaretRight size={15} className="a-rowchev" />
               </button>
             ))}
           </section>
@@ -193,7 +194,7 @@ function ClassLook({
 
       <Link to="/accounts" className="a-qlink" onClick={onClose}>
         Manage accounts
-        <ArrowUpRight size={15} strokeWidth={2.5} />
+        <ArrowUpRight size={15} />
       </Link>
     </>
   )
@@ -208,7 +209,6 @@ function AccountLook({
   onLook: (t: QuickLookTarget) => void
   onClose: () => void
 }) {
-  const { chf } = useMoney()
   const { data: accounts } = useAccounts()
   const holdings = useMergedHoldings()
 
@@ -246,7 +246,7 @@ function AccountLook({
       <div className="a-hero bare">
         <div className="a-caption">Balance</div>
         <div className={`a-value ${liability ? 'loss' : ''}`}>
-          {liability ? `−${chf(value)}` : chf(value, false, account.currency)}
+          <Money value={liability ? -value : value} currency={liability ? 'USD' : account.currency} />
         </div>
         {account.status === 'error' ? (
           <div className="a-delta loss">{account.lastError || 'Sync failed'}</div>
@@ -300,7 +300,7 @@ function AccountLook({
 
       <Link to="/accounts" className="a-qlink" onClick={onClose}>
         Manage in Accounts
-        <ArrowUpRight size={15} strokeWidth={2.5} />
+        <ArrowUpRight size={15} />
       </Link>
     </>
   )
@@ -350,7 +350,9 @@ function HoldingLook({
         <div className="a-caption">
           {cur != null && points[cur] ? shortDate(points[cur].date) : 'Price'}
         </div>
-        <div className="a-value">{price != null ? chf(price, false, currency) : '—'}</div>
+        <div className="a-value">
+          {price != null ? <Money value={price} currency={currency} animated={cur == null} /> : '—'}
+        </div>
         {cur == null && dayPct != null && (
           <div className={`a-delta ${dayPct >= 0 ? 'gain' : 'loss'}`}>
             {pctStr(dayPct)} today
@@ -415,7 +417,7 @@ function HoldingLook({
         onClick={onClose}
       >
         Open full view
-        <ArrowUpRight size={15} strokeWidth={2.5} />
+        <ArrowUpRight size={15} />
       </Link>
     </>
   )

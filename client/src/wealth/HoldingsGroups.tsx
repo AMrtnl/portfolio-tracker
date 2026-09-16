@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react'
+import { CaretRight } from '@phosphor-icons/react'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useMoney } from '@/wealth/format'
 import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccount'
@@ -69,9 +69,8 @@ export function HoldingsGroups({
                 <b>{chf(sum, false, currency)}</b>
                 <em>{share.toFixed(0)}%</em>
               </span>
-              <ChevronRight
+              <CaretRight
                 size={16}
-                strokeWidth={2.5}
                 className={`a-chev ${open ? 'open' : ''}`}
               />
             </button>
@@ -105,7 +104,7 @@ export function HoldingsGroups({
                     <span className="a-anum">
                       <b>{chf(accountValue(a), false, currency)}</b>
                     </span>
-                    <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
+                    <CaretRight size={15} className="a-rowchev" />
                   </button>
                 ))}
               </div>
@@ -135,9 +134,8 @@ export function HoldingsGroups({
                   {loans.length} {loans.length === 1 ? 'account' : 'accounts'}
                 </em>
               </span>
-              <ChevronRight
+              <CaretRight
                 size={16}
-                strokeWidth={2.5}
                 className={`a-chev ${debtOpen ? 'open' : ''}`}
               />
             </button>
@@ -162,7 +160,7 @@ export function HoldingsGroups({
                     <span className="a-anum">
                       <b className="loss">−{chf(accountValue(l), false, currency)}</b>
                     </span>
-                    <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
+                    <CaretRight size={15} className="a-rowchev" />
                   </button>
                 ))}
               </div>
@@ -199,7 +197,7 @@ export function HoldingsGroups({
                       {pl == null ? '—' : pctStr(pl)}
                     </em>
                   </span>
-                  <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
+                  <CaretRight size={15} className="a-rowchev" />
                 </button>
               )
             })}

@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { ChevronLeft, X } from 'lucide-react'
+import { CaretLeft, X } from '@phosphor-icons/react'
 
 /**
  * Centered floating sheet over a blurred backdrop — the one modal chrome
@@ -51,7 +51,7 @@ export function FloatSheet({
         <header className="a-qhead">
           {onBack ? (
             <button type="button" className="a-back" onClick={onBack}>
-              <ChevronLeft size={19} strokeWidth={2.5} />
+              <CaretLeft size={19} />
               Back
             </button>
           ) : title ? (
@@ -61,7 +61,7 @@ export function FloatSheet({
           )}
           {onBack && title ? <h2 className="a-qtitle mid">{title}</h2> : null}
           <button type="button" className="a-navbtn" onClick={onClose} aria-label="Close">
-            <X size={16} strokeWidth={2.5} />
+            <X size={16} />
           </button>
         </header>
         {children}

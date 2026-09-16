@@ -49,7 +49,7 @@
 }
 .a-large {
   font-family: var(--font-display);
-  font-size: 32px; font-weight: 800; letter-spacing: -.03em; margin: 0;
+  font-size: 30px; font-weight: 700; letter-spacing: -.028em; margin: 0;
 }
 .a-navbtns { display: flex; gap: 8px; align-items: center; }
 .a-navbtn {
@@ -70,10 +70,11 @@
 .a-hero { padding: 0 16px 4px; }
 .a-caption { font-size: 13px; font-weight: 600; color: rgba(235,235,245,.55); height: 17px; }
 .a-value {
-  font-size: 40px; font-weight: 800; letter-spacing: -.035em; line-height: 1.08;
+  font-size: 40px; font-weight: 700; letter-spacing: -.03em; line-height: 1.08;
   margin-top: 3px; display: flex; align-items: baseline; gap: 8px;
   font-variant-numeric: tabular-nums;
 }
+.a-value number-flow-react { --number-flow-mask-height: .2em; }
 .a-unit { font-size: 17px; font-weight: 700; color: rgba(235,235,245,.42); }
 .a-delta {
   margin-top: 6px; font-size: 15px; font-weight: 700;
@@ -362,6 +363,8 @@ button.a-arow { cursor: pointer; }
 }
 .a-arow.on { background: rgba(10,132,255,.12); }
 .a-arow.on:hover { background: rgba(10,132,255,.16); }
+.a-rowcheck { color: #0A84FF; flex: none; }
+.a-arow.tap:disabled { cursor: default; opacity: .7; }
 .a-header.sm { margin: 14px 0 6px; font-size: 11px; }
 .a-rowchev { color: rgba(235,235,245,.25); flex: none; margin-left: -4px; }
 

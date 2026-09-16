@@ -2,27 +2,7 @@ import * as React from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import {
-  Eye,
-  EyeOff,
-  Plus,
-  Trash2,
-  Pencil,
-  Check,
-  X,
-  Loader2,
-  ArrowRight,
-  RefreshCw,
-  Wallet,
-  Building2,
-  PenLine,
-  ExternalLink,
-  MoreHorizontal,
-  Landmark,
-  Home,
-  Umbrella,
-  CreditCard,
-} from 'lucide-react'
+import { Eye, EyeSlash, Plus, Trash, PencilSimple, Check, X, CircleNotch, ArrowRight, ArrowsClockwise, Wallet, Buildings, PencilSimpleLine, ArrowSquareOut, DotsThree, Bank, House, Umbrella, CreditCard } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Amount } from '@/components/ui/Amount'
 import { Banner, SkeletonRows } from '@/components/ui/states'
@@ -173,7 +153,7 @@ function CryptoForm({ onDone }: { onDone?: () => void }) {
             aria-label={showMnemonic ? 'Hide recovery phrase' : 'Show recovery phrase'}
           >
             {showMnemonic ? (
-              <EyeOff className="h-4 w-4" aria-hidden />
+              <EyeSlash className="h-4 w-4" aria-hidden />
             ) : (
               <Eye className="h-4 w-4" aria-hidden />
             )}
@@ -191,7 +171,7 @@ function CryptoForm({ onDone }: { onDone?: () => void }) {
         disabled={wordCount < 12 || addAccount.isPending}
       >
         {addAccount.isPending ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+          <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
         ) : (
           <ArrowRight className="mr-2 h-4 w-4" aria-hidden />
         )}
@@ -371,7 +351,7 @@ function ManualForm({ onDone }: { onDone?: () => void }) {
         disabled={!label.trim() || addManual.isPending}
       >
         {addManual.isPending ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+          <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
         ) : (
           <ArrowRight className="mr-2 h-4 w-4" aria-hidden />
         )}
@@ -533,7 +513,7 @@ function SimpleBalanceForm({
       {add.isError && <FormError error={add.error} fallback="Could not save this account." />}
       <Button type="submit" className="h-11 w-full" disabled={!label.trim() || add.isPending}>
         {add.isPending ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+          <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
         ) : (
           <ArrowRight className="mr-2 h-4 w-4" aria-hidden />
         )}
@@ -659,9 +639,9 @@ SNAPTRADE_CONSUMER_KEY=…`}
             }
           >
             {importAccts.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+              <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
             ) : (
-              <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
+              <ArrowsClockwise className="mr-2 h-4 w-4" aria-hidden />
             )}
             Import connected accounts
           </Button>
@@ -680,9 +660,9 @@ SNAPTRADE_CONSUMER_KEY=…`}
             }
           >
             {connect.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+              <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
             ) : (
-              <ExternalLink className="mr-2 h-4 w-4" aria-hidden />
+              <ArrowSquareOut className="mr-2 h-4 w-4" aria-hidden />
             )}
             Add or repair brokerage
           </Button>
@@ -737,7 +717,7 @@ function AddChooser({
       subtitle: snapConfigured
         ? 'Import accounts already connected in SnapTrade'
         : 'SnapTrade — needs API keys first',
-      icon: Building2,
+      icon: Buildings,
       color: '#FFD84D',
       badge: snapConfigured ? 'Ready' : 'Needs keys',
       badgeTone: snapConfigured ? 'gain' : 'warn',
@@ -756,7 +736,7 @@ function AddChooser({
       id: 'cash',
       title: 'Cash',
       subtitle: 'Checking, savings, or a wallet of cash',
-      icon: Landmark,
+      icon: Bank,
       color: '#4BD57E',
     },
     {
@@ -770,7 +750,7 @@ function AddChooser({
       id: 'estate',
       title: 'Real estate',
       subtitle: 'A home or property at estimated value',
-      icon: Home,
+      icon: House,
       color: '#FF5C48',
     },
     {
@@ -784,7 +764,7 @@ function AddChooser({
       id: 'manual',
       title: 'Holdings by hand',
       subtitle: 'Tickers, quantities, and prices you enter yourself',
-      icon: PenLine,
+      icon: PencilSimpleLine,
       color: '#3ABEFF',
     },
   ]
@@ -800,7 +780,7 @@ function AddChooser({
         className="a-av"
         style={{ background: `${opt.color}22`, color: opt.color }}
       >
-        <opt.icon size={16} strokeWidth={2.2} aria-hidden />
+        <opt.icon size={16} aria-hidden />
       </span>
       <span className="a-atext">
         <b>{opt.title}</b>
@@ -809,7 +789,7 @@ function AddChooser({
       {opt.badge && (
         <span className={`ui-tag ${opt.badgeTone ?? 'flat'}`}>{opt.badge}</span>
       )}
-      <ArrowRight size={15} strokeWidth={2.5} className="a-rowchev" aria-hidden />
+      <ArrowRight size={15} className="a-rowchev" aria-hidden />
     </button>
   )
 
@@ -976,7 +956,7 @@ function AccountRow({ account }: { account: Account }) {
             disabled={remove.isPending}
           >
             {remove.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              <CircleNotch className="h-3.5 w-3.5 animate-spin" aria-hidden />
             ) : (
               'Yes'
             )}
@@ -998,9 +978,9 @@ function AccountRow({ account }: { account: Account }) {
               aria-label={`Actions for ${account.label}`}
             >
               {sync.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                <CircleNotch className="h-4 w-4 animate-spin" aria-hidden />
               ) : (
-                <MoreHorizontal className="h-4 w-4" aria-hidden />
+                <DotsThree className="h-4 w-4" aria-hidden />
               )}
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
@@ -1013,14 +993,14 @@ function AccountRow({ account }: { account: Account }) {
                   className={menuItemClass}
                   onSelect={() => sync.mutate(account.id)}
                 >
-                  <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                  <ArrowsClockwise className="h-3.5 w-3.5" aria-hidden />
                   Sync now
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className={menuItemClass}
                   onSelect={() => setEditing(true)}
                 >
-                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                  <PencilSimple className="h-3.5 w-3.5" aria-hidden />
                   Rename
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator className="my-1 h-px bg-border/70" />
@@ -1028,7 +1008,7 @@ function AccountRow({ account }: { account: Account }) {
                   className={cn(menuItemClass, 'text-destructive')}
                   onSelect={() => setConfirming(true)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  <Trash className="h-3.5 w-3.5" aria-hidden />
                   Disconnect
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
@@ -1159,7 +1139,7 @@ export function Accounts() {
               className="ui-btn tinted sm"
               onClick={() => setStep('chooser')}
             >
-              <Plus size={15} strokeWidth={2.5} />
+              <Plus size={15} />
               Add account
             </button>
           </div>
@@ -1187,7 +1167,7 @@ export function Accounts() {
           </div>
 
           <button type="button" className="a-add" onClick={() => setStep('chooser')}>
-            <Plus size={17} strokeWidth={2.5} />
+            <Plus size={17} />
             Add your first account
           </button>
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from '@phosphor-icons/react'
 import { NewsList } from '@/components/NewsList'
 import {
   useAnalyticsHoldings,
@@ -13,6 +13,7 @@ import {
 } from '@/hooks/useAnalytics'
 import { DetailChart } from '@/wealth/charts'
 import { useMoney } from '@/wealth/format'
+import { Money } from '@/wealth/Money'
 import { LogoAvatar } from '@/wealth/logos'
 
 const PRICE_RANGES: Array<{ value: PriceHistoryRange; label: string }> = [
@@ -104,7 +105,7 @@ function mergeLots(lots: AnalyticsHolding[]): AnalyticsHolding | null {
  * strip, your position, fills, and news for this symbol only.
  */
 export function HoldingDetail() {
-  const { chf, pctStr } = useMoney()
+  const { chf, pctStr, unit } = useMoney()
   const { symbol: raw } = useParams<{ symbol: string }>()
   const symbol = decodeURIComponent(raw || '').toUpperCase()
   const [range, setRange] = useState<PriceHistoryRange>('1y')
@@ -164,7 +165,7 @@ export function HoldingDetail() {
   return (
     <article>
       <Link to="/" className="a-back">
-        <ArrowLeft size={20} strokeWidth={2.5} />
+        <ArrowLeft size={20} />
         Wealth
       </Link>
 
@@ -190,8 +191,8 @@ export function HoldingDetail() {
           <div className="a-value">
             {price != null ? (
               <>
-                <span className="a-unit">{currency}</span>
-                {chf(price, false, currency)}
+                <span className="a-unit">{unit()}</span>
+                <Money value={price} currency={currency} animated={cur == null} />
               </>
             ) : (
               '—'

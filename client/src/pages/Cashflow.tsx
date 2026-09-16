@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Plus, Trash2, Upload } from 'lucide-react'
+import { Plus, Trash, UploadSimple } from '@phosphor-icons/react'
 import { FlowBars } from '@/wealth/charts'
 import { FloatSheet } from '@/wealth/FloatSheet'
 import { useMoney } from '@/wealth/format'
+import { Money } from '@/wealth/Money'
 import { GAIN, LOSS } from '@/wealth/tokens'
 import { isDemoId } from '@/wealth/demo'
 import {
@@ -43,7 +44,7 @@ function niceDate(iso: string): string {
 }
 
 export function Cashflow() {
-  const { chf } = useMoney()
+  const { chf, unit } = useMoney()
   const { data, isLoading } = useCashflow(6)
   const { data: cats } = useCategories()
   const { data: txs } = useTransactions()
@@ -147,7 +148,7 @@ export function Cashflow() {
       <div className="a-pagebar">
         <div className="a-header">Last 6 months</div>
         <button type="button" className="ui-btn tinted sm" onClick={() => setAdding(true)}>
-          <Plus size={15} strokeWidth={2.5} />
+          <Plus size={15} />
           Add transaction
         </button>
       </div>
@@ -160,8 +161,8 @@ export function Cashflow() {
                 {month ? `${month.label} · Saved` : 'Saved this month'}
               </div>
               <div className="a-value">
-                <span className="a-unit">USD</span>
-                {chf(saved)}
+                <span className="a-unit">{unit()}</span>
+                <Money value={saved} animated={cur == null} />
               </div>
               <div
                 className={`a-delta ${rate >= 0 ? 'gain' : 'loss'} ${!month?.income ? 'muted' : ''}`}
@@ -205,11 +206,11 @@ export function Cashflow() {
           <div className="a-stats">
             <div className="a-stat">
               <span>Income</span>
-              <b className="gain">{chf(month?.income ?? 0)}</b>
+              <b className="gain"><Money value={month?.income ?? 0} /></b>
             </div>
             <div className="a-stat">
               <span>Spent</span>
-              <b className="loss">{chf(month?.spend ?? 0)}</b>
+              <b className="loss"><Money value={month?.spend ?? 0} /></b>
             </div>
             <div className="a-stat">
               <span>vs. previous month</span>
@@ -280,7 +281,7 @@ export function Cashflow() {
                       aria-label={`Delete ${t.note || catName(t.category)}`}
                       onClick={() => delTx.mutate(t.id)}
                     >
-                      <Trash2 size={14} strokeWidth={2} />
+                      <Trash size={14} />
                     </button>
                   )}
                 </div>
@@ -364,7 +365,7 @@ export function Cashflow() {
               duplicates are skipped, so re-importing is safe.
             </p>
             <label className="ui-btn secondary sm a-filepick">
-              <Upload size={14} strokeWidth={2.4} />
+              <UploadSimple size={14} />
               Choose a CSV file
               <input type="file" accept=".csv,.txt,text/csv,text/plain" onChange={onFile} />
             </label>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ExternalLink, RotateCw } from 'lucide-react'
+import { ArrowSquareOut, ArrowsClockwise } from '@phosphor-icons/react'
 import { Banner, SkeletonRows } from '@/components/ui/states'
 import { groupByMonth, relativeTime } from '@/lib/utils'
 import { useMoney } from '@/wealth/format'
@@ -36,7 +36,7 @@ function SetupSteps() {
           className="ui-btn tinted sm"
         >
           Open
-          <ExternalLink size={13} strokeWidth={2.5} />
+          <ArrowSquareOut size={13} />
         </a>
       </div>
       <div className="a-step">
@@ -145,7 +145,7 @@ export function Brokerage() {
             aria-label="Refresh brokerage data"
             disabled={!configured || busy}
           >
-            <RotateCw size={15} strokeWidth={2.2} />
+            <ArrowsClockwise size={15} />
           </button>
           <button
             type="button"

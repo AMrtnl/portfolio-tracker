@@ -1,7 +1,8 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { CaretLeft, CaretRight, Plus, Sparkle, Trash } from '@phosphor-icons/react'
 import { FloatSheet } from '@/wealth/FloatSheet'
 import { useMoney } from '@/wealth/format'
+import { Money } from '@/wealth/Money'
 import { isDemoId } from '@/wealth/demo'
 import { LogoAvatar } from '@/wealth/logos'
 import {
@@ -48,7 +49,7 @@ function shortDate(iso: string): string {
 }
 
 export function Subscriptions() {
-  const { chf, hidden } = useMoney()
+  const { chf, hidden, unit } = useMoney()
   const { data } = useSubscriptions()
   const { data: cats } = useCategories()
   const { data: suggestions } = useRecurringSuggestions()
@@ -183,7 +184,7 @@ export function Subscriptions() {
       <div className="a-pagebar">
         <div className="a-header">Recurring charges</div>
         <button type="button" className="ui-btn tinted sm" onClick={() => openSheet()}>
-          <Plus size={15} strokeWidth={2.5} />
+          <Plus size={15} />
           Add subscription
         </button>
       </div>
@@ -192,7 +193,7 @@ export function Subscriptions() {
         <section className="a-detect" aria-label="Detected recurring charges">
           <div className="a-detecthead">
             <b>
-              <Sparkles size={14} strokeWidth={2.4} aria-hidden /> Detected in your
+              <Sparkle size={14} aria-hidden /> Detected in your
               transactions
             </b>
             <em>
@@ -238,8 +239,8 @@ export function Subscriptions() {
                   {MONTHS[month]} {year} · Due
                 </div>
                 <div className="a-value">
-                  <span className="a-unit">USD</span>
-                  {chf(monthTotal)}
+                  <span className="a-unit">{unit()}</span>
+                  <Money value={monthTotal} />
                 </div>
                 <div className="a-delta muted">
                   {monthCharges.length} {monthCharges.length === 1 ? 'charge' : 'charges'}
@@ -253,7 +254,7 @@ export function Subscriptions() {
                   onClick={() => step(-1)}
                   aria-label="Previous month"
                 >
-                  <ChevronLeft size={17} strokeWidth={2.5} />
+                  <CaretLeft size={17} />
                 </button>
                 <span className="a-calmonth">
                   {MONTHS[month].slice(0, 3)} {year}
@@ -264,7 +265,7 @@ export function Subscriptions() {
                   onClick={() => step(1)}
                   aria-label="Next month"
                 >
-                  <ChevronRight size={17} strokeWidth={2.5} />
+                  <CaretRight size={17} />
                 </button>
               </div>
             </div>
@@ -359,11 +360,11 @@ export function Subscriptions() {
           <div className="a-stats">
             <div className="a-stat">
               <span>Monthly</span>
-              <b>{chf(monthlyRun)}</b>
+              <b><Money value={monthlyRun} /></b>
             </div>
             <div className="a-stat">
               <span>Yearly</span>
-              <b>{chf(yearlyRun)}</b>
+              <b><Money value={yearlyRun} /></b>
             </div>
             <div className="a-stat">
               <span>Active</span>
@@ -403,7 +404,7 @@ export function Subscriptions() {
                       aria-label={`Remove ${s.name}`}
                       onClick={() => delSub.mutate(s.id)}
                     >
-                      <Trash2 size={14} strokeWidth={2} />
+                      <Trash size={14} />
                     </button>
                   )}
                 </div>
