@@ -69,7 +69,9 @@ app.set('trust proxy', 1);
 if (!IS_PRODUCTION) {
   app.use(cors());
 }
-app.use(express.json());
+// Statement imports post a whole CSV as text; the default 100 kB would
+// reject a yearly export before the handler could explain why.
+app.use(express.json({ limit: '2mb' }));
 
 const store = new Store();
 

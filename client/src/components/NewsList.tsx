@@ -14,7 +14,7 @@ export function NewsList({
   limit?: number
   title?: string
 }) {
-  const { data, isLoading } = useNews(limit, symbol)
+  const { data, isLoading, isError, refetch } = useNews(limit, symbol)
   const articles = data?.articles ?? []
 
   return (
@@ -29,6 +29,13 @@ export function NewsList({
                 <span className="ui-skel" style={{ width: '92%', height: 13, borderRadius: 6 }} />
               </div>
             ))}
+          </div>
+        ) : isError ? (
+          <div style={{ padding: '4px 4px 8px' }}>
+            <p className="a-insnote spaced">Market news could not be loaded.</p>
+            <button type="button" className="a-more" onClick={() => refetch()}>
+              Try again
+            </button>
           </div>
         ) : articles.length === 0 ? (
           <p className="a-insnote spaced" style={{ paddingBottom: 12 }}>

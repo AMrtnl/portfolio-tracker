@@ -65,6 +65,22 @@ describe('parseStatement', () => {
     expect(rows[1]).toMatchObject({ kind: 'income', amount: 5000, category: 'salary' });
   });
 
+  it('prefers an in/out column pair over a partial amount match', () => {
+    const csv = [
+      'Date;Description;Amount in;Amount out;Balance',
+      '01.09.2026;Migros;;54.30;1000.00',
+      '02.09.2026;Salary;5000.00;;6000.00',
+    ].join('\n');
+    const { rows, errors, mapping } = parseStatement(csv);
+    expect(errors).toEqual([]);
+    expect(mapping).toMatchObject({ credit: 2, debit: 3 });
+    expect(mapping.amount).toBeUndefined();
+    expect(rows.map((r) => [r.kind, r.amount])).toEqual([
+      ['spend', 54.3],
+      ['income', 5000],
+    ]);
+  });
+
   it('sniffs columns when there is no header', () => {
     const csv = ['16.09.2026;SBB CFF FFS;-3.20', '17.09.2026;Uber;-14.00'].join('\n');
     const { rows, errors } = parseStatement(csv);

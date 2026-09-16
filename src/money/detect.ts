@@ -86,13 +86,17 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Word-bounded alternation: "css" never matches "access", "bp" never "bpm". */
+function wordRegex(words: string[]): RegExp {
+  const alternatives = words.map((k) => escapeRegex(k.trim()));
+  return new RegExp(`(?:^|[^\\p{L}\\p{N}])(?:${alternatives.join('|')})(?![\\p{L}\\p{N}])`, 'iu');
+}
+
 const compiled = new Map<CategoryRule, RegExp>();
 function ruleRegex(rule: CategoryRule): RegExp {
   let rx = compiled.get(rule);
   if (!rx) {
-    const alternatives = rule.keywords.map((k) => escapeRegex(k.trim()));
-    // Word boundaries stop "css" matching "access" and "bp" matching "bpm".
-    rx = new RegExp(`(?:^|[^\\p{L}\\p{N}])(?:${alternatives.join('|')})(?![\\p{L}\\p{N}])`, 'iu');
+    rx = wordRegex(rule.keywords);
     compiled.set(rule, rx);
   }
   return rx;
@@ -129,27 +133,25 @@ export interface RecurringSuggestion {
   lastDate: string;
 }
 
-const TELECOM = ['swisscom', 'sunrise', 'salt', 'wingo', 'yallo', 'upc', 'init7', 'quickline'];
-const SOFTWARE = [
-  'adobe', 'microsoft', 'office', 'github', 'dropbox', 'notion', 'chatgpt', 'openai',
-  'icloud', 'google one', 'google storage', 'figma', '1password', 'setapp', 'jetbrains',
-];
-const MEDIA = [
+const TELECOM = wordRegex([
+  'swisscom', 'sunrise', 'salt', 'wingo', 'yallo', 'upc', 'init7', 'quickline',
+]);
+const SOFTWARE = wordRegex([
+  'adobe', 'microsoft', 'microsoft 365', 'office 365', 'github', 'dropbox', 'notion',
+  'chatgpt', 'openai', 'icloud', 'google one', 'google storage', 'figma', '1password',
+  'setapp', 'jetbrains',
+]);
+const MEDIA = wordRegex([
   'netflix', 'spotify', 'apple music', 'apple tv', 'youtube', 'disney', 'amazon prime',
-  'prime video', 'hbo', 'canal', 'sky', 'nzz', 'tages-anzeiger', 'le temps', 'audible',
+  'prime video', 'hbo', 'canal+', 'sky', 'nzz', 'tages-anzeiger', 'le temps', 'audible',
   'kindle', 'playstation', 'xbox', 'nintendo', 'twitch', 'patreon',
-];
-
-function hasAny(text: string, words: string[]): boolean {
-  const t = text.toLowerCase();
-  return words.some((w) => t.includes(w));
-}
+]);
 
 /** Which subscription bucket a detected charge belongs to. */
 export function subscriptionCategoryFor(note: string, spendCategory: string): string {
-  if (hasAny(note, TELECOM)) return 'telecom';
-  if (hasAny(note, SOFTWARE)) return 'software';
-  if (hasAny(note, MEDIA)) return 'media';
+  if (TELECOM.test(note)) return 'telecom';
+  if (SOFTWARE.test(note)) return 'software';
+  if (MEDIA.test(note)) return 'media';
   switch (spendCategory) {
     case 'transport':
       return 'transport';

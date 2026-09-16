@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useDemo } from '@/wealth/DemoContext'
@@ -278,9 +279,19 @@ export function useImportStatement() {
   })
 }
 
+/** A value that only settles once typing pauses. */
+function useDebounced<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(value), ms)
+    return () => clearTimeout(t)
+  }, [value, ms])
+  return settled
+}
+
 /** Category the server would pick for this note; null while typing is too short. */
 export function useCategorySuggestion(note: string, kind: TxKind) {
-  const trimmed = note.trim()
+  const trimmed = useDebounced(note.trim(), 300)
   return useQuery({
     queryKey: ['money', 'categorize', kind, trimmed.toLowerCase()],
     queryFn: async () => {

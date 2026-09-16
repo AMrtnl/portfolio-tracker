@@ -49,6 +49,13 @@ describe('subscriptionCategoryFor', () => {
     expect(subscriptionCategoryFor('SBB GA', 'transport')).toBe('transport');
     expect(subscriptionCategoryFor('Miete', 'housing')).toBe('home');
   });
+
+  it('matches bucket keywords as whole words', () => {
+    expect(subscriptionCategoryFor('Skyguide Parking', 'transport')).toBe('transport');
+    expect(subscriptionCategoryFor('Basalt Cafe', 'leisure')).toBe('essentials');
+    expect(subscriptionCategoryFor('Post Office Box 12', 'other')).toBe('essentials');
+    expect(subscriptionCategoryFor('Salt Mobile', 'subscriptions')).toBe('telecom');
+  });
 });
 
 describe('detectRecurring', () => {

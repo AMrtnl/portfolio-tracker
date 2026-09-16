@@ -135,8 +135,12 @@ function findHeader(cells: string[], names: string[]): number | undefined {
     const exact = lower.findIndex((c) => c === n);
     if (exact > -1) return exact;
   }
+  // Short names ("in", "out", "soll") only count as whole words, so "in"
+  // never claims "Beginning balance"; longer ones may sit inside a phrase.
   for (const n of names) {
-    const partial = lower.findIndex((c) => c.includes(n));
+    const partial = lower.findIndex((c) =>
+      n.length <= 4 ? c.split(/[^a-z]+/).includes(n) : c.includes(n),
+    );
     if (partial > -1) return partial;
   }
   return undefined;
@@ -165,9 +169,18 @@ export function parseStatement(text: string): ParseResult {
     mapping.debit = findHeader(first, DEBIT_HEADERS);
     mapping.credit = findHeader(first, CREDIT_HEADERS);
     mapping.note = findHeader(first, NOTE_HEADERS);
-    if (mapping.amount != null && (mapping.debit === mapping.amount || mapping.credit === mapping.amount)) {
-      mapping.debit = undefined;
-      mapping.credit = undefined;
+    // "Amount in" / "Amount out" matches the amount rule and the credit rule
+    // at once: a distinct debit/credit pair is the more specific reading and
+    // wins; otherwise the lone column that collided is the amount column.
+    const pair =
+      mapping.debit != null && mapping.credit != null && mapping.debit !== mapping.credit;
+    if (pair) {
+      if (mapping.amount === mapping.debit || mapping.amount === mapping.credit) {
+        mapping.amount = undefined;
+      }
+    } else {
+      if (mapping.debit === mapping.amount) mapping.debit = undefined;
+      if (mapping.credit === mapping.amount) mapping.credit = undefined;
     }
   }
 

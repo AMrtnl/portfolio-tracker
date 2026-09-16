@@ -99,31 +99,45 @@ export function createMoneyRouter(): Router {
       return res.status(413).json({ error: 'That file is too large — split it by month.' });
     }
     const parsed = parseStatement(text);
-    const existing = new Set(
-      moneyStore
-        .listTransactions()
-        .map((t) => `${t.date}|${t.kind}|${t.amount}|${(t.note || '').toLowerCase()}`),
-    );
-    let imported = 0;
+    // A row is a duplicate only while the ledger still holds an unmatched
+    // copy of it, so two real parking charges on the same day both survive
+    // but re-importing last month's file adds nothing.
+    const sigOf = (t: { date: string; kind: string; amount: number; note?: string }) =>
+      `${t.date}|${t.kind}|${t.amount}|${(t.note || '').toLowerCase()}`;
+    const spare = new Map<string, number>();
+    for (const t of moneyStore.listTransactions()) {
+      const sig = sigOf(t);
+      spare.set(sig, (spare.get(sig) || 0) + 1);
+    }
+    const fresh: typeof parsed.rows = [];
     let skipped = 0;
     for (const row of parsed.rows) {
-      const sig = `${row.date}|${row.kind}|${row.amount}|${row.note.toLowerCase()}`;
-      if (existing.has(sig)) {
+      const sig = sigOf(row);
+      const left = spare.get(sig) || 0;
+      if (left > 0) {
+        spare.set(sig, left - 1);
         skipped++;
-        continue;
+      } else {
+        fresh.push(row);
       }
-      moneyStore.addTransaction({
-        date: row.date,
-        kind: row.kind,
-        amount: row.amount,
-        category: row.category,
-        note: row.note || undefined,
+    }
+    try {
+      moneyStore.addTransactions(
+        fresh.map((row) => ({
+          date: row.date,
+          kind: row.kind,
+          amount: row.amount,
+          category: row.category,
+          note: row.note || undefined,
+        })),
+      );
+    } catch (err) {
+      return res.status(400).json({
+        error: err instanceof Error ? err.message : 'Could not save the statement',
       });
-      existing.add(sig);
-      imported++;
     }
     res.json({
-      imported,
+      imported: fresh.length,
       skipped,
       unreadable: parsed.errors.length,
       errors: parsed.errors.slice(0, 5),
