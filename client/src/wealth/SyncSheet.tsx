@@ -1,8 +1,9 @@
-import { Check, ChevronLeft, RotateCw, X } from 'lucide-react'
+import { Check, RotateCw, X } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { freshness, providerName, relativeTime } from '@/lib/utils'
 import { useAccounts, type Account } from '@/hooks/useAccounts'
+import { FloatSheet } from '@/wealth/FloatSheet'
 
 function methodOf(account: Account): { name: string; note: string; color: string } {
   if (account.provider === 'snaptrade') {
@@ -60,32 +61,20 @@ export function SyncSheet({ open, onClose }: { open: boolean; onClose: () => voi
     },
   })
 
-  if (!open) return null
-
   const live = accounts.filter((a) => a.provider !== 'manual')
   const manual = accounts.filter((a) => a.provider === 'manual')
   const failed = accounts.filter((a) => a.status === 'error')
   const stale = accounts.filter((a) => freshness(a.lastSyncedAt) === 'stale')
 
   return (
-    <div className="a-sheet" role="dialog" aria-label="Connections">
-      <div className="a-shell">
-        <header className="a-detnav">
-          <button type="button" className="a-back" onClick={onClose}>
-            <ChevronLeft size={20} strokeWidth={2.5} />
-            Back
-          </button>
-        </header>
-
-        <div className="a-detid">
-          <div>
-            <h2 className="a-dettitle">Connections</h2>
-            <p className="a-detsub">
-              {accounts.length} {accounts.length === 1 ? 'source' : 'sources'}
-              {failed.length > 0 && ` · ${failed.length} need attention`}
-            </p>
-          </div>
-        </div>
+    <FloatSheet open={open} onClose={onClose} title="Connections">
+      <p className="a-qlead">
+        {accounts.length} {accounts.length === 1 ? 'source' : 'sources'} on the book
+        {failed.length > 0
+          ? ` · ${failed.length} ${failed.length === 1 ? 'needs' : 'need'} attention`
+          : ''}
+        . Live sources refresh on demand; manual ones stay as you last set them.
+      </p>
 
         <section className="a-gcard pad">
           <div className="s-runhead">
@@ -172,9 +161,8 @@ export function SyncSheet({ open, onClose }: { open: boolean; onClose: () => voi
         )}
 
         {accounts.length === 0 && (
-          <p className="a-footnote">No accounts connected yet.</p>
+          <p className="a-insnote spaced">No accounts connected yet.</p>
         )}
-      </div>
-    </div>
+    </FloatSheet>
   )
 }

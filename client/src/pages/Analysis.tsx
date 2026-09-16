@@ -85,7 +85,7 @@ export function Analysis() {
   }, [])
 
   const currency = overview?.currency || 'USD'
-  const points = history?.points ?? []
+  const points = useMemo(() => history?.points ?? [], [history])
   const values = useMemo(() => points.map((p) => p.value), [points])
   const total = overview?.totalValue ?? values[values.length - 1] ?? 0
   const shown = cur != null && values[cur] != null ? values[cur] : total

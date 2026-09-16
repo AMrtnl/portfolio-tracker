@@ -3,6 +3,7 @@ import axios from 'axios'
 import { useDemo } from '@/wealth/DemoContext'
 import {
   buildCashflow,
+  demoRecurringSuggestions,
   mergeSubscriptions,
   mergeTransactions,
 } from '@/wealth/demo'
@@ -223,6 +224,73 @@ export function useDeleteSubscription() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['money'] })
     },
+  })
+}
+
+export interface RecurringSuggestion {
+  key: string
+  name: string
+  amount: number
+  cycle: BillingCycle
+  day: number
+  month?: number
+  cat: string
+  category: string
+  occurrences: number
+  firstDate: string
+  lastDate: string
+}
+
+/** Recurring charges the ledger detected that are not tracked yet. */
+export function useRecurringSuggestions() {
+  const { enabled } = useDemo()
+  const query = useQuery({
+    queryKey: ['money', 'suggestions'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/money/subscriptions/suggestions')
+      return data.suggestions as RecurringSuggestion[]
+    },
+  })
+  return {
+    ...query,
+    data: query.data?.length ? query.data : enabled ? demoRecurringSuggestions() : query.data,
+  }
+}
+
+export interface ImportResult {
+  imported: number
+  skipped: number
+  unreadable: number
+  errors: string[]
+}
+
+/** Paste or upload a bank CSV; rows come back categorised and deduplicated. */
+export function useImportStatement() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (text: string) => {
+      const { data } = await axios.post('/api/money/import', { text })
+      return data as ImportResult
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['money'] })
+    },
+  })
+}
+
+/** Category the server would pick for this note; null while typing is too short. */
+export function useCategorySuggestion(note: string, kind: TxKind) {
+  const trimmed = note.trim()
+  return useQuery({
+    queryKey: ['money', 'categorize', kind, trimmed.toLowerCase()],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/money/categorize', {
+        params: { note: trimmed, kind },
+      })
+      return (data.category as string | null) ?? null
+    },
+    enabled: trimmed.length >= 3,
+    staleTime: 5 * 60_000,
   })
 }
 

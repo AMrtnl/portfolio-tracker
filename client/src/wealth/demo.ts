@@ -285,6 +285,42 @@ export function buildCashflow(
 
 export const DEMO_CASHFLOW = buildCashflow(DEMO_TRANSACTIONS, 6)
 
+/** What the recurring-charge detector would surface for the sample household. */
+export function demoRecurringSuggestions() {
+  const d = new Date()
+  const iso = (monthsAgo: number, day: number) => {
+    const x = new Date(d.getFullYear(), d.getMonth() - monthsAgo, day)
+    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+  return [
+    {
+      key: 'zurich versicherung|quarterly',
+      name: 'Zürich Versicherung',
+      amount: 312,
+      cycle: 'quarterly' as const,
+      day: 1,
+      month: d.getMonth(),
+      cat: 'essentials',
+      category: 'insurance',
+      occurrences: 3,
+      firstDate: iso(6, 1),
+      lastDate: iso(0, 1),
+    },
+    {
+      key: 'adobe creative cloud|monthly',
+      name: 'Adobe Creative Cloud',
+      amount: 62.9,
+      cycle: 'monthly' as const,
+      day: 17,
+      cat: 'software',
+      category: 'subscriptions',
+      occurrences: 4,
+      firstDate: iso(3, 17),
+      lastDate: iso(0, 17),
+    },
+  ]
+}
+
 export function mergeAccounts(live: Account[] | undefined, enabled: boolean): Account[] {
   const real = live ?? []
   if (!enabled) return real.filter((a) => !isDemoId(a.id))

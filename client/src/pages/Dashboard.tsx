@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Plus } from 'lucide-react'
+import { Check, ChevronRight, Plus } from 'lucide-react'
+import { useSubscriptions, useTransactions } from '@/hooks/useMoneyLedger'
 import {
   useAllocation,
   useConcentration,
@@ -49,6 +50,65 @@ const RANGE_DAYS: Record<(typeof RANGES)[number]['k'], number> = {
   '1Y': 365,
 }
 
+/**
+ * Mercury-style setup checklist, shown until something real is connected.
+ * The order is a real sequence: nothing downstream means much before an
+ * account exists.
+ */
+function SetupChecklist({
+  accounts,
+  transactions,
+  subscriptions,
+}: {
+  accounts: number
+  transactions: number
+  subscriptions: number
+}) {
+  const steps = [
+    {
+      done: accounts > 0,
+      title: 'Add an account',
+      sub: 'Cash, a broker, crypto, property, or a loan — synced or by hand',
+      to: '/accounts',
+    },
+    {
+      done: transactions > 0,
+      title: 'Import a bank statement',
+      sub: 'Paste a CSV and every line is categorised for you',
+      to: '/cashflow',
+    },
+    {
+      done: subscriptions > 0,
+      title: 'Confirm recurring charges',
+      sub: 'Meridian spots subscriptions in the ledger; you approve them',
+      to: '/subscriptions',
+    },
+  ]
+  const done = steps.filter((s) => s.done).length
+  return (
+    <section className="a-setup" aria-label="Setup">
+      <div className="a-setuphead">
+        <b>Finish setting up</b>
+        <em>
+          {done} of {steps.length}
+        </em>
+      </div>
+      {steps.map((s, i) => (
+        <Link key={s.title} to={s.to} className={`a-step ${s.done ? 'done' : ''}`}>
+          <span className="a-stepnum">
+            {s.done ? <Check size={14} strokeWidth={3} /> : i + 1}
+          </span>
+          <span className="a-atext">
+            <b>{s.title}</b>
+            <em>{s.sub}</em>
+          </span>
+          <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
+        </Link>
+      ))}
+    </section>
+  )
+}
+
 export function Dashboard() {
   const { chf, pctStr, unit } = useMoney()
   const { enabled: sampleOn } = useDemo()
@@ -66,6 +126,11 @@ export function Dashboard() {
   const { data: concentration } = useConcentration()
   const { data: movers } = useMovers()
   const { data: news } = useNews(6)
+  const { data: txs } = useTransactions()
+  const { data: subData } = useSubscriptions()
+  const realAccounts = (accounts ?? []).filter((a) => !isDemoId(a.id)).length
+  const realTxs = (txs ?? []).filter((t) => !isDemoId(t.id)).length
+  const realSubs = (subData?.subscriptions ?? []).filter((s) => !isDemoId(s.id)).length
   const [mode, setMode] = useState<'stacked' | 'candles'>('stacked')
   const [range, setRange] = useState<(typeof RANGES)[number]['k']>('3M')
   const [off, setOff] = useState<Record<string, boolean>>({})
@@ -212,20 +277,22 @@ export function Dashboard() {
   if (!hasAccounts) {
     return (
       <>
-        <section className="a-card">
-          <div className="a-hero">
+        <section className="a-heroblock">
+          <div className="a-hero bare">
             <div className="a-caption">Net worth</div>
             <div className="a-value">
               <span className="a-unit">USD</span>
               {chf(0)}
             </div>
-            <div className="a-delta muted">Add what you own and what you owe</div>
+            <div className="a-delta muted">Nothing on the book yet</div>
           </div>
-          <p className="a-insnote spaced">
-            Cash, brokers, crypto, pension, property, and loans sit on one book.
-            Cash flow and subscriptions work even before a broker is connected.
-          </p>
         </section>
+        <SetupChecklist accounts={realAccounts} transactions={realTxs} subscriptions={realSubs} />
+        <p className="a-insnote spaced">
+          Cash, brokers, crypto, pension, property, and loans sit on one book. Cash flow
+          and subscriptions work even before a broker is connected — turn on Sample to
+          see the layout filled in.
+        </p>
         <Link to="/accounts" className="a-add">
           <Plus size={17} strokeWidth={2.5} />
           Add account
@@ -259,6 +326,9 @@ export function Dashboard() {
 
   return (
     <>
+      {realAccounts === 0 && (
+        <SetupChecklist accounts={realAccounts} transactions={realTxs} subscriptions={realSubs} />
+      )}
       <div className="a-desk">
         <div className="a-desk-primary">
       <section className="a-heroblock">
@@ -473,7 +543,7 @@ export function Dashboard() {
             </span>
             <b>{grossNow ? ((liquid / grossNow) * 100).toFixed(0) : 0}%</b>
           </div>
-          {top && (
+          {top && (concentration?.top?.length ?? (sampleOn ? 2 : 0)) >= 2 && (
             <p className="a-insnote spaced">
               <b>{top.label || top.symbol}</b> is the largest holding
               {(top.percent ?? 0) > 50 ? ' — over half the book sits in one place.' : '.'}
@@ -527,7 +597,7 @@ export function Dashboard() {
       </aside>
       </div>
 
-      {(geoRows.length > 0 || secRows.length > 0) && (
+      {(geoRows.length > 1 || secRows.length > 1) && (
         <>
           <div className="a-header">Diversification</div>
           <section className="a-gcard pad">

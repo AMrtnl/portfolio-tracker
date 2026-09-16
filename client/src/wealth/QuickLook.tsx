@@ -109,7 +109,7 @@ function ClassLook({
     .sort((a, b) => (b.marketValue || 0) - (a.marketValue || 0))
     .slice(0, 6)
 
-  const points = history?.points ?? []
+  const points = useMemo(() => history?.points ?? [], [history])
   const weight = gross ? total / gross : 0
   const values = useMemo(
     () => points.map((p) => p.value * weight),

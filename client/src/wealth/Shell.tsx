@@ -29,7 +29,7 @@ import { HoldingDetail } from '@/pages/HoldingDetail'
 import { Cashflow } from '@/pages/Cashflow'
 import { Subscriptions } from '@/pages/Subscriptions'
 import { useWalletStatus } from '@/hooks/useWalletStatus'
-import { useAccounts } from '@/hooks/useAccounts'
+import { useAccounts, type Account } from '@/hooks/useAccounts'
 import { useSubscriptions } from '@/hooks/useMoneyLedger'
 import { usePrivacy } from '@/wealth/PrivacyContext'
 import { useDemo } from '@/wealth/DemoContext'
@@ -109,14 +109,40 @@ function RailTab({ tab }: { tab: TabItem }) {
   )
 }
 
-function RailNav() {
+/** Rail nav with the top accounts listed under the Accounts entry (Mercury). */
+function RailNav({ accounts }: { accounts: Account[] }) {
+  const { look } = useQuickLook()
+  const { chf } = useMoney()
+  const top = accounts
+    .filter((a) => !isLiability(a))
+    .sort((a, b) => accountValue(b) - accountValue(a))
+    .slice(0, 5)
   return (
     <nav className="a-railnav" aria-label="Primary">
       {NAV_GROUPS.map(({ label, tabs }) => (
         <div key={label} className="a-navgroup">
           <p className="a-navlabel">{label}</p>
           {tabs.map((tab) => (
-            <RailTab key={tab.to} tab={tab} />
+            <div key={tab.to}>
+              <RailTab tab={tab} />
+              {tab.to === '/accounts' && top.length > 0 && (
+                <div className="a-railsub" aria-label="Largest accounts">
+                  {top.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className="a-railacct"
+                      onClick={() => look({ kind: 'account', id: a.id })}
+                      title={a.label}
+                    >
+                      <i style={{ background: CLASSES.find((c) => c.id === accountClass(a))?.color }} />
+                      <span>{a.label}</span>
+                      <b>{chf(accountValue(a))}</b>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       ))}
@@ -433,7 +459,7 @@ export function AppShell() {
             <em>Your money, one book</em>
           </div>
         </div>
-        <RailNav />
+        <RailNav accounts={accounts ?? []} />
         <p className="a-railnote">
           {sampleOn
             ? sampleCount

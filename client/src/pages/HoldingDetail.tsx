@@ -418,7 +418,7 @@ export function HoldingDetail() {
         </div>
 
         <aside className="a-desk-aside">
-          <NewsList headingId="holding-news" symbol={symbol} limit={8} title={`News · ${symbol}`} />
+          <NewsList symbol={symbol} limit={8} title={`News · ${symbol}`} />
         </aside>
       </div>
     </article>
