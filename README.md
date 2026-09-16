@@ -103,6 +103,13 @@ Track cold storage without ever typing a seed phrase. Paste a Bitcoin account ke
 
 In Chrome, Edge, or Brave, **Read device** pulls the key straight from a plugged-in Ledger over WebHID (Bitcoin or Ethereum app open). The device only ever exports public material, and Meridian stores just the key — nothing that can sign. Reads are cached for five minutes, and the last successful read stays on the account so a flaky RPC never zeroes the dashboard.
 
+## Goals, budget targets, and the command palette
+
+- **Goals** (`/goals`, `/api/goals`): a target, an optional date, a monthly contribution, an expected return, and the accounts that fund it. Progress is the live balance of those accounts; each card shows what is needed per month to land on the date and when the current pace gets there.
+- **Budget targets** (`/api/money/budgets`): a monthly ceiling per spend category, shown against the running average in Cash flow › Where it goes. Bars fill against the target and turn red when a month runs over.
+- **⌘K / Ctrl K / `/`** opens the palette: pages, asset classes, accounts, positions, and actions (add a transaction, import a statement, add an account, new goal, sync everything, hide balances, switch the display currency, open preferences).
+- **Needs attention** (the bell): failed or stale syncs, recurring charges waiting for a decision, and goals that have slipped — each with its one next step.
+
 ## API (selected)
 
 | Method | Endpoint | Description |

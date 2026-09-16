@@ -23,16 +23,7 @@ import {
   type RecurringSuggestion,
 } from '@/hooks/useMoneyLedger'
 
-const DISMISSED_KEY = 'meridian.dismissedRecurring'
-
-function readDismissed(): Set<string> {
-  try {
-    const raw = localStorage.getItem(DISMISSED_KEY)
-    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
-  } catch {
-    return new Set()
-  }
-}
+import { readDismissed, writeDismissed } from '@/wealth/dismissed'
 
 function cycleLabel(cycle: BillingCycle): string {
   return cycle === 'monthly' ? 'Monthly' : cycle === 'quarterly' ? 'Every 3 months' : 'Yearly'
@@ -78,11 +69,7 @@ export function Subscriptions() {
     setDismissed((prev) => {
       const next = new Set(prev)
       next.add(key)
-      try {
-        localStorage.setItem(DISMISSED_KEY, JSON.stringify([...next]))
-      } catch {
-        /* private mode */
-      }
+      writeDismissed(next)
       return next
     })
   }

@@ -7,7 +7,7 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom'
-import { ArrowsLeftRight, Briefcase, CalendarBlank, CaretDoubleLeft, CaretDoubleRight, Eye, EyeSlash, Stack, ChartPieSlice, ArrowsClockwise, MagnifyingGlass, Wallet, GearSix, Target } from '@phosphor-icons/react'
+import { ArrowsLeftRight, Briefcase, CalendarBlank, CaretDoubleLeft, CaretDoubleRight, Eye, EyeSlash, Stack, ChartPieSlice, ArrowsClockwise, MagnifyingGlass, Wallet, GearSix, Target, Plus, UploadSimple, Sparkle, CurrencyCircleDollar, Bell } from '@phosphor-icons/react'
 import { Dashboard } from '@/pages/Dashboard'
 import { Accounts } from '@/pages/Accounts'
 import { Brokerage } from '@/pages/Brokerage'
@@ -19,6 +19,8 @@ import { Goals } from '@/pages/Goals'
 import { useWalletStatus } from '@/hooks/useWalletStatus'
 import { useAccounts, type Account } from '@/hooks/useAccounts'
 import { PreferencesSheet } from '@/wealth/PreferencesSheet'
+import { AttentionSheet, useAttention } from '@/wealth/AttentionSheet'
+import { useSettings, useUpdateSettings } from '@/hooks/useSettings'
 import { useSubscriptions } from '@/hooks/useMoneyLedger'
 import { usePrivacy } from '@/wealth/PrivacyContext'
 import { useDemo } from '@/wealth/DemoContext'
@@ -166,10 +168,29 @@ interface Suggestion {
  * positions. Focus (or ⌘K) opens the suggestion list; anything that is
  * an asset opens as a quick-view panel rather than a navigation.
  */
-function TopSearch() {
+function isTyping(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null
+  if (!el) return false
+  const tag = el.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
+}
+
+function TopSearch({
+  openPrefs,
+  openSync,
+  openInbox,
+}: {
+  openPrefs: () => void
+  openSync: () => void
+  openInbox: () => void
+}) {
   const navigate = useNavigate()
   const { look } = useQuickLook()
   const { chf } = useMoney()
+  const { hidden, toggle: togglePrivacy } = usePrivacy()
+  const { enabled: sampleOn, toggle: toggleSample } = useDemo()
+  const { data: settings } = useSettings()
+  const setCurrency = useUpdateSettings().mutate
   const { data: accounts } = useAccounts()
   const holdings = useMergedHoldings()
   const [query, setQuery] = useState('')
@@ -179,7 +200,9 @@ function TopSearch() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      const cmdK = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k'
+      const slash = e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !isTyping(e.target)
+      if (cmdK || slash) {
         e.preventDefault()
         inputRef.current?.focus()
         inputRef.current?.select()
@@ -217,6 +240,109 @@ function TopSearch() {
       })
     }
     out.splice(q ? 3 : 6)
+
+    // Things you can do from anywhere — the command half of the palette.
+    const display = settings?.displayCurrency ?? 'USD'
+    const actions: Array<Omit<Suggestion, 'group' | 'right'> & { keys: string }> = [
+      {
+        key: 'act-tx',
+        label: 'Add a transaction',
+        sub: 'Log spending or income',
+        keys: 'spend income log cash flow',
+        icon: <Plus size={17} />,
+        run: () => navigate('/cashflow?add=spend'),
+      },
+      {
+        key: 'act-import',
+        label: 'Import a bank statement',
+        sub: 'Paste a CSV — every line gets categorised',
+        keys: 'csv upload statement bank',
+        icon: <UploadSimple size={17} />,
+        run: () => navigate('/cashflow?add=import'),
+      },
+      {
+        key: 'act-account',
+        label: 'Add an account',
+        sub: 'Bank, broker, wallet, property, or loan',
+        keys: 'connect ledger wallet broker bank',
+        icon: <Stack size={17} />,
+        run: () => navigate('/accounts?add=1'),
+      },
+      {
+        key: 'act-goal',
+        label: 'New goal',
+        sub: 'A target, a date, and what funds it',
+        keys: 'savings target deposit',
+        icon: <Target size={17} />,
+        run: () => navigate('/goals?new=1'),
+      },
+      {
+        key: 'act-sync',
+        label: 'Sync all connections',
+        sub: 'Refresh every live source',
+        keys: 'refresh update connections',
+        icon: <ArrowsClockwise size={17} />,
+        run: openSync,
+      },
+      {
+        key: 'act-inbox',
+        label: 'What needs attention',
+        sub: 'Failed syncs, detected charges, goals behind',
+        keys: 'inbox alerts attention repair',
+        icon: <Bell size={17} />,
+        run: openInbox,
+      },
+      {
+        key: 'act-privacy',
+        label: hidden ? 'Show balances' : 'Hide balances',
+        sub: 'Masks every figure on screen',
+        keys: 'privacy mask hide show',
+        icon: hidden ? <Eye size={17} /> : <EyeSlash size={17} />,
+        run: togglePrivacy,
+      },
+      {
+        key: 'act-sample',
+        label: sampleOn ? 'Turn off the sample household' : 'Turn on the sample household',
+        sub: 'Example accounts and cash flow beside yours',
+        keys: 'demo example sample',
+        icon: <Sparkle size={17} />,
+        run: toggleSample,
+      },
+      ...(settings?.currencies ?? [])
+        .filter((c) => c !== display)
+        .map((c) => ({
+          key: `act-cur-${c}`,
+          label: `Display in ${c}`,
+          sub: `Every total converted at today's rate`,
+          keys: `currency ${c.toLowerCase()} display convert`,
+          icon: <CurrencyCircleDollar size={17} />,
+          run: () => setCurrency({ displayCurrency: c }),
+        })),
+      {
+        key: 'act-prefs',
+        label: 'Preferences',
+        sub: 'Currency, headline figure, privacy',
+        keys: 'settings options',
+        icon: <GearSix size={17} />,
+        run: openPrefs,
+      },
+    ]
+    let actionCount = 0
+    for (const a of actions) {
+      if (!hit(a.label, a.sub, a.keys) || actionCount >= (q ? 4 : 3)) continue
+      actionCount++
+      out.push({
+        key: a.key,
+        group: 'Actions',
+        label: a.label,
+        sub: a.sub,
+        icon: a.icon,
+        run: () => {
+          a.run()
+          done()
+        },
+      })
+    }
 
     const assets = (accounts ?? []).filter((a) => !isLiability(a))
     const gross = assets.reduce((s, a) => s + accountValue(a), 0)
@@ -292,7 +418,23 @@ function TopSearch() {
     }
 
     return out
-  }, [query, accounts, holdings, chf, look, navigate])
+  }, [
+    query,
+    accounts,
+    holdings,
+    chf,
+    look,
+    navigate,
+    hidden,
+    togglePrivacy,
+    sampleOn,
+    toggleSample,
+    settings,
+    setCurrency,
+    openPrefs,
+    openSync,
+    openInbox,
+  ])
 
   useEffect(() => setHi(0), [query])
 
@@ -387,6 +529,8 @@ export function AppShell() {
   const { enabled: sampleOn, toggle: toggleSample } = useDemo()
   const [syncOpen, setSyncOpen] = useState(false)
   const [prefsOpen, setPrefsOpen] = useState(false)
+  const [inboxOpen, setInboxOpen] = useState(false)
+  const attention = useAttention()
   const [railMin, setRailMin] = useState(
     () => localStorage.getItem('meridian.railMin') === '1',
   )
@@ -482,7 +626,11 @@ export function AppShell() {
           <span className="a-topbrand" aria-hidden>
             M
           </span>
-          <TopSearch />
+          <TopSearch
+            openPrefs={() => setPrefsOpen(true)}
+            openSync={() => setSyncOpen(true)}
+            openInbox={() => setInboxOpen(true)}
+          />
           <div className="a-navbtns">
             <button
               type="button"
@@ -503,6 +651,19 @@ export function AppShell() {
               ) : (
                 <Eye size={17} />
               )}
+            </button>
+            <button
+              type="button"
+              className="a-navbtn"
+              onClick={() => setInboxOpen(true)}
+              aria-label={
+                attention.length
+                  ? `${attention.length} ${attention.length === 1 ? 'thing needs' : 'things need'} attention`
+                  : 'Needs attention'
+              }
+            >
+              <Bell size={17} />
+              {attention.length > 0 && <i className="a-navcount">{attention.length}</i>}
             </button>
             <button
               type="button"
@@ -577,6 +738,7 @@ export function AppShell() {
 
       <SyncSheet open={syncOpen} onClose={() => setSyncOpen(false)} />
       <PreferencesSheet open={prefsOpen} onClose={() => setPrefsOpen(false)} />
+      <AttentionSheet open={inboxOpen} onClose={() => setInboxOpen(false)} items={attention} />
 
       <TabBar />
     </div>

@@ -1387,3 +1387,21 @@ a.ui-btn.secondary { color: #fff; }
 .a-budgetrow input { width: 100%; font: inherit; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; background: rgba(118,118,128,.18); border: .5px solid rgba(255,255,255,.07); border-radius: 12px; padding: 8px 10px; text-align: right; outline: none; }
 .a-budgetrow input:focus { border-color: rgba(10,132,255,.6); }
 .a-budgetrow input::placeholder { color: rgba(235,235,245,.25); }
+
+/* ---- Attention inbox & command actions ---- */
+.a-navcount {
+  position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 999px; background: #FF453A; color: #fff; font-size: 10px; font-weight: 800;
+  font-style: normal; display: flex; align-items: center; justify-content: center;
+  border: 2px solid #0d0d12; font-variant-numeric: tabular-nums;
+}
+.a-tonedot { width: 9px; height: 9px; border-radius: 999px; flex: none; }
+.a-tonedot.loss { background: #FF453A; box-shadow: 0 0 0 3px rgba(255,69,58,.18); }
+.a-tonedot.warn { background: #FF9F45; box-shadow: 0 0 0 3px rgba(255,159,69,.18); }
+.a-tonedot.info { background: #0A84FF; box-shadow: 0 0 0 3px rgba(10,132,255,.18); }
+.a-pagebar .a-header { white-space: nowrap; }
+.a-goalhead .a-atext em { white-space: normal; }
+
+.a-navbtn { position: relative; }
+
+.a-sugs { max-height: min(72vh, 680px); overflow: auto; }

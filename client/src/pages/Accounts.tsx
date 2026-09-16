@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Eye, EyeSlash, Plus, Trash, PencilSimple, Check, X, CircleNotch, ArrowRight, ArrowsClockwise, Wallet, Buildings, PencilSimpleLine, ArrowSquareOut, DotsThree, Bank, House, Umbrella, CreditCard, Key, Usb } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
@@ -1291,11 +1291,20 @@ export function Accounts() {
   const { data: accounts, isLoading } = useAccounts()
   const [step, setStep] = useState<AddStep | null>(null)
   const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
   const hasAccounts = Boolean(accounts && accounts.length > 0)
 
   useEffect(() => {
     document.title = hasAccounts ? 'Accounts' : 'Connect'
   }, [hasAccounts])
+
+  // ⌘K "Add an account" lands here with ?add=1.
+  useEffect(() => {
+    if (params.get('add') === '1') {
+      setStep('chooser')
+      setParams({}, { replace: true })
+    }
+  }, [params, setParams])
 
   function handleAdded() {
     setStep(null)

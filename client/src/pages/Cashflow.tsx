@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Trash, UploadSimple } from '@phosphor-icons/react'
 import { FlowBars } from '@/wealth/charts'
 import { FloatSheet } from '@/wealth/FloatSheet'
@@ -66,6 +67,25 @@ export function Cashflow() {
   const [csv, setCsv] = useState('')
   const [targetsOpen, setTargetsOpen] = useState(false)
   const { data: budgets = {} } = useBudgets()
+  const [params, setParams] = useSearchParams()
+
+  // ⌘K actions land here with ?add=spend|income|import.
+  useEffect(() => {
+    const add = params.get('add')
+    if (!add) return
+    if (add === 'import') {
+      setMode('import')
+    } else {
+      setMode('log')
+      if (add === 'income' || add === 'spend') {
+        setKind(add)
+        setCatTouched(false)
+        setCategory(add === 'income' ? 'salary' : 'groceries')
+      }
+    }
+    setAdding(true)
+    setParams({}, { replace: true })
+  }, [params, setParams])
 
   // The server guesses a category from the note; it only fills the field
   // until the user picks one by hand.

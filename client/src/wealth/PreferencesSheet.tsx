@@ -128,6 +128,28 @@ export function PreferencesSheet({ open, onClose }: { open: boolean; onClose: ()
         </div>
       </section>
 
+      <div className="a-header">Keyboard</div>
+      <section className="a-gcard pad">
+        <div className="a-fields">
+          <div className="a-field">
+            <span>Search and actions</span>
+            <b>⌘K · Ctrl K · /</b>
+          </div>
+          <div className="a-field">
+            <span>Move and open</span>
+            <b>↑ ↓ · ↵</b>
+          </div>
+          <div className="a-field">
+            <span>Close anything</span>
+            <b>Esc</b>
+          </div>
+          <div className="a-field">
+            <span>Sidebar</span>
+            <b>Collapse button</b>
+          </div>
+        </div>
+      </section>
+
       {(settings?.warnings?.length ?? 0) > 0 && (
         <p className="a-insnote spaced">{settings!.warnings.join(' ')}</p>
       )}
