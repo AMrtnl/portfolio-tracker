@@ -233,7 +233,7 @@ export function isStablecoin(symbol: string): boolean {
 
 function looksLikeCryptoSource(hint: SymbolHint | undefined): boolean {
   if (!hint) return false;
-  if (hint.provider === 'hyperliquid') return true;
+  if (hint.provider === 'hyperliquid' || hint.provider === 'watch') return true;
   const institution = (hint.institution || '').toLowerCase();
   return CRYPTO_INSTITUTIONS.some((name) => institution.includes(name));
 }

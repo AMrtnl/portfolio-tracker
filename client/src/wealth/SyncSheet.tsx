@@ -12,6 +12,9 @@ function methodOf(account: Account): { name: string; note: string; color: string
   if (account.provider === 'hyperliquid') {
     return { name: 'On-chain', note: 'Public address', color: '#A57BFF' }
   }
+  if (account.provider === 'watch') {
+    return { name: 'Watch-only', note: 'Public key · nothing to sign', color: '#F7931A' }
+  }
   return { name: 'Manual', note: 'You update this', color: '#8E8E93' }
 }
 

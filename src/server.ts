@@ -24,7 +24,10 @@ import {
   listProviders,
   removeLiveAdapter,
   snaptrade,
+  watch,
 } from './providers';
+import type { SyncResult } from './providers';
+import { CHAIN_NAMES, describeWatchKey, detectWatchKey } from './wallets';
 import {
   errorMessage,
   fetchSnapAccountDetail,
@@ -76,6 +79,18 @@ if (!IS_PRODUCTION) {
 app.use(express.json({ limit: '2mb' }));
 
 const store = new Store();
+watch.attachStore(store);
+
+/** Records a sync's outcome on the account so the UI can show freshness and errors. */
+function finishSync(id: string, result: SyncResult): void {
+  const failed = Boolean(result.error && result.balances.length === 0);
+  store.updateAccount(id, {
+    status: failed ? 'error' : 'connected',
+    lastSyncedAt: new Date().toISOString(),
+    lastError: result.error ?? null,
+  });
+  invalidatePortfolioSnapshot();
+}
 
 function liveIds(): Set<string> {
   const ids = new Set<string>();
@@ -237,6 +252,68 @@ app.post('/api/accounts/manual', (req: Request, res: Response) => {
   });
   invalidatePortfolioSnapshot();
   console.log(`✅ Manual account added: "${label}" (${holdings.length} holdings)`);
+  res.json(store.getAccount(id));
+});
+
+/**
+ * Watch-only wallet: POST { label?, key, institution? } where key is a
+ * Bitcoin account key (xpub / ypub / zpub) or a BTC / ETH / SOL address.
+ * The first read runs inline for a few seconds so the row lands with a
+ * figure; a slow chain finishes in the background.
+ */
+app.post('/api/accounts/watch', async (req: Request, res: Response) => {
+  const body = req.body as { label?: string; key?: string; institution?: string };
+  const key = detectWatchKey(String(body.key || ''));
+  if (!key) {
+    return res.status(400).json({
+      error:
+        'Paste a Bitcoin account key (xpub, ypub, or zpub) or a Bitcoin, Ethereum, or Solana address.',
+    });
+  }
+  const duplicate = store
+    .getAllRaw()
+    .find(
+      (a) =>
+        a.provider === 'watch' &&
+        (a.externalId || '').toLowerCase() === key.key.toLowerCase(),
+    );
+  if (duplicate) {
+    return res.status(409).json({ error: `Already tracked as "${duplicate.label}"` });
+  }
+
+  const label =
+    (body.label || '').trim() ||
+    `${CHAIN_NAMES[key.chain]} · ${key.kind === 'xpub' ? 'Ledger' : 'Watch-only'}`;
+  const id = store.addWatchWallet(label, {
+    key: key.key,
+    chain: key.chain,
+    kind: key.kind,
+    institution: body.institution?.trim() || undefined,
+    notes: describeWatchKey(key),
+  });
+
+  const syncing = watch.sync(store.getAccount(id)!).then(
+    (result) => {
+      finishSync(id, result);
+      return result;
+    },
+    (err: unknown) => {
+      finishSync(id, {
+        balances: [],
+        positions: [],
+        totalValueUsd: 0,
+        error: errorMessage(err),
+      });
+      return null;
+    },
+  );
+  const timer = new Promise<null>((resolve) => {
+    setTimeout(() => resolve(null), 12_000).unref();
+  });
+  await Promise.race([syncing, timer]);
+
+  invalidatePortfolioSnapshot();
+  console.log(`✅ Watch-only wallet added: "${label}" (${describeWatchKey(key)})`);
   res.json(store.getAccount(id));
 });
 
@@ -461,15 +538,11 @@ app.post('/api/accounts/:id/sync', async (req: Request, res: Response) => {
   const account = store.getAccount(id, hasLiveAdapter(id));
   if (!account) return res.status(404).json({ error: 'Account not found' });
 
+  // An explicit sync should hit the chain, not the provider's read cache.
+  if (account.provider === 'watch') watch.forget(id);
   const provider = getProvider(account.provider);
   const result = await provider.sync(account);
-
-  const failed = Boolean(result.error && result.balances.length === 0);
-  store.updateAccount(id, {
-    status: failed ? 'error' : 'connected',
-    lastSyncedAt: new Date().toISOString(),
-    lastError: result.error ?? null,
-  });
+  finishSync(id, result);
 
   res.json({
     account: store.getAccount(id, hasLiveAdapter(id)),

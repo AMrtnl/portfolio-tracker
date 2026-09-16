@@ -20,7 +20,8 @@ export type BookClass =
   | 'bonds'
   | 'crypto'
   | 'other'
-export type ProviderId = 'hyperliquid' | 'snaptrade' | 'manual'
+export type ProviderId = 'hyperliquid' | 'snaptrade' | 'manual' | 'watch'
+export type WatchChain = 'btc' | 'eth' | 'sol'
 export type AccountStatus =
   | 'connected'
   | 'pending'
@@ -55,6 +56,8 @@ export interface Account {
   live?: boolean
   holdings?: Holding[]
   totalValueUsd?: number
+  /** Watch-only wallets: which network the key lives on */
+  chain?: WatchChain
   /** @deprecated legacy field — prefer maskedIdentifier / externalId */
   address?: string
 }
@@ -66,7 +69,7 @@ export interface ProviderInfo {
   accountTypes: AccountType[]
   configured: boolean
   coverage: string
-  connectMode: 'mnemonic' | 'oauth' | 'manual' | 'import'
+  connectMode: 'mnemonic' | 'oauth' | 'manual' | 'import' | 'watch'
 }
 
 function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
@@ -135,6 +138,18 @@ export function useAddManualAccount() {
       holdings?: Holding[]
     }) => {
       const { data } = await axios.post('/api/accounts/manual', payload)
+      return data as Account
+    },
+    onSuccess: () => invalidateAll(qc),
+  })
+}
+
+/** Track a wallet from its public key (xpub / ypub / zpub) or a BTC / ETH / SOL address. */
+export function useAddWatchWallet() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { label?: string; key: string; institution?: string }) => {
+      const { data } = await axios.post('/api/accounts/watch', payload)
       return data as Account
     },
     onSuccess: () => invalidateAll(qc),

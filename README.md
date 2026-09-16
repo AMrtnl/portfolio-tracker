@@ -93,6 +93,16 @@ give it and does the sorting for you:
 The rules live in `src/money/detect.ts` and the parser in
 `src/money/import.ts`; both are covered by unit tests.
 
+## Watch-only wallets (Ledger, or any address)
+
+Track cold storage without ever typing a seed phrase. Paste a Bitcoin account key (`xpub`, `ypub`, or `zpub` — what Ledger Live shows under *Account settings → Advanced*) or a single Bitcoin, Ethereum, or Solana address, and Meridian reads the balance from the network:
+
+- **Bitcoin** — every receive and change address is derived from the account key (BIP44 / 49 / 84) and totalled from an Esplora API with the standard 20-address gap limit. `BTC_API_URL` defaults to `https://mempool.space/api`.
+- **Ethereum** — ETH plus USDC, USDT, DAI, WBTC, stETH, LINK, and UNI over JSON-RPC. `ETH_RPC_URL` defaults to `https://ethereum-rpc.publicnode.com`.
+- **Solana** — SOL plus USDC and USDT. `SOLANA_RPC_URL` defaults to `https://api.mainnet-beta.solana.com`.
+
+In Chrome, Edge, or Brave, **Read device** pulls the key straight from a plugged-in Ledger over WebHID (Bitcoin or Ethereum app open). The device only ever exports public material, and Meridian stores just the key — nothing that can sign. Reads are cached for five minutes, and the last successful read stays on the account so a flaky RPC never zeroes the dashboard.
+
 ## API (selected)
 
 | Method | Endpoint | Description |

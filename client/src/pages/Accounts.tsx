@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { Eye, EyeSlash, Plus, Trash, PencilSimple, Check, X, CircleNotch, ArrowRight, ArrowsClockwise, Wallet, Buildings, PencilSimpleLine, ArrowSquareOut, DotsThree, Bank, House, Umbrella, CreditCard } from '@phosphor-icons/react'
+import { Eye, EyeSlash, Plus, Trash, PencilSimple, Check, X, CircleNotch, ArrowRight, ArrowsClockwise, Wallet, Buildings, PencilSimpleLine, ArrowSquareOut, DotsThree, Bank, House, Umbrella, CreditCard, Key, Usb } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Amount } from '@/components/ui/Amount'
 import { Banner, SkeletonRows } from '@/components/ui/states'
@@ -11,6 +11,7 @@ import {
   useAccounts,
   useAddCryptoAccount,
   useAddManualAccount,
+  useAddWatchWallet,
   useDeleteAccount,
   useRenameAccount,
   useProviders,
@@ -30,9 +31,17 @@ import { CLASSES } from '@/wealth/tokens'
 import { isDemoId } from '@/wealth/demo'
 import { LogoAvatar } from '@/wealth/logos'
 import { FloatSheet } from '@/wealth/FloatSheet'
+import {
+  detectKey,
+  ledgerErrorMessage,
+  ledgerSupported,
+  readFromLedger,
+  type LedgerChain,
+} from '@/wealth/watchKey'
 
 type AddStep =
   | 'chooser'
+  | 'watch'
   | 'crypto'
   | 'manual'
   | 'broker'
@@ -176,6 +185,169 @@ function CryptoForm({ onDone }: { onDone?: () => void }) {
           <ArrowRight className="mr-2 h-4 w-4" aria-hidden />
         )}
         {addAccount.isPending ? 'Connecting…' : 'Add Hyperliquid wallet'}
+      </Button>
+    </form>
+  )
+}
+
+function WatchForm({ onDone }: { onDone?: () => void }) {
+  const add = useAddWatchWallet()
+  const [label, setLabel] = useState('')
+  const [key, setKey] = useState('')
+  const [institution, setInstitution] = useState('')
+  const [ledgerChain, setLedgerChain] = useState<LedgerChain>('btc')
+  const [ledgerBusy, setLedgerBusy] = useState(false)
+  const [ledgerError, setLedgerError] = useState<string | null>(null)
+  const detected = detectKey(key)
+  const canLedger = ledgerSupported()
+
+  async function handleLedger() {
+    setLedgerBusy(true)
+    setLedgerError(null)
+    try {
+      const read = await readFromLedger(ledgerChain)
+      setKey(read.key)
+      setInstitution(read.institution)
+      add.reset()
+    } catch (err) {
+      setLedgerError(ledgerErrorMessage(err))
+    } finally {
+      setLedgerBusy(false)
+    }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!detected) return
+    add.mutate(
+      {
+        label: label.trim() || undefined,
+        key: key.trim(),
+        institution: institution.trim() || undefined,
+      },
+      { onSuccess: () => onDone?.() },
+    )
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4" aria-label="Add watch-only wallet">
+      <p className="a-qlead">
+        Paste a public key or address. Balances are read from the network — nothing here can
+        sign or spend.
+      </p>
+
+      <section className="a-gcard pad">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[15px] font-semibold">Read from a Ledger</div>
+            <div className="text-[12.5px] text-white/50">
+              {canLedger
+                ? 'Plug it in, unlock it, and open the Bitcoin or Ethereum app.'
+                : 'Needs Chrome, Edge, or Brave over USB — or paste the key from Ledger Live.'}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="ui-btn tinted sm"
+            onClick={handleLedger}
+            disabled={!canLedger || ledgerBusy}
+          >
+            {ledgerBusy ? (
+              <CircleNotch className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Usb size={15} aria-hidden />
+            )}
+            {ledgerBusy ? 'Reading…' : 'Read device'}
+          </button>
+        </div>
+        <div className="a-pills mt-3">
+          {(['btc', 'eth'] as const).map((c) => (
+            <button
+              key={c}
+              type="button"
+              className={cn('a-pill', ledgerChain === c && 'on')}
+              onClick={() => setLedgerChain(c)}
+              aria-pressed={ledgerChain === c}
+            >
+              {c === 'btc' ? 'Bitcoin' : 'Ethereum'}
+            </button>
+          ))}
+        </div>
+        {ledgerError && <p className="mt-2 text-[12.5px] text-loss">{ledgerError}</p>}
+      </section>
+
+      <div className="space-y-1.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <label className="text-sm font-medium" htmlFor="watch-key">
+            Public key or address
+          </label>
+          <span
+            className={cn('text-xs', detected ? 'text-gain' : 'text-muted-foreground')}
+          >
+            {detected
+              ? detected.label
+              : key.trim()
+                ? 'Not recognised yet'
+                : 'xpub · zpub · 0x… · bc1… · Solana'}
+          </span>
+        </div>
+        <textarea
+          id="watch-key"
+          rows={3}
+          placeholder="zpub6r… or 0x… or bc1q…"
+          value={key}
+          onChange={(e) => {
+            setKey(e.target.value)
+            add.reset()
+          }}
+          className={cn(
+            fieldClass,
+            'resize-none font-mono text-[13px]',
+            add.isError && 'border-destructive',
+          )}
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium" htmlFor="watch-label">
+            Account name
+          </label>
+          <input
+            id="watch-label"
+            type="text"
+            placeholder={detected ? `Ledger · ${detected.label.split(' · ')[0]}` : 'Cold storage'}
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium" htmlFor="watch-institution">
+            Kept on
+          </label>
+          <input
+            id="watch-institution"
+            type="text"
+            placeholder="Ledger · Trezor · Exchange"
+            value={institution}
+            onChange={(e) => setInstitution(e.target.value)}
+            className={fieldClass}
+          />
+        </div>
+      </div>
+
+      {add.isError && <FormError error={add.error} fallback="Could not add this wallet." />}
+
+      <Button type="submit" className="h-11 w-full" disabled={!detected || add.isPending}>
+        {add.isPending ? (
+          <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+        ) : (
+          <ArrowRight className="mr-2 h-4 w-4" aria-hidden />
+        )}
+        {add.isPending ? 'Reading balances…' : 'Track wallet'}
       </Button>
     </form>
   )
@@ -534,6 +706,7 @@ function AddFlow({
   onBack: () => void
   onDone?: () => void
 }) {
+  if (step === 'watch') return <WatchForm onDone={onDone} />
   if (step === 'crypto') return <CryptoForm onDone={onDone} />
   if (step === 'manual') return <ManualForm onDone={onDone} />
   if (step === 'broker') return <BrokerForm onDone={onDone} onBack={onBack} />
@@ -721,6 +894,13 @@ function AddChooser({
       color: '#FFD84D',
       badge: snapConfigured ? 'Ready' : 'Needs keys',
       badgeTone: snapConfigured ? 'gain' : 'warn',
+    },
+    {
+      id: 'watch',
+      title: 'Ledger or any wallet',
+      subtitle: 'Bitcoin, Ethereum, Solana — from a public key, nothing to sign',
+      icon: Key,
+      color: '#F7931A',
     },
     {
       id: 'crypto',
@@ -1097,6 +1277,7 @@ function AccountGroups({ accounts }: { accounts: Account[] }) {
 
 const STEP_TITLES: Record<AddStep, string> = {
   chooser: 'Add an account',
+  watch: 'Ledger or any wallet',
   crypto: 'Crypto wallet',
   broker: 'Brokerage',
   manual: 'Holdings by hand',
