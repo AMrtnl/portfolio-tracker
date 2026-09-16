@@ -63,6 +63,7 @@ export class WatchProvider implements FinanceProvider {
     }
 
     let raw: WatchBalance[];
+    let fresh = false;
     const hit = this.cache.get(account.id);
     if (hit && Date.now() - hit.at < CACHE_TTL) {
       raw = hit.balances;
@@ -70,6 +71,7 @@ export class WatchProvider implements FinanceProvider {
       try {
         raw = (await fetchWatchBalances(key)).balances;
         this.cache.set(account.id, { at: Date.now(), balances: raw });
+        fresh = true;
       } catch (err) {
         return this.fromSnapshot(
           account,
@@ -80,7 +82,9 @@ export class WatchProvider implements FinanceProvider {
     }
 
     const holdings = await priceHoldings(raw, account.holdings ?? []);
-    this.store?.updateAccount(account.id, { holdings });
+    // Only a fresh chain read is worth a disk write; cached reads happen on
+    // every dashboard refresh.
+    if (fresh) this.store?.updateAccount(account.id, { holdings });
     return result(holdings, account, key);
   }
 
