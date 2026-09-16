@@ -71,6 +71,28 @@ Without keys, SnapTrade routes return **503** and other providers still work. Fa
 3. Or choose **Crypto wallet** and paste a Hyperliquid recovery phrase.
 4. Portfolio shows combined total + **Sources** breakdown.
 
+## Cash flow, statements, and subscriptions
+
+There is no bank aggregator wired (Swiss retail banks are mostly outside
+Plaid/GoCardless coverage anyway), so the ledger fills itself from what you
+give it and does the sorting for you:
+
+- **Log a transaction** — the category is guessed from the note as you type
+  (`Migros` → Groceries, `SBB` → Transport, `Lohn` → Salary). Pick another one
+  to override.
+- **Import a bank statement** — paste or upload the CSV your bank exports.
+  Delimiters, date formats (`16.09.2026`, `2026-09-16`, `16/09/2026`), amount
+  formats (`1'234.50`, `1.234,50`, `(45.00)`), signed-amount or debit/credit
+  columns, and header rows are all detected. Every line is categorised;
+  lines already in the ledger are skipped, so re-importing is safe.
+- **Recurring charges are detected** — anything at the same merchant with a
+  stable amount that repeats monthly, quarterly, or yearly shows up on the
+  Subscriptions page as a suggestion. Add it as-is, open it to adjust, or
+  dismiss it. Suggestions disappear once tracked.
+
+The rules live in `src/money/detect.ts` and the parser in
+`src/money/import.ts`; both are covered by unit tests.
+
 ## API (selected)
 
 | Method | Endpoint | Description |
