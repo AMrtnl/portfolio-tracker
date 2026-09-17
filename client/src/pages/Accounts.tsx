@@ -52,7 +52,7 @@ type AddStep =
 
 /** One field treatment for every input on the route. */
 const fieldClass =
-  'w-full rounded-[14px] border-[0.5px] border-white/[0.07] bg-[rgba(118,118,128,0.18)] px-3.5 py-3 text-[15px] font-semibold text-white placeholder:text-white/30'
+  'w-full rounded-[14px] border-[0.5px] border-border/10 bg-[rgba(118,118,128,0.18)] px-3.5 py-3 text-[15px] font-semibold text-foreground placeholder:text-muted-foreground/70'
 
 function typeLabel(a: Account): string {
   switch (a.type) {
@@ -240,7 +240,7 @@ function WatchForm({ onDone }: { onDone?: () => void }) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-[15px] font-semibold">Read from a Ledger</div>
-            <div className="text-[12.5px] text-white/50">
+            <div className="text-[12.5px] text-muted-foreground">
               {canLedger
                 ? 'Plug it in, unlock it, and open the Bitcoin or Ethereum app.'
                 : 'Needs Chrome, Edge, or Brave over USB — or paste the key from Ledger Live.'}
@@ -990,7 +990,7 @@ function AddChooser({
 /* ---------- Account row ---------- */
 
 const menuItemClass =
-  'flex w-full cursor-pointer items-center gap-2 rounded-[12px] px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-white/10'
+  'flex w-full cursor-pointer items-center gap-2 rounded-[12px] px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-foreground/10'
 
 function AccountRow({ account }: { account: Account }) {
   const [editing, setEditing] = useState(false)
@@ -1226,7 +1226,7 @@ function AccountGroups({ accounts }: { accounts: Account[] }) {
                   aria-hidden
                 />
                 {c.name}
-                <span className="text-xs font-semibold text-white/40">
+                <span className="text-xs font-semibold text-muted-foreground">
                   {items.length === 1 ? '1 account' : `${items.length} accounts`}
                 </span>
               </h3>
@@ -1251,11 +1251,11 @@ function AccountGroups({ accounts }: { accounts: Account[] }) {
                 aria-hidden
               />
               Loans
-              <span className="text-xs font-semibold text-white/40">
+              <span className="text-xs font-semibold text-muted-foreground">
                 {loans.length === 1 ? '1 account' : `${loans.length} accounts`}
               </span>
             </h3>
-            <span className="num text-[13px] font-bold text-[#FF453A]">
+            <span className="num text-[13px] font-bold text-loss">
               −{formatCurrency(
                 loans.reduce((s, a) => s + accountValue(a), 0),
                 { compact: true },

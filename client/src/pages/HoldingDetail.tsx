@@ -216,7 +216,6 @@ export function HoldingDetail() {
           <DetailChart
             values={points.map((p) => p.close)}
             height={230}
-            color="#FFFFFF"
             dates={(i) => (points[i] ? shortDate(points[i].date) : '')}
             onScrub={setCur}
           />

@@ -244,7 +244,7 @@ export function Goals() {
                 <i
                   style={{
                     width: `${totalTarget ? (totalCurrent / totalTarget) * 100 : 0}%`,
-                    background: '#0A84FF',
+                    background: 'var(--accent)',
                   }}
                 />
               </span>

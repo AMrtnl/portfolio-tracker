@@ -364,7 +364,6 @@ function HoldingLook({
         <DetailChart
           values={points.map((p) => p.close)}
           height={140}
-          color="#0A84FF"
           dates={(i) => (points[i] ? shortDate(points[i].date) : '')}
           onScrub={setCur}
         />

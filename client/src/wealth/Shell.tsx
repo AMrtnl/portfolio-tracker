@@ -7,7 +7,7 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom'
-import { ArrowsLeftRight, Briefcase, CalendarBlank, CaretDoubleLeft, CaretDoubleRight, Eye, EyeSlash, Stack, ChartPieSlice, ArrowsClockwise, MagnifyingGlass, Wallet, GearSix, Target, Plus, UploadSimple, Sparkle, CurrencyCircleDollar, Bell } from '@phosphor-icons/react'
+import { ArrowsLeftRight, Briefcase, CalendarBlank, CaretDoubleLeft, CaretDoubleRight, Eye, EyeSlash, Stack, ChartPieSlice, ArrowsClockwise, MagnifyingGlass, Wallet, GearSix, Target, Plus, UploadSimple, Sparkle, CurrencyCircleDollar, Bell, Moon, Sun } from '@phosphor-icons/react'
 import { Dashboard } from '@/pages/Dashboard'
 import { Accounts } from '@/pages/Accounts'
 import { Brokerage } from '@/pages/Brokerage'
@@ -21,6 +21,7 @@ import { useAccounts, type Account } from '@/hooks/useAccounts'
 import { PreferencesSheet } from '@/wealth/PreferencesSheet'
 import { AttentionSheet, useAttention } from '@/wealth/AttentionSheet'
 import { useSettings, useUpdateSettings } from '@/hooks/useSettings'
+import { useTheme } from '@/wealth/ThemeContext'
 import { useSubscriptions } from '@/hooks/useMoneyLedger'
 import { usePrivacy } from '@/wealth/PrivacyContext'
 import { useDemo } from '@/wealth/DemoContext'
@@ -94,7 +95,7 @@ function RailTab({ tab }: { tab: TabItem }) {
     >
       {({ isActive }) => (
         <>
-          <Icon size={21} weight={isActive ? 'duotone' : 'regular'} />
+          <Icon size={20} weight={isActive ? 'regular' : 'light'} />
           <span>{label}</span>
         </>
       )}
@@ -191,6 +192,7 @@ function TopSearch({
   const { enabled: sampleOn, toggle: toggleSample } = useDemo()
   const { data: settings } = useSettings()
   const setCurrency = useUpdateSettings().mutate
+  const { theme, toggle: toggleTheme } = useTheme()
   const { data: accounts } = useAccounts()
   const holdings = useMergedHoldings()
   const [query, setQuery] = useState('')
@@ -319,6 +321,14 @@ function TopSearch({
           run: () => setCurrency({ displayCurrency: c }),
         })),
       {
+        key: 'act-theme',
+        label: theme === 'paper' ? 'Switch to Night' : 'Switch to Paper',
+        sub: theme === 'paper' ? 'Black shell, neon chart' : 'Light, ink on warm grey',
+        keys: 'theme dark light appearance paper night',
+        icon: theme === 'paper' ? <Moon size={17} /> : <Sun size={17} />,
+        run: toggleTheme,
+      },
+      {
         key: 'act-prefs',
         label: 'Preferences',
         sub: 'Currency, headline figure, privacy',
@@ -431,6 +441,8 @@ function TopSearch({
     toggleSample,
     settings,
     setCurrency,
+    theme,
+    toggleTheme,
     openPrefs,
     openSync,
     openInbox,

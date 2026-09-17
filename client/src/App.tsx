@@ -3,6 +3,7 @@ import { BrowserRouter, MemoryRouter } from 'react-router-dom'
 import { PrivacyProvider } from '@/wealth/PrivacyContext'
 import { QuickLookProvider } from '@/wealth/QuickLook'
 import { DemoProvider } from '@/wealth/DemoContext'
+import { ThemeProvider } from '@/wealth/ThemeContext'
 import { AppShell } from '@/wealth/Shell'
 
 /* VITE_PREVIEW builds run as a standalone page with no server and a sandbox
@@ -21,6 +22,7 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
       <PrivacyProvider>
         <DemoProvider>
           <Router>
@@ -30,6 +32,7 @@ function App() {
           </Router>
         </DemoProvider>
       </PrivacyProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   )
 }

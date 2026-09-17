@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, CaretRight, Plus } from '@phosphor-icons/react'
-import { useSubscriptions, useTransactions } from '@/hooks/useMoneyLedger'
+import { useCashflow, useSubscriptions, useTransactions } from '@/hooks/useMoneyLedger'
 import { useGoals } from '@/hooks/useGoals'
 import { GOAL_COLORS, STATE_COPY, goalStatus, monthLabel } from '@/wealth/goals'
 import { useSettings } from '@/hooks/useSettings'
@@ -18,7 +18,7 @@ import {
 import { useAccounts } from '@/hooks/useAccounts'
 import { usePortfolio } from '@/hooks/usePortfolio'
 import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccount'
-import { CandleChart, Ring, SplitBar, StackedChart, type Candle, type ChartSeries } from '@/wealth/charts'
+import { CandleChart, Ring, Sparkline, SplitBar, StackedChart, type Candle, type ChartSeries } from '@/wealth/charts'
 import { useQuickLook } from '@/wealth/QuickLook'
 import { useMoney } from '@/wealth/format'
 import { Money } from '@/wealth/Money'
@@ -114,8 +114,31 @@ function SetupChecklist({
   )
 }
 
+/** Six little bars for a tile — the last one in ink, the rest in grey. */
+function TinyBars({ values }: { values: number[] }) {
+  const max = Math.max(...values, 1)
+  return (
+    <svg className="a-spark" width={values.length * 14} height={22} aria-hidden="true">
+      {values.map((v, i) => {
+        const h = Math.max(2, (v / max) * 20)
+        return (
+          <rect
+            key={i}
+            x={i * 14}
+            y={22 - h}
+            width={9}
+            height={h}
+            rx={1.5}
+            fill={i === values.length - 1 ? 'var(--ink)' : 'var(--ink-30)'}
+          />
+        )
+      })}
+    </svg>
+  )
+}
+
 export function Dashboard() {
-  const { chf, pctStr, unit } = useMoney()
+  const { chf, pctStr, unit, toDisplay } = useMoney()
   const { enabled: sampleOn } = useDemo()
   const { look } = useQuickLook()
   const { data: accounts } = useAccounts()
@@ -133,6 +156,11 @@ export function Dashboard() {
   const { data: news } = useNews(6)
   const { data: txs } = useTransactions()
   const { data: subData } = useSubscriptions()
+  const { data: cashflow } = useCashflow(6)
+  const flowMonths = cashflow?.months ?? []
+  const lastSaved = flowMonths.length
+    ? flowMonths[flowMonths.length - 1].income - flowMonths[flowMonths.length - 1].spend
+    : 0
   const { data: settings } = useSettings()
   const { data: goals = [] } = useGoals()
   const goalRows = useMemo(
@@ -401,7 +429,13 @@ export function Dashboard() {
         </div>
 
         {plotLen >= 2 && mode === 'candles' ? (
-          <CandleChart data={candles} height={236} dates={dates.short} onScrub={setCur} />
+          <CandleChart
+            data={candles}
+            height={236}
+            dates={dates.short}
+            onScrub={setCur}
+            convert={(v) => toDisplay(v, currency)}
+          />
         ) : plotLen >= 2 ? (
           <StackedChart
             series={series}
@@ -411,6 +445,7 @@ export function Dashboard() {
             dates={dates.short}
             onScrub={setCur}
             showDebt={debtNow > 0}
+            convert={(v) => toDisplay(v, currency)}
           />
         ) : (
           <p className="a-insnote spaced">
@@ -506,19 +541,40 @@ export function Dashboard() {
         })}
       </div>
 
-      <div className="a-stats">
-        <div className="a-stat">
+      <div className="a-vitals" aria-label="Vitals">
+        <div className="a-vital">
           <span>Assets</span>
           <b><Money value={grossNow} currency={currency} /></b>
+          <Sparkline values={assetSeries} color="var(--ink)" w={120} h={22} fill />
         </div>
-        <div className="a-stat">
+        <div className="a-vital">
           <span>Debt</span>
-          <b className="loss"><Money value={-debtNow} currency={currency} /></b>
+          <b className={debtNow > 0 ? 'loss' : ''}><Money value={-debtNow} currency={currency} /></b>
+          <em>{grossNow ? `${((debtNow / grossNow) * 100).toFixed(0)}% of assets` : '—'}</em>
         </div>
-        <div className="a-stat">
+        <div className="a-vital">
           <span>Today</span>
-          <b className={dayAbs >= 0 ? 'gain' : 'loss'}><Money value={dayAbs} currency={currency} sign /></b>
+          <b className={dayAbs >= 0 ? '' : 'loss'}><Money value={dayAbs} currency={currency} sign /></b>
+          <em>{assetSeries.length > 1 ? `${pctStr((dayAbs / (assetSeries[assetSeries.length - 2] || 1)) * 100)} on the day` : '—'}</em>
         </div>
+        {flowMonths.length > 0 && (
+          <div className="a-vital">
+            <span>Spend · {flowMonths[flowMonths.length - 1].label}</span>
+            <b><Money value={flowMonths[flowMonths.length - 1].spend} /></b>
+            <TinyBars values={flowMonths.map((m) => m.spend)} />
+          </div>
+        )}
+        {flowMonths.length > 0 && (
+          <div className="a-vital">
+            <span>Saved · {flowMonths[flowMonths.length - 1].label}</span>
+            <b className={lastSaved < 0 ? 'loss' : ''}><Money value={lastSaved} sign /></b>
+            <em>
+              {flowMonths[flowMonths.length - 1].income
+                ? `${((lastSaved / flowMonths[flowMonths.length - 1].income) * 100).toFixed(0)}% savings rate`
+                : 'No income logged'}
+            </em>
+          </div>
+        )}
       </div>
 
       </div>
@@ -560,7 +616,7 @@ export function Dashboard() {
               <i
                 style={{
                   width: `${Math.min(top?.percent ?? 0, 100)}%`,
-                  background: (top?.percent ?? 0) > 50 ? '#FF9F45' : '#30D158',
+                  background: (top?.percent ?? 0) > 50 ? 'var(--warn)' : 'var(--gain)',
                 }}
               />
             </span>
@@ -572,7 +628,7 @@ export function Dashboard() {
               <i
                 style={{
                   width: `${grossNow ? Math.min((liquid / grossNow) * 100, 100) : 0}%`,
-                  background: '#0A84FF',
+                  background: 'var(--accent)',
                 }}
               />
             </span>

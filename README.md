@@ -108,6 +108,7 @@ In Chrome, Edge, or Brave, **Read device** pulls the key straight from a plugged
 - **Goals** (`/goals`, `/api/goals`): a target, an optional date, a monthly contribution, an expected return, and the accounts that fund it. Progress is the live balance of those accounts; each card shows what is needed per month to land on the date and when the current pace gets there.
 - **Budget targets** (`/api/money/budgets`): a monthly ceiling per spend category, shown against the running average in Cash flow › Where it goes. Bars fill against the target and turn red when a month runs over.
 - **⌘K / Ctrl K / `/`** opens the palette: pages, asset classes, accounts, positions, and actions (add a transaction, import a statement, add an account, new goal, sync everything, hide balances, switch the display currency, open preferences).
+- **Appearance** (Preferences, or ⌘K → "Switch to…"): **Paper** is the light, institutional theme — warm grey ground, ink and grey series, one muted red for anything that needs attention, mono tick labels on dotted grids; **Night** keeps the black shell and the neon composition chart. Both run off the same CSS tokens.
 - **Needs attention** (the bell): failed or stale syncs, recurring charges waiting for a decision, and goals that have slipped — each with its one next step.
 
 ## API (selected)

@@ -1,7 +1,7 @@
 import type { Goal } from '@/hooks/useGoals'
 
 /** Palette for goal rings and bars, cycled by position. */
-export const GOAL_COLORS = ['#0A84FF', '#30D158', '#FF9F45', '#A57BFF', '#FFD84D', '#3ABEFF']
+export const GOAL_COLORS = ['#3B6EA8', '#2B7A4B', '#B8742B', '#7A5BA8', '#3A8E9E', '#8A7A2B']
 
 /** Whole months from now until `dateIso`, never negative; null without a date. */
 export function monthsUntil(dateIso: string | undefined, now = new Date()): number | null {

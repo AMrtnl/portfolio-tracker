@@ -16,6 +16,7 @@ import {
   DetailChart,
   FlowBars,
   MiniBars,
+  SlopeChart,
   Ring,
   SplitBar,
 } from '@/wealth/charts'
@@ -62,7 +63,7 @@ function monthLabel(month: string): string {
 }
 
 export function Analysis() {
-  const { chf, pctStr, unit } = useMoney()
+  const { chf, pctStr, unit, toDisplay } = useMoney()
   const { look } = useQuickLook()
   const [range, setRange] = useState<(typeof RANGES)[number]['k']>('3M')
   const [cut, setCut] = useState<AllocationDimension>('assetClass')
@@ -133,6 +134,19 @@ export function Analysis() {
       bySymbol.set(h.symbol, acc)
     }
     return [...bySymbol.values()].sort((a, b) => b.value - a.value)
+  }, [holdings])
+
+  // Positions with a known cost basis, biggest first — the "what did I pay" view.
+  const costRows = useMemo(() => {
+    const bySymbol = new Map<string, { key: string; name: string; from: number; to: number }>()
+    for (const h of holdings) {
+      if (!h.costBasis || h.costBasis <= 0) continue
+      const row = bySymbol.get(h.symbol) ?? { key: h.symbol, name: h.name || h.symbol, from: 0, to: 0 }
+      row.from += h.costBasis
+      row.to += h.marketValue || 0
+      bySymbol.set(h.symbol, row)
+    }
+    return [...bySymbol.values()].sort((a, b) => b.to - a.to).slice(0, 8)
   }, [holdings])
 
   const conc = concentration
@@ -207,9 +221,9 @@ export function Analysis() {
           <DetailChart
             values={values}
             height={220}
-            color="#FFFFFF"
             dates={(i) => (points[i] ? shortDate(points[i].date) : '')}
             onScrub={setCur}
+            convert={(v) => toDisplay(v, currency)}
           />
         ) : (
           <p className="a-insnote spaced">
@@ -327,7 +341,7 @@ export function Analysis() {
                 <div className="a-chartfoot">
                   <div className="a-keys">
                     <span className="a-key static">
-                      <span className="a-dot" style={{ background: '#fff' }} />
+                      <span className="a-dot" style={{ background: 'var(--ink)' }} />
                       This book
                       <b>
                         {bench?.portfolioReturnPercent != null
@@ -383,6 +397,20 @@ export function Analysis() {
               )
             })}
           </section>
+
+          {costRows.length >= 2 && (
+            <>
+              <div className="a-header">Cost → value</div>
+              <section className="a-gcard pad">
+                <SlopeChart
+                  rows={costRows}
+                  money={(n) => chf(n, false, currency)}
+                  fromLabel="Cost basis"
+                  toLabel="Market value"
+                />
+              </section>
+            </>
+          )}
         </div>
 
         <aside className="a-desk-aside">
@@ -398,7 +426,7 @@ export function Analysis() {
               {top5 != null && (
                 <Ring
                   pct={top5}
-                  color={top5 > 70 ? '#FF9F45' : GAIN}
+                  color={top5 > 70 ? 'var(--warn)' : GAIN}
                   label={`${top5.toFixed(0)}%`}
                 />
               )}
@@ -429,7 +457,7 @@ export function Analysis() {
               <div className="a-value sm">{chf(ttm, false, income?.currency || currency)}</div>
             </div>
             {incomeMonths.length >= 2 && (
-              <MiniBars data={incomeMonths} color={GAIN} height={140} />
+              <MiniBars data={incomeMonths} height={140} convert={(v) => toDisplay(v)} />
             )}
             {(income?.bySymbol?.length ?? 0) > 0 && (
               <div className="a-arows">
@@ -461,14 +489,16 @@ export function Analysis() {
                 {chf(netFlows, true, flows?.currency || currency)}
               </div>
             </div>
-            {flowMonths.length >= 2 && <FlowBars data={flowMonths} height={150} />}
+            {flowMonths.length >= 2 && (
+              <FlowBars data={flowMonths} height={150} convert={(v) => toDisplay(v)} />
+            )}
             <div className="a-keys">
               <span className="a-key static">
-                <span className="a-dot" style={{ background: GAIN }} />
+                <span className="a-dot" style={{ background: 'var(--ink)' }} />
                 In
               </span>
               <span className="a-key static">
-                <span className="a-dot" style={{ background: '#FF453A' }} />
+                <span className="a-dot" style={{ background: 'var(--ink-40)' }} />
                 Out
               </span>
             </div>

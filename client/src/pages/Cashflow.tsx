@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Trash, UploadSimple } from '@phosphor-icons/react'
-import { FlowBars } from '@/wealth/charts'
+import { Dumbbells, FlowBars, FlowChart } from '@/wealth/charts'
 import { FloatSheet } from '@/wealth/FloatSheet'
 import { useMoney } from '@/wealth/format'
 import { Money } from '@/wealth/Money'
@@ -46,7 +46,7 @@ function niceDate(iso: string): string {
 }
 
 export function Cashflow() {
-  const { chf, unit } = useMoney()
+  const { chf, unit, toDisplay } = useMoney()
   const { data, isLoading } = useCashflow(6)
   const { data: cats } = useCategories()
   const { data: txs } = useTransactions()
@@ -110,6 +110,29 @@ export function Cashflow() {
     )
   }, [months])
   const spendTotal = (data?.categories ?? []).reduce((s, c) => s + c.amount, 0)
+  const budgetTotal = Object.values(budgets).reduce((s, v) => s + (v || 0), 0)
+  const latest = months[months.length - 1]
+  // Income → saved + the biggest categories, for the flow view.
+  const flowTargets = useMemo(() => {
+    if (!latest) return []
+    const cats = [...(data?.categories ?? [])].sort((a, b) => b.amount - a.amount)
+    const top = cats.slice(0, 5)
+    const rest = cats.slice(5).reduce((s, c) => s + c.amount, 0)
+    const savedNow = latest.income - latest.spend
+    const out: Array<{ key: string; name: string; value: number; tone?: 'ink' | 'soft' | 'loss' }> = []
+    if (savedNow > 0) out.push({ key: 'saved', name: 'Saved', value: savedNow, tone: 'ink' })
+    for (const c of top) out.push({ key: c.id, name: c.name, value: c.amount, tone: 'soft' })
+    if (rest > 0) out.push({ key: 'rest', name: 'Other', value: rest, tone: 'soft' })
+    if (savedNow < 0) out.push({ key: 'over', name: 'Overspend', value: -savedNow, tone: 'loss' })
+    return out
+  }, [latest, data])
+  const dumbbellRows = useMemo(
+    () =>
+      [...(data?.categories ?? [])]
+        .sort((a, b) => b.amount - a.amount)
+        .map((c) => ({ key: c.id, name: c.name, before: data?.averages?.[c.id] ?? 0, after: c.amount })),
+    [data],
+  )
   const catList = kind === 'income' ? cats?.income : cats?.spend
   const catName = (id: string) =>
     [...(cats?.income ?? []), ...(cats?.spend ?? [])].find((c) => c.id === id)?.name ?? id
@@ -204,15 +227,21 @@ export function Cashflow() {
 
             {data?.hasActivity && months.length > 0 ? (
               <>
-                <FlowBars data={months} height={200} onScrub={setCur} />
+                <FlowBars
+                  data={months}
+                  height={200}
+                  onScrub={setCur}
+                  budget={budgetTotal > 0 ? budgetTotal : undefined}
+                  convert={(v) => toDisplay(v)}
+                />
                 <div className="a-chartfoot">
                   <div className="a-keys">
                     <span className="a-key static">
-                      <span className="a-dot" style={{ background: GAIN }} />
+                      <span className="a-dot" style={{ background: 'var(--ink)' }} />
                       Income
                     </span>
                     <span className="a-key static">
-                      <span className="a-dot" style={{ background: LOSS }} />
+                      <span className="a-dot" style={{ background: 'var(--ink-40)' }} />
                       Spending
                     </span>
                   </div>
@@ -229,11 +258,11 @@ export function Cashflow() {
           <div className="a-stats">
             <div className="a-stat">
               <span>Income</span>
-              <b className="gain"><Money value={month?.income ?? 0} /></b>
+              <b><Money value={month?.income ?? 0} /></b>
             </div>
             <div className="a-stat">
               <span>Spent</span>
-              <b className="loss"><Money value={month?.spend ?? 0} /></b>
+              <b><Money value={month?.spend ?? 0} /></b>
             </div>
             <div className="a-stat">
               <span>vs. previous month</span>
@@ -246,6 +275,20 @@ export function Cashflow() {
               </b>
             </div>
           </div>
+
+          {latest && flowTargets.length > 0 && (
+            <>
+              <div className="a-header">Where {latest.label} went</div>
+              <section className="a-gcard pad">
+                <FlowChart
+                  source={{ name: 'Income', value: latest.income }}
+                  targets={flowTargets}
+                  money={chf}
+                  height={Math.max(180, flowTargets.length * 34 + 40)}
+                />
+              </section>
+            </>
+          )}
 
           <div className="a-sechead">
             <div className="a-header">Transactions</div>
@@ -359,6 +402,14 @@ export function Cashflow() {
                     )
                   })}
               </section>
+              {dumbbellRows.length > 0 && (
+                <>
+                  <div className="a-header">Vs 6-month average</div>
+                  <section className="a-gcard pad">
+                    <Dumbbells rows={dumbbellRows} money={chf} />
+                  </section>
+                </>
+              )}
               <BudgetTargetsSheet
                 open={targetsOpen}
                 onClose={() => setTargetsOpen(false)}

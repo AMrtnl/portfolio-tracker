@@ -11,8 +11,8 @@
     --card-foreground: 0 0% 100%;
     --popover: 240 6% 11%;
     --popover-foreground: 0 0% 100%;
-    --primary: 211 100% 52%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
     --secondary: 240 5% 16%;
     --secondary-foreground: 0 0% 100%;
     --muted: 240 5% 16%;
@@ -23,11 +23,11 @@
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 100%;
     --input: 240 5% 22%;
-    --ring: 211 100% 52%;
+    --ring: 0 0% 100%;
     --radius: 0.875rem;
 
     --gain: 145 70% 50%;
-    --loss: 3 100% 62%;
+    --loss: 4 84% 62%;
     --warn: 32 100% 64%;
     --ink: 0 0% 100%;
 
@@ -42,6 +42,34 @@
     --font-body: Nunito, ui-rounded, "SF Pro Rounded", "Segoe UI Variable", system-ui, sans-serif;
     --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   }
+
+  :root[data-theme="paper"] {
+    --paper: 60 6% 90%;
+    --background: 60 6% 90%;
+    --foreground: 240 5% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 5% 8%;
+    --popover: 60 20% 98%;
+    --popover-foreground: 240 5% 8%;
+    --primary: 240 5% 8%;
+    --primary-foreground: 60 6% 96%;
+    --secondary: 240 4% 84%;
+    --secondary-foreground: 240 5% 8%;
+    --muted: 240 4% 84%;
+    --muted-foreground: 240 4% 42%;
+    --accent: 240 4% 82%;
+    --accent-foreground: 240 5% 8%;
+    --destructive: 2 52% 54%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 0%;
+    --input: 240 4% 80%;
+    --ring: 240 5% 8%;
+
+    --gain: 147 48% 33%;
+    --loss: 2 52% 54%;
+    --warn: 31 62% 45%;
+    --ink: 240 5% 8%;
+  }
 }
 
 @layer base {
@@ -52,16 +80,16 @@
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
-    background: #000;
+    background: var(--bg, #000);
     height: 100%;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-body);
-    background: #000;
+    background: var(--bg, #000);
     min-height: 100%;
-    color: #fff;
+    color: var(--ink, #fff);
   }
 
   #root {
@@ -69,11 +97,11 @@
   }
 
   ::selection {
-    background: rgba(10, 132, 255, 0.35);
+    background: var(--accent-soft-2);
   }
 
   :focus-visible {
-    outline: 2px solid #0a84ff;
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
     border-radius: 8px;
   }
@@ -103,8 +131,8 @@
     z-index: 60;
     transform: translateY(-250%);
     border-radius: 999px;
-    background: #0a84ff;
-    color: #fff;
+    background: var(--accent);
+    color: var(--on-accent);
     padding: 0.5rem 0.875rem;
     font-size: 0.875rem;
     font-weight: 700;
@@ -126,13 +154,13 @@
     font-weight: 700;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: rgba(235, 235, 245, 0.45);
+    color: var(--ink-45);
   }
 
   .t-meta {
     font-size: 0.75rem;
     line-height: 1.45;
-    color: rgba(235, 235, 245, 0.45);
+    color: var(--ink-45);
   }
 
   .num {
@@ -151,52 +179,52 @@
   }
 
   .text-gain {
-    color: #30d158;
+    color: var(--gain);
   }
   .text-loss {
-    color: #ff453a;
+    color: var(--loss);
   }
   .text-warn {
-    color: #ff9f45;
+    color: var(--warn);
   }
 
   .chip-gain {
-    background: rgba(48, 209, 88, 0.15);
-    color: #30d158;
+    background: var(--gain-soft);
+    color: var(--gain);
   }
   .chip-loss {
-    background: rgba(255, 69, 58, 0.15);
-    color: #ff453a;
+    background: var(--loss-soft);
+    color: var(--loss);
   }
   .chip-warn {
-    background: rgba(255, 159, 69, 0.16);
-    color: #ff9f45;
+    background: var(--warn-soft);
+    color: var(--warn);
   }
   .chip-neutral {
-    background: rgba(118, 118, 128, 0.2);
-    color: rgba(235, 235, 245, 0.5);
+    background: var(--fill-20);
+    color: var(--ink-50);
   }
 
   .surface {
-    background: rgba(28, 28, 30, 0.72);
-    border: 0.5px solid rgba(255, 255, 255, 0.09);
+    background: var(--surface);
+    border: 0.5px solid var(--line-09);
     border-radius: 26px;
     backdrop-filter: blur(30px) saturate(180%);
   }
 
   .surface-chrome {
-    background: rgba(0, 0, 0, 0.72);
+    background: var(--scrim);
     backdrop-filter: blur(24px) saturate(180%);
   }
 
   .surface-inset {
-    background: rgba(118, 118, 128, 0.16);
-    border: 0.5px solid rgba(255, 255, 255, 0.06);
+    background: var(--fill-16);
+    border: 0.5px solid var(--line-06);
   }
 
   .rule {
     position: relative;
-    border-top: 0.5px solid rgba(255, 255, 255, 0.09);
+    border-top: 0.5px solid var(--line-09);
   }
 
   .row-hover {
@@ -204,11 +232,11 @@
   }
 
   .row-hover:hover {
-    background: rgba(255, 255, 255, 0.035);
+    background: var(--line-035);
   }
 
   .divide-rule > * + * {
-    border-left: 0.5px solid rgba(255, 255, 255, 0.08);
+    border-left: 0.5px solid var(--line-08);
   }
 
   .animate-rise {
@@ -311,9 +339,9 @@
 .skeleton {
   background-image: linear-gradient(
     92deg,
-    rgba(255, 255, 255, 0.06) 22%,
-    rgba(255, 255, 255, 0.13) 50%,
-    rgba(255, 255, 255, 0.06) 78%
+    var(--line-06) 22%,
+    var(--line-13) 50%,
+    var(--line-06) 78%
   );
   background-size: 220% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
@@ -331,7 +359,7 @@
 
   .skeleton {
     background-image: none;
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: var(--line-08);
   }
 
   .animate-draw {

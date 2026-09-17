@@ -46,7 +46,7 @@ export function InsightsStrip({
               </div>
               <Ring
                 pct={conc}
-                color={conc > 50 ? '#FF9F45' : GAIN}
+                color={conc > 50 ? 'var(--warn)' : GAIN}
                 label={`${conc.toFixed(0)}%`}
               />
             </div>
