@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useIsFetching } from '@tanstack/react-query'
 import {
   NavLink,
   Navigate,
@@ -22,6 +23,7 @@ import { PreferencesSheet } from '@/wealth/PreferencesSheet'
 import { AttentionSheet, useAttention } from '@/wealth/AttentionSheet'
 import { useSettings, useUpdateSettings } from '@/hooks/useSettings'
 import { useTheme } from '@/wealth/ThemeContext'
+import { Warmup } from '@/wealth/Warmup'
 import { useSubscriptions } from '@/hooks/useMoneyLedger'
 import { usePrivacy } from '@/wealth/PrivacyContext'
 import { useDemo } from '@/wealth/DemoContext'
@@ -169,6 +171,24 @@ interface Suggestion {
  * positions. Focus (or ⌘K) opens the suggestion list; anything that is
  * an asset opens as a quick-view panel rather than a navigation.
  */
+/**
+ * A hairline at the very top while anything is still fetching. It waits a
+ * beat before showing so cached pages never flash it.
+ */
+function LoadingBar() {
+  const fetching = useIsFetching()
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    if (!fetching) {
+      setShow(false)
+      return
+    }
+    const t = setTimeout(() => setShow(true), 250)
+    return () => clearTimeout(t)
+  }, [fetching])
+  return <div className={`a-loadbar ${show ? 'on' : ''}`} aria-hidden />
+}
+
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null
   if (!el) return false
@@ -543,6 +563,7 @@ export function AppShell() {
   const [prefsOpen, setPrefsOpen] = useState(false)
   const [inboxOpen, setInboxOpen] = useState(false)
   const attention = useAttention()
+  const { theme, toggle: toggleTheme } = useTheme()
   const [railMin, setRailMin] = useState(
     () => localStorage.getItem('meridian.railMin') === '1',
   )
@@ -597,6 +618,8 @@ export function AppShell() {
 
   return (
     <div className={`a-root ${railMin ? 'rail-min' : ''}`}>
+      <Warmup />
+      <LoadingBar />
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
@@ -689,6 +712,15 @@ export function AppShell() {
             <button
               type="button"
               className="a-navbtn"
+              onClick={toggleTheme}
+              aria-label={theme === 'paper' ? 'Switch to dark' : 'Switch to light'}
+              title={theme === 'paper' ? 'Dark theme' : 'Light theme'}
+            >
+              {theme === 'paper' ? <Moon size={17} /> : <Sun size={17} />}
+            </button>
+            <button
+              type="button"
+              className="a-navbtn"
               onClick={() => setPrefsOpen(true)}
               aria-label="Preferences"
             >
@@ -704,19 +736,7 @@ export function AppShell() {
           </header>
 
           <main id="main-content" tabIndex={-1} className="a-page" key={location.pathname}>
-            {statusLoading ? (
-              <>
-                <p role="status" aria-live="polite" className="sr-only">
-                  Loading your accounts
-                </p>
-                <section className="a-card" aria-hidden>
-                  <div className="a-hero">
-                    <span className="ui-skel" style={{ width: 72, height: 14, borderRadius: 7 }} />
-                    <span className="ui-skel" style={{ width: 180, height: 36, borderRadius: 10, marginTop: 12 }} />
-                  </div>
-                </section>
-              </>
-            ) : (
+            {(
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route

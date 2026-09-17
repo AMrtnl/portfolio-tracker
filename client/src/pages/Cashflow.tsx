@@ -175,24 +175,10 @@ export function Cashflow() {
     e.target.value = ''
   }
 
-  if (isLoading) {
-    return (
-      <section className="a-heroblock" aria-hidden>
-        <div className="a-hero bare">
-          <span className="ui-skel" style={{ width: 88, height: 14, borderRadius: 7 }} />
-          <span
-            className="ui-skel"
-            style={{ width: 180, height: 36, borderRadius: 10, marginTop: 12 }}
-          />
-        </div>
-      </section>
-    )
-  }
-
   return (
     <>
       <div className="a-pagebar">
-        <div className="a-header">Last 6 months</div>
+        <div className="a-header">Last 6 months <em>Income against what you spend</em></div>
         <button type="button" className="ui-btn tinted sm" onClick={() => setAdding(true)}>
           <Plus size={15} />
           Add transaction
@@ -233,6 +219,7 @@ export function Cashflow() {
                   onScrub={setCur}
                   budget={budgetTotal > 0 ? budgetTotal : undefined}
                   convert={(v) => toDisplay(v)}
+                  money={chf}
                 />
                 <div className="a-chartfoot">
                   <div className="a-keys">
@@ -247,6 +234,8 @@ export function Cashflow() {
                   </div>
                 </div>
               </>
+            ) : isLoading ? (
+              <div className="a-plot" style={{ height: 200 }} aria-hidden />
             ) : (
               <p className="a-insnote spaced">
                 No cash flow yet. Add a salary deposit or a grocery run and the bars fill in
@@ -278,7 +267,7 @@ export function Cashflow() {
 
           {latest && flowTargets.length > 0 && (
             <>
-              <div className="a-header">Where {latest.label} went</div>
+              <div className="a-header">Where {latest.label} went <em>Income into savings and spending</em></div>
               <section className="a-gcard pad">
                 <FlowChart
                   source={{ name: 'Income', value: latest.income }}
@@ -291,7 +280,7 @@ export function Cashflow() {
           )}
 
           <div className="a-sechead">
-            <div className="a-header">Transactions</div>
+            <div className="a-header">Transactions <em>Newest first</em></div>
             <div className="a-pills" role="tablist" aria-label="Filter transactions">
               {FILTERS.map((f) => (
                 <button
@@ -365,7 +354,7 @@ export function Cashflow() {
           {spendTotal > 0 && (
             <>
               <div className="a-pagebar">
-                <div className="a-header">Where it goes</div>
+                <div className="a-header">Where it goes <em>This month by category</em></div>
                 <button type="button" className="a-more" onClick={() => setTargetsOpen(true)}>
                   Targets
                 </button>
@@ -404,7 +393,7 @@ export function Cashflow() {
               </section>
               {dumbbellRows.length > 0 && (
                 <>
-                  <div className="a-header">Vs 6-month average</div>
+                  <div className="a-header">Against your usual <em>This month vs the 6-month average</em></div>
                   <section className="a-gcard pad">
                     <Dumbbells rows={dumbbellRows} money={chf} />
                   </section>

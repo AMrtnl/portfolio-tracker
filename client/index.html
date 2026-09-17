@@ -8,8 +8,13 @@
     <meta name="theme-color" content="#E7E7E4" />
     <script>
       try {
+        var saved = localStorage.getItem("meridian.theme");
         document.documentElement.dataset.theme =
-          localStorage.getItem("meridian.theme") === "night" ? "night" : "paper";
+          saved === "night" || saved === "paper"
+            ? saved
+            : window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "night"
+              : "paper";
       } catch (e) {
         document.documentElement.dataset.theme = "paper";
       }

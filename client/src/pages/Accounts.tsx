@@ -1323,7 +1323,7 @@ export function Accounts() {
       ) : hasAccounts ? (
         <>
           <div className="a-pagebar">
-            <div className="a-header">Connected accounts</div>
+            <div className="a-header">Connected accounts <em>Grouped by what they hold</em></div>
             <button
               type="button"
               className="ui-btn tinted sm"

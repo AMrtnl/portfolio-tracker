@@ -114,6 +114,15 @@ function SetupChecklist({
   )
 }
 
+/** Keeps a daily series to a drawable number of points; the last point always survives. */
+function thinPoints<T>(points: T[], max: number): T[] {
+  if (points.length <= max) return points
+  const step = Math.ceil(points.length / max)
+  const out = points.filter((_, i) => i % step === 0)
+  if (out[out.length - 1] !== points[points.length - 1]) out.push(points[points.length - 1])
+  return out
+}
+
 /** Six little bars for a tile — the last one in ink, the rest in grey. */
 function TinyBars({ values }: { values: number[] }) {
   const max = Math.max(...values, 1)
@@ -144,7 +153,7 @@ export function Dashboard() {
   const { data: accounts } = useAccounts()
   const hasAccounts = (accounts?.length ?? 0) > 0
   const hasLive = (accounts ?? []).some((a) => !isDemoId(a.id))
-  const { data: portfolio, isLoading, error, refetch } = usePortfolio({
+  const { data: portfolio, error, refetch } = usePortfolio({
     enabled: hasLive,
   })
   const { data: overview } = useOverview()
@@ -198,17 +207,20 @@ export function Dashboard() {
   }, [])
 
   const currency = overview?.currency || 'USD'
-  const livePoints = history?.points ?? []
+  const livePoints = useMemo(() => history?.points ?? [], [history])
   const grossHint =
     (accounts ?? []).filter((a) => !isLiability(a)).reduce((s, a) => s + accountValue(a), 0) ||
     overview?.totalValue ||
     0
-  const points =
-    livePoints.length >= 8
-      ? livePoints
-      : sampleOn && grossHint
-        ? demoHistory(grossHint, RANGE_DAYS[range] ?? 90)
-        : livePoints
+  const points = useMemo(() => {
+    const raw =
+      livePoints.length >= 8
+        ? livePoints
+        : sampleOn && grossHint
+          ? demoHistory(grossHint, RANGE_DAYS[range] ?? 90)
+          : livePoints
+    return thinPoints(raw, 320)
+  }, [livePoints, sampleOn, grossHint, range])
   const assetSeries = useMemo(() => points.map((p) => p.value), [points])
 
   const classTotals = useMemo(() => {
@@ -364,16 +376,6 @@ export function Dashboard() {
     )
   }
 
-  if (hasLive && isLoading) {
-    return (
-      <section className="a-card" aria-hidden>
-        <div className="a-hero">
-          <span className="ui-skel" style={{ width: 88, height: 14, borderRadius: 7 }} />
-        </div>
-      </section>
-    )
-  }
-
   if (hasLive && error && !sampleOn) {
     return (
       <div className="ui-empty">
@@ -446,6 +448,7 @@ export function Dashboard() {
             onScrub={setCur}
             showDebt={debtNow > 0}
             convert={(v) => toDisplay(v, currency)}
+            money={(v) => chf(v, false, currency)}
           />
         ) : (
           <p className="a-insnote spaced">
@@ -545,7 +548,7 @@ export function Dashboard() {
         <div className="a-vital">
           <span>Assets</span>
           <b><Money value={grossNow} currency={currency} /></b>
-          <Sparkline values={assetSeries} color="var(--ink)" w={120} h={22} fill />
+          <Sparkline values={assetSeries} color="var(--ink)" h={22} fill stretch />
         </div>
         <div className="a-vital">
           <span>Debt</span>
@@ -582,7 +585,7 @@ export function Dashboard() {
       <aside className="a-desk-aside">
         {moverRows.length > 0 && (
           <>
-            <div className="a-header">Today&rsquo;s movers</div>
+            <div className="a-header">Today&rsquo;s movers <em>Biggest moves among your positions</em></div>
             <section className="a-gcard">
               {moverRows.map((m) => (
                 <button
@@ -608,7 +611,7 @@ export function Dashboard() {
           </>
         )}
 
-        <div className="a-header">Portfolio health</div>
+        <div className="a-header">Portfolio health <em>How concentrated and how liquid the book is</em></div>
         <section className="a-gcard pad">
           <div className="a-healthrow">
             <span>Concentration</span>
@@ -661,7 +664,7 @@ export function Dashboard() {
 
         {goalRows.length > 0 && (
           <>
-            <div className="a-header">Goals</div>
+            <div className="a-header">Goals <em>Progress from live balances</em></div>
             <section className="a-gcard">
               {goalRows.map(({ goal, status, color }) => (
                 <Link key={goal.id} to="/goals" className="a-arow tap">
@@ -687,7 +690,7 @@ export function Dashboard() {
           </>
         )}
 
-        <div className="a-header">Market recap</div>
+        <div className="a-header">Market recap <em>News on what you hold</em></div>
         <section className="a-gcard pad">
           {(news?.articles ?? []).slice(0, 5).map((a) => (
             <a

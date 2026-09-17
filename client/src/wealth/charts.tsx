@@ -148,6 +148,45 @@ function Grid({
   )
 }
 
+/* ---------- tooltip ---------- */
+
+type Money = (v: number) => string
+const plain: Money = (v) => v.toLocaleString('de-CH', { maximumFractionDigits: 2 }).replace(/’/g, "'")
+
+/**
+ * One readout for every series at the cursor. It's HTML over the plot, so it
+ * wraps and clips like text, and flips sides near the right edge.
+ */
+function Tip({
+  x,
+  width,
+  title,
+  rows,
+}: {
+  x: number
+  width: number
+  title: string
+  rows: Array<{ color?: string; name: string; value: string; strong?: boolean }>
+}) {
+  const flip = x > width * 0.6
+  return (
+    <div
+      className="a-tip"
+      style={{ left: x, transform: flip ? 'translateX(calc(-100% - 14px))' : 'translateX(14px)' }}
+      role="status"
+    >
+      <em>{title}</em>
+      {rows.map((r) => (
+        <span key={r.name} className={r.strong ? 'strong' : ''}>
+          <i style={{ background: r.color ?? 'var(--ink)' }} />
+          {r.name}
+          <b>{r.value}</b>
+        </span>
+      ))}
+    </div>
+  )
+}
+
 /* ---------- composition (the rainbow) ---------- */
 
 export interface ChartSeries {
@@ -166,6 +205,8 @@ interface StackedChartProps {
   onScrub?: (i: number | null) => void
   showDebt?: boolean
   convert?: Convert
+  /** Formats tooltip values; defaults to a plain number. */
+  money?: Money
 }
 
 export function StackedChart({
@@ -177,6 +218,7 @@ export function StackedChart({
   onScrub,
   showDebt = false,
   convert,
+  money = plain,
 }: StackedChartProps) {
   const [ref, width] = useWidth()
   const ink = useChartInk()
@@ -251,11 +293,6 @@ export function StackedChart({
             {c.bands.map((b, k) => (
               <g key={b.id} className="a-enter" style={{ animationDelay: `${k * 60}ms` }}>
                 <path d={b.area} fill={b.color} opacity={ink.glow ? 0.17 : 0.09} />
-                {ink.glow && (
-                  <g filter="url(#a-glow)" opacity=".45">
-                    <path d={b.line} fill="none" stroke={b.color} strokeWidth="3" />
-                  </g>
-                )}
                 <path
                   d={b.line}
                   fill="none"
@@ -324,6 +361,21 @@ export function StackedChart({
             )}
           </g>
         </svg>
+      )}
+      {c && cx != null && cur != null && (
+        <Tip
+          x={cx + PAD.left}
+          width={width}
+          title={dates(cur)}
+          rows={[
+            { name: showDebt ? 'Net worth' : 'Total', value: money(net[cur] ?? 0), strong: true },
+            ...[...series].reverse().map((b) => ({
+              color: b.color,
+              name: b.name,
+              value: money(b.values[cur] ?? 0),
+            })),
+          ]}
+        />
       )}
     </div>
   )
@@ -452,6 +504,7 @@ export function Sparkline({
   w = 44,
   h = 20,
   fill = false,
+  stretch = false,
 }: {
   values?: number[] | null
   color: string
@@ -459,6 +512,8 @@ export function Sparkline({
   h?: number
   /** Soft area under the line, for tiles. */
   fill?: boolean
+  /** Fill the container's width instead of a fixed pixel width. */
+  stretch?: boolean
 }) {
   const d = useMemo(() => {
     if (!values || values.length < 2) return null
@@ -470,7 +525,14 @@ export function Sparkline({
   }, [values, w, h])
   if (!d) return <span className="a-spark" />
   return (
-    <svg className="a-spark" width={w} height={h} aria-hidden="true">
+    <svg
+      className={`a-spark ${stretch ? 'stretch' : ''}`}
+      width={stretch ? '100%' : w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio={stretch ? 'none' : 'xMidYMid meet'}
+      aria-hidden="true"
+    >
       {fill && <path d={d.area} fill={color} opacity=".12" />}
       <path
         d={d.line}
@@ -479,6 +541,7 @@ export function Sparkline({
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
         opacity=".9"
       />
     </svg>
@@ -494,6 +557,7 @@ export function DetailChart({
   dates,
   onScrub,
   convert,
+  money = plain,
 }: {
   values: number[]
   height?: number
@@ -502,6 +566,7 @@ export function DetailChart({
   dates: (i: number) => string
   onScrub?: (i: number | null) => void
   convert?: Convert
+  money?: Money
 }) {
   const [ref, width] = useWidth()
   const ink = useChartInk()
@@ -596,6 +661,14 @@ export function DetailChart({
             )}
           </g>
         </svg>
+      )}
+      {a && cur != null && (
+        <Tip
+          x={a.px + PAD.left}
+          width={width}
+          title={dates(cur)}
+          rows={[{ color: stroke, name: 'Value', value: money(values[cur]), strong: true }]}
+        />
       )}
     </div>
   )
@@ -768,6 +841,7 @@ export function FlowBars({
   onScrub,
   budget,
   convert,
+  money = plain,
 }: {
   data: Array<{ label: string; income: number; spend: number }>
   height?: number
@@ -775,6 +849,7 @@ export function FlowBars({
   /** Monthly spending ceiling, drawn as a dashed reference line. */
   budget?: number
   convert?: Convert
+  money?: Money
 }) {
   const [ref, width] = useWidth()
   const ink = useChartInk()
@@ -882,6 +957,23 @@ export function FlowBars({
             )}
           </g>
         </svg>
+      )}
+      {c && cur != null && data[cur] && (
+        <Tip
+          x={c.x.center(cur) + 4}
+          width={width}
+          title={data[cur].label}
+          rows={[
+            { color: ink.ink, name: 'Income', value: money(data[cur].income) },
+            { color: ink.inkFaint, name: 'Spending', value: money(data[cur].spend) },
+            {
+              color: data[cur].income - data[cur].spend >= 0 ? ink.gain : ink.loss,
+              name: 'Saved',
+              value: money(data[cur].income - data[cur].spend),
+              strong: true,
+            },
+          ]}
+        />
       )}
     </div>
   )

@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, keepPreviousData } from '@tanstack/react-query'
 import { BrowserRouter, MemoryRouter } from 'react-router-dom'
 import { PrivacyProvider } from '@/wealth/PrivacyContext'
 import { QuickLookProvider } from '@/wealth/QuickLook'
@@ -15,6 +15,10 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      // Loaded once, kept warm: pages open from cache and refresh quietly.
+      staleTime: 5 * 60_000,
+      gcTime: 60 * 60_000,
+      placeholderData: keepPreviousData,
     },
   },
 })

@@ -214,7 +214,7 @@
 .a-card {
   background: var(--surface); border: .5px solid var(--line-09);
   border-radius: 32px; padding: 20px 6px 16px;
-  backdrop-filter: blur(30px) saturate(180%);
+  
 }
 .a-hero { padding: 0 16px 4px; }
 .a-caption { font-size: 13px; font-weight: 600; color: var(--ink-55); height: 17px; }
@@ -354,7 +354,7 @@
 .a-stat {
   flex: 1; display: flex; flex-direction: column; gap: 5px;
   background: var(--surface); border: .5px solid var(--line-06);
-  border-radius: 20px; padding: 13px 14px; backdrop-filter: blur(30px) saturate(180%);
+  border-radius: 20px; padding: 13px 14px; 
 }
 .a-stat span { font-size: 11.5px; font-weight: 600; color: var(--ink-45); }
 .a-stat b { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -362,7 +362,7 @@
 .a-gcard {
   background: var(--surface); border: .5px solid var(--line-06);
   border-radius: 26px; padding: 6px; margin-bottom: 10px;
-  backdrop-filter: blur(30px) saturate(180%);
+  
 }
 .a-gcard.pad { padding: 10px 8px; }
 .a-ghead {
@@ -457,7 +457,7 @@ button.a-arow { cursor: pointer; }
   scroll-snap-align: start; flex: 0 0 auto; width: 258px;
   display: flex; flex-direction: column; gap: 10px;
   background: var(--surface); border: .5px solid var(--line-06);
-  border-radius: 24px; padding: 16px; backdrop-filter: blur(30px) saturate(180%);
+  border-radius: 24px; padding: 16px; 
 }
 .a-instop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .a-inslabel {
@@ -698,7 +698,7 @@ button.a-arow { cursor: pointer; }
   display: flex; align-items: center; gap: 11px;
   border: .5px solid var(--line-07); background: var(--surface);
   border-radius: 20px; padding: 11px 13px; color: var(--ink); font: inherit;
-  text-align: left; cursor: pointer; backdrop-filter: blur(30px) saturate(180%);
+  text-align: left; cursor: pointer; 
   transition: background .16s, border-color .16s;
 }
 .a-catchip:hover { background: rgba(40,40,44,.75); border-color: var(--line-15); }
@@ -779,7 +779,7 @@ button.a-arow { cursor: pointer; }
 .a-qlook {
   position: fixed; inset: 0; z-index: 80;
   background: var(--scrim);
-  backdrop-filter: blur(10px) saturate(130%);
+  backdrop-filter: blur(6px);
   animation: a-qfade .2s ease both;
   display: flex; align-items: flex-start; justify-content: center;
   overflow-y: auto; overscroll-behavior: contain;
@@ -836,7 +836,7 @@ button.a-arow { cursor: pointer; }
 .a-sugs {
   position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 90;
   background: var(--popover);
-  backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(140%);
   border: .5px solid var(--line-12);
   border-radius: 18px; padding: 8px;
   box-shadow: 0 24px 60px var(--shadow);
@@ -920,7 +920,7 @@ button.a-arow { cursor: pointer; }
 .a-setup {
   background: var(--surface); border: .5px solid var(--line-08);
   border-radius: 24px; padding: 8px; margin-bottom: 18px;
-  backdrop-filter: blur(30px) saturate(180%);
+  
 }
 .a-setuphead {
   display: flex; align-items: center; justify-content: space-between;
@@ -1284,7 +1284,7 @@ button.a-arow { cursor: pointer; }
   display: flex; justify-content: center; gap: 4px;
   padding: 8px 12px calc(20px + env(safe-area-inset-bottom));
   background: linear-gradient(to top, var(--bg) 55%, transparent);
-  backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(140%);
   border-top: .5px solid var(--line-07);
 }
 .a-tab {
@@ -1433,7 +1433,7 @@ a.ui-btn.secondary { color: var(--ink); }
     align-items: center; gap: 16px;
     height: 60px; padding: 0 28px;
     background: var(--bar);
-    backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(140%);
     border-bottom: .5px solid var(--line-07);
   }
   .a-topbrand { display: none; }
@@ -1492,7 +1492,7 @@ a.ui-btn.secondary { color: var(--ink); }
 
   .a-sheet {
     background: var(--scrim);
-    backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(8px);
     padding: 64px 24px; align-items: flex-start;
     animation: a-sheetin-desk .28s cubic-bezier(.2,.7,.3,1) both;
   }
@@ -1586,3 +1586,56 @@ a.ui-btn.secondary { color: var(--ink); }
 .a-vital > b.loss { color: var(--loss); }
 .a-vital > em { font-style: normal; font-size: 11.5px; font-weight: 600; color: var(--ink-45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .a-vital .a-spark { margin-top: 2px; }
+
+/* ---- Readability pass: fintech clarity over terminal terseness ---- */
+:root { --label: rgba(235,235,245,.66); }
+:root[data-theme="paper"] { --label: rgba(20,20,22,.64); --surface: rgba(255,255,255,.72); }
+:root:not([data-theme="paper"]) { --surface: #131316; --panel: #17171a; --well: #1c1c20; }
+.a-header, .a-header.sm {
+  font-family: var(--font-body); font-size: 13.5px; font-weight: 700; letter-spacing: -.005em;
+  text-transform: none; color: var(--ink); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.a-header em { font-style: normal; font-size: 12.5px; font-weight: 500; color: var(--label); letter-spacing: 0; }
+.a-header.sm { font-size: 12.5px; }
+.a-pagebar .a-header { white-space: normal; }
+.a-caption, .a-navlabel, .a-stat span, .a-vital > span, .a-field span, .a-goalmeta span, .a-suglabel {
+  font-family: var(--font-body); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--label);
+}
+.a-caption { font-size: 11.5px; }
+.a-stat span, .a-vital > span { font-size: 10.5px; }
+.a-navlabel { font-size: 10px; }
+.a-field span, .a-goalmeta span { font-size: 10px; }
+.a-suglabel { font-size: 10.5px; }
+.a-axis { fill: var(--label); font-size: 10.5px; letter-spacing: .04em; }
+.a-atext b { font-size: 14.5px; }
+.a-atext em { font-size: 12.5px; color: var(--ink-60); }
+.a-anum b { font-size: 14.5px; }
+.a-anum em { font-size: 12px; color: var(--ink-60); }
+.a-insnote { font-size: 13px; color: var(--ink-70); line-height: 1.5; }
+.a-navsub { font-size: 13.5px; color: var(--ink-60); }
+.a-vital > em { font-size: 12px; color: var(--ink-60); }
+.a-key { font-size: 13px; }
+.a-key b { color: var(--ink-60); }
+.a-goalfund button { color: var(--ink-75); }
+.a-plot { position: relative; }
+.a-spark.stretch { display: block; width: 100%; }
+
+/* chart tooltip */
+.a-tip {
+  position: absolute; top: 4px; z-index: 6; pointer-events: none; min-width: 168px;
+  background: var(--panel); border: .5px solid var(--line-12); border-radius: 12px;
+  padding: 8px 10px 6px; box-shadow: 0 10px 28px var(--shadow);
+  font-size: 12.5px; font-weight: 600; color: var(--ink);
+}
+.a-tip em { display: block; font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--label); margin-bottom: 4px; }
+.a-tip span { display: flex; align-items: center; gap: 7px; padding: 2px 0; }
+.a-tip span i { width: 8px; height: 8px; border-radius: 999px; flex: none; }
+.a-tip span b { margin-left: auto; padding-left: 14px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; }
+.a-tip span.strong b { font-weight: 700; }
+.a-tip span.strong { border-bottom: .5px solid var(--line-10); margin-bottom: 2px; padding-bottom: 5px; }
+
+/* top progress hairline — appears only when a fetch outlives 250ms */
+.a-loadbar { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 200; pointer-events: none; opacity: 0; transition: opacity .2s; overflow: hidden; }
+.a-loadbar.on { opacity: 1; }
+.a-loadbar::before { content: ''; position: absolute; top: 0; bottom: 0; width: 38%; background: var(--accent); border-radius: 2px; animation: a-loadbar 1.1s cubic-bezier(.4,0,.2,1) infinite; }
+@keyframes a-loadbar { from { left: -40%; } to { left: 100%; } }

@@ -87,7 +87,14 @@ export function Analysis() {
   }, [])
 
   const currency = overview?.currency || 'USD'
-  const points = useMemo(() => history?.points ?? [], [history])
+  const points = useMemo(() => {
+    const raw = history?.points ?? []
+    if (raw.length <= 320) return raw
+    const step = Math.ceil(raw.length / 320)
+    const out = raw.filter((_, i) => i % step === 0)
+    if (out[out.length - 1] !== raw[raw.length - 1]) out.push(raw[raw.length - 1])
+    return out
+  }, [history])
   const values = useMemo(() => points.map((p) => p.value), [points])
   const total = overview?.totalValue ?? values[values.length - 1] ?? 0
   const shown = cur != null && values[cur] != null ? values[cur] : total
@@ -224,6 +231,7 @@ export function Analysis() {
             dates={(i) => (points[i] ? shortDate(points[i].date) : '')}
             onScrub={setCur}
             convert={(v) => toDisplay(v, currency)}
+            money={(v) => chf(v, false, currency)}
           />
         ) : (
           <p className="a-insnote spaced">
@@ -261,7 +269,7 @@ export function Analysis() {
 
       <div className="a-desk">
         <div className="a-desk-primary">
-          <div className="a-header">Allocation</div>
+          <div className="a-header">Allocation <em>How the book is split</em></div>
           <section className="a-gcard pad">
             <div className="a-pills wrap" role="tablist" aria-label="Allocation cut">
               {CUTS.map((c) => (
@@ -326,7 +334,7 @@ export function Analysis() {
             </div>
           </section>
 
-          <div className="a-header">Against the market</div>
+          <div className="a-header">Against the market <em>Both rebased to 100 at the start of the range</em></div>
           <section className="a-gcard pad">
             {benchLen >= 2 ? (
               <>
@@ -369,7 +377,7 @@ export function Analysis() {
             )}
           </section>
 
-          <div className="a-header">Largest positions</div>
+          <div className="a-header">Largest positions <em>Share of everything you hold</em></div>
           <section className="a-gcard">
             {topPositions.slice(0, 8).map((p) => {
               const share = total ? (p.value / total) * 100 : 0
@@ -400,7 +408,7 @@ export function Analysis() {
 
           {costRows.length >= 2 && (
             <>
-              <div className="a-header">Cost → value</div>
+              <div className="a-header">Cost to value <em>What you paid against what it is worth now</em></div>
               <section className="a-gcard pad">
                 <SlopeChart
                   rows={costRows}
@@ -414,7 +422,7 @@ export function Analysis() {
         </div>
 
         <aside className="a-desk-aside">
-          <div className="a-header">Concentration</div>
+          <div className="a-header">Concentration <em>How much rides on the top positions</em></div>
           <section className="a-gcard pad">
             <div className="a-instop">
               <div>
@@ -450,7 +458,7 @@ export function Analysis() {
             )}
           </section>
 
-          <div className="a-header">Income</div>
+          <div className="a-header">Income <em>Dividends and interest received</em></div>
           <section className="a-gcard pad">
             <div className="a-hero bare tight">
               <div className="a-caption">Last 12 months</div>
@@ -481,7 +489,7 @@ export function Analysis() {
             )}
           </section>
 
-          <div className="a-header">Deposits &amp; withdrawals</div>
+          <div className="a-header">Deposits &amp; withdrawals <em>Money moved in and out</em></div>
           <section className="a-gcard pad">
             <div className="a-hero bare tight">
               <div className="a-caption">Net over 12 months</div>

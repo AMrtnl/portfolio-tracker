@@ -22,10 +22,12 @@ const Ctx = createContext<ThemeCtx | null>(null)
 
 function read(): Theme {
   try {
-    return localStorage.getItem(KEY) === 'night' ? 'night' : 'paper'
+    const saved = localStorage.getItem(KEY)
+    if (saved === 'night' || saved === 'paper') return saved
   } catch {
-    return 'paper'
+    /* private mode */
   }
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'night' : 'paper'
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

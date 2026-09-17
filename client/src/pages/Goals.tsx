@@ -100,14 +100,6 @@ export function Goals() {
     .filter((r) => r.status.etaDate && r.status.state !== 'funded')
     .sort((a, b) => a.status.etaDate!.getTime() - b.status.etaDate!.getTime())[0]
 
-  if (isLoading) {
-    return (
-      <section className="a-gcard pad" aria-hidden>
-        <span className="ui-skel" style={{ width: 160, height: 14, borderRadius: 7 }} />
-      </section>
-    )
-  }
-
   return (
     <>
       <div className="a-pagebar">
@@ -124,7 +116,9 @@ export function Goals() {
 
       <div className="a-desk">
         <div className="a-desk-primary">
-          {rows.length === 0 ? (
+          {isLoading && rows.length === 0 ? (
+            <div className="a-goals" style={{ minHeight: 240 }} aria-hidden />
+          ) : rows.length === 0 ? (
             <section className="a-gcard pad a-goalempty">
               <b>Nothing is earmarked yet.</b>
               <p className="a-insnote">
@@ -236,7 +230,7 @@ export function Goals() {
         </div>
 
         <aside className="a-desk-aside">
-          <div className="a-header">All goals</div>
+          <div className="a-header">All goals <em>Across everything you are saving for</em></div>
           <section className="a-gcard pad">
             <div className="a-healthrow">
               <span>Funded</span>

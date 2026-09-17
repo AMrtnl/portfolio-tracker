@@ -14,7 +14,6 @@ export function useWalletStatus() {
       const { data } = await axios.get('/api/wallet/status')
       return data
     },
-    refetchInterval: 10000,
   })
 }
 
