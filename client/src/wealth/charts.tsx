@@ -115,6 +115,7 @@ function Grid({
   ink,
   convert,
   hideZero = true,
+  layer = 'both',
 }: {
   ticks: number[]
   y: (v: number) => number
@@ -122,23 +123,35 @@ function Grid({
   ink: ChartInk
   convert?: Convert
   hideZero?: boolean
+  /** Lines sit behind the marks; labels go on top with a surface halo so fills never hide them. */
+  layer?: 'lines' | 'labels' | 'both'
 }) {
   const labels = tickLabels(ticks, convert)
   return (
     <g pointerEvents="none">
       {ticks.map((t, i) => (
         <g key={t}>
-          <line
-            x1={0}
-            x2={iw}
-            y1={y(t)}
-            y2={y(t)}
-            stroke={ink.grid}
-            strokeDasharray="1 3"
-            shapeRendering="crispEdges"
-          />
-          {(t !== 0 || !hideZero) && (
-            <text x={0} y={y(t) - 4} className="a-axis">
+          {layer !== 'labels' && (
+            <line
+              x1={0}
+              x2={iw}
+              y1={y(t)}
+              y2={y(t)}
+              stroke={ink.grid}
+              strokeDasharray="1 3"
+              shapeRendering="crispEdges"
+            />
+          )}
+          {layer !== 'lines' && (t !== 0 || !hideZero) && (
+            <text
+              x={0}
+              y={y(t) - 4}
+              className="a-axis"
+              paintOrder="stroke"
+              stroke={ink.bg}
+              strokeWidth={3}
+              strokeLinejoin="round"
+            >
               {labels[i]}
             </text>
           )}
@@ -289,7 +302,7 @@ export function StackedChart({
             </pattern>
           </defs>
           <g transform={`translate(${PAD.left},${PAD.top})`}>
-            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} />
+            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} layer="lines" />
             {c.bands.map((b, k) => (
               <g key={b.id} className="a-enter" style={{ animationDelay: `${k * 60}ms` }}>
                 <path d={b.area} fill={b.color} opacity={ink.glow ? 0.17 : 0.09} />
@@ -326,6 +339,7 @@ export function StackedChart({
                 strokeLinejoin="round"
               />
             </g>
+            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} layer="labels" />
             <g transform={`translate(0,${c.ih + 6})`}>
               <text x={0} className="a-axis" textAnchor="start">
                 {dates(0)}
@@ -621,7 +635,7 @@ export function DetailChart({
             </filter>
           </defs>
           <g transform={`translate(${PAD.left},${PAD.top})`}>
-            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} hideZero={false} />
+            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} hideZero={false} layer="lines" />
             <path d={c.area} fill="url(#a-detfill)" />
             {ink.glow && (
               <g filter="url(#a-detglow)" opacity=".5">
@@ -637,6 +651,7 @@ export function DetailChart({
               strokeLinejoin="round"
               className="a-enter"
             />
+            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} hideZero={false} layer="labels" />
             <g transform={`translate(0,${c.ih + 6})`}>
               <text x={0} className="a-axis" textAnchor="start">
                 {dates(0)}
@@ -799,7 +814,7 @@ export function MiniBars({
       {c && (
         <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
           <g transform="translate(4,0)">
-            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} />
+            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} layer="lines" />
             <line
               x1={0}
               x2={c.iw}
@@ -827,6 +842,7 @@ export function MiniBars({
                 )}
               </g>
             ))}
+            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} layer="labels" />
           </g>
         </svg>
       )}
@@ -884,7 +900,7 @@ export function FlowBars({
       {c && (
         <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
           <g transform="translate(4,0)">
-            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} />
+            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} layer="lines" />
             <line
               x1={0}
               x2={c.iw}
@@ -939,6 +955,7 @@ export function FlowBars({
                 </g>
               )
             })}
+            <Grid ticks={c.ticks} y={c.y} iw={c.iw} ink={ink} convert={convert} layer="labels" />
             {budget != null && budget > 0 && (
               <g pointerEvents="none">
                 <line
