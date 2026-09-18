@@ -38,9 +38,10 @@
     --chart-5: 196 100% 62%;
     --chart-6: 258 100% 74%;
 
-    --font-display: "Bricolage Grotesque", ui-rounded, Nunito, system-ui, sans-serif;
-    --font-body: Nunito, ui-rounded, "SF Pro Rounded", "Segoe UI Variable", system-ui, sans-serif;
-    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    /* Legacy stacks: everything counts in DM Sans until each screen adopts the serif for its title. */
+    --font-display: var(--wh-sans);
+    --font-body: var(--wh-sans);
+    --font-mono: var(--wh-sans);
   }
 
   [data-ground="dark"] {
@@ -144,7 +145,7 @@
 
   .font-display {
     font-family: var(--font-display);
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -0.03em;
   }
 

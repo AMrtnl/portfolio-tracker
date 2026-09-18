@@ -114,7 +114,7 @@
   width: 30px; height: 30px; flex: none; border-radius: 10px;
   display: grid; place-items: center;
   background: var(--accent); color: var(--on-accent);
-  font-family: var(--font-display); font-size: 15px; font-weight: 800;
+  font-family: var(--font-display); font-size: 15px; font-weight: 700;
 }
 .a-search {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
@@ -271,7 +271,7 @@
 .a-cellDots i { width: 4px; height: 4px; border-radius: 999px; display: block; }
 .a-cell.has { background: var(--line-055); cursor: pointer; }
 .a-cell.has:hover { background: var(--line-10); }
-.a-cell.today .a-cellnum { color: var(--accent); font-weight: 800; }
+.a-cell.today .a-cellnum { color: var(--accent); font-weight: 700; }
 .a-cell.today::after {
   content: ""; position: absolute; inset: 0; border-radius: 13px;
   border: 1.5px solid var(--accent); opacity: .55;
@@ -347,7 +347,7 @@ button.a-arow { cursor: pointer; }
 .a-arow:hover, .a-subrow:hover { background: var(--line-035); }
 .a-av {
   width: 32px; height: 32px; flex: none; border-radius: 11px;
-  display: grid; place-items: center; font-size: 14px; font-weight: 800;
+  display: grid; place-items: center; font-size: 14px; font-weight: 700;
   overflow: hidden;
 }
 .a-av.logo {
@@ -409,7 +409,7 @@ button.a-arow { cursor: pointer; }
   text-transform: uppercase; letter-spacing: .06em;
 }
 .a-insval {
-  font-size: 27px; font-weight: 800; letter-spacing: -.03em; margin-top: 4px;
+  font-size: 27px; font-weight: 700; letter-spacing: -.03em; margin-top: 4px;
   font-variant-numeric: tabular-nums;
 }
 .a-insnote {
@@ -421,7 +421,7 @@ button.a-arow { cursor: pointer; }
 .a-ringarc { animation: a-arc .7s cubic-bezier(.2,.7,.3,1) both; }
 @keyframes a-arc { from { stroke-dasharray: 0 999; } }
 .a-ringtxt {
-  fill: var(--ink); font-size: 12.5px; font-weight: 800;
+  fill: var(--ink); font-size: 12.5px; font-weight: 700;
   font-family: inherit; font-variant-numeric: tabular-nums;
 }
 
@@ -479,7 +479,7 @@ button.a-arow { cursor: pointer; }
 }
 .a-detid { display: flex; align-items: center; gap: 13px; padding: 4px 2px 18px; }
 .a-av.lg { width: 46px; height: 46px; border-radius: 15px; font-size: 19px; }
-.a-dettitle { font-size: 22px; font-weight: 800; letter-spacing: -.025em; margin: 0; }
+.a-dettitle { font-size: 22px; font-weight: 700; letter-spacing: -.025em; margin: 0; }
 .a-detsub { font-size: 13px; color: var(--ink-50); margin: 2px 0 0; font-weight: 500; }
 
 .a-posrow {
@@ -488,7 +488,7 @@ button.a-arow { cursor: pointer; }
 }
 .a-posrow:hover { background: var(--line-035); }
 .a-ticker {
-  flex: none; min-width: 52px; font-size: 11.5px; font-weight: 800;
+  flex: none; min-width: 52px; font-size: 11.5px; font-weight: 700;
   letter-spacing: .02em; color: var(--ink-75);
   background: var(--fill-22); border-radius: 8px;
   padding: 5px 7px; text-align: center;
@@ -669,7 +669,7 @@ button.a-arow { cursor: pointer; }
 .a-statcell:first-child { padding-left: 4px; }
 .a-statcell + .a-statcell { border-left: .5px solid var(--line-07); }
 .a-statcell span {
-  font-size: 10.5px; font-weight: 800; letter-spacing: .06em;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--ink-40); white-space: nowrap;
 }
 .a-statcell b {
@@ -749,7 +749,7 @@ button.a-arow { cursor: pointer; }
   margin-bottom: 8px; min-height: 34px;
 }
 .a-qtitle {
-  margin: 0; font-size: 16.5px; font-weight: 800; letter-spacing: -.015em;
+  margin: 0; font-size: 16.5px; font-weight: 700; letter-spacing: -.015em;
   padding-left: 2px;
 }
 .a-qtitle.mid {
@@ -789,7 +789,7 @@ button.a-arow { cursor: pointer; }
 .a-suggroup + .a-suggroup { margin-top: 6px; }
 .a-suglabel {
   margin: 4px 0 2px; padding: 0 10px;
-  font-size: 10.5px; font-weight: 800; letter-spacing: .08em;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
   text-transform: uppercase; color: var(--ink-35);
 }
 .a-sug {
@@ -852,7 +852,7 @@ button.a-arow { cursor: pointer; }
 .a-detecthead { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 8px; }
 .a-detecthead b {
   display: flex; align-items: center; gap: 7px;
-  font-size: 14.5px; font-weight: 800; letter-spacing: -.01em; color: var(--ink);
+  font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; color: var(--ink);
 }
 .a-detecthead b svg { color: var(--accent); }
 .a-detecthead em { font-style: normal; font-size: 12.5px; color: var(--ink-62); font-weight: 500; }
@@ -870,7 +870,7 @@ button.a-arow { cursor: pointer; }
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 10px 12px 6px;
 }
-.a-setuphead b { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+.a-setuphead b { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
 .a-setuphead em {
   font-style: normal; font-size: 12px; color: var(--ink-45);
   font-weight: 700; font-variant-numeric: tabular-nums;
@@ -882,7 +882,7 @@ button.a-arow { cursor: pointer; }
 .a-step:hover { background: var(--line-045); }
 .a-stepnum {
   width: 30px; height: 30px; border-radius: 999px; flex: none;
-  display: grid; place-items: center; font-size: 12.5px; font-weight: 800;
+  display: grid; place-items: center; font-size: 12.5px; font-weight: 700;
   background: var(--fill-22); color: var(--ink-75);
 }
 .a-step.done .a-stepnum { background: var(--gain-soft); color: var(--gain); }
@@ -907,7 +907,7 @@ button.a-arow { cursor: pointer; }
 
 /* ── UI primitives ── */
 .ui-money { font-variant-numeric: tabular-nums; font-weight: 700; }
-.ui-money.lg { font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+.ui-money.lg { font-size: 26px; font-weight: 700; letter-spacing: -.03em; }
 .ui-money.md { font-size: 15px; }
 .ui-money.inherit { font-size: inherit; font-weight: inherit; }
 .ui-money-ccy {
@@ -1014,7 +1014,7 @@ button.a-arow { cursor: pointer; }
 }
 .ui-amount-box input {
   flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); font: inherit;
-  font-size: 30px; font-weight: 800; letter-spacing: -.03em; outline: none;
+  font-size: 30px; font-weight: 700; letter-spacing: -.03em; outline: none;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1059,7 +1059,7 @@ button.a-arow { cursor: pointer; }
 }
 .ui-rangewrap { width: 100%; }
 
-.ui-avatar { display: grid; place-items: center; font-weight: 800; flex: none; }
+.ui-avatar { display: grid; place-items: center; font-weight: 700; flex: none; }
 
 .ui-banner {
   display: flex; align-items: flex-start; gap: 11px; width: 100%;
@@ -1313,11 +1313,11 @@ a.ui-btn.secondary { color: var(--ink); }
     display: grid; place-items: center;
     background: var(--accent); color: var(--on-accent);
     font-family: var(--font-display);
-    font-size: 18px; font-weight: 800;
+    font-size: 18px; font-weight: 700;
   }
   .a-brand b {
     display: block; font-family: var(--font-display);
-    font-size: 16px; font-weight: 800; letter-spacing: -.02em;
+    font-size: 16px; font-weight: 700; letter-spacing: -.02em;
   }
   .a-brand em {
     display: block; font-style: normal; font-size: 11.5px;
@@ -1330,7 +1330,7 @@ a.ui-btn.secondary { color: var(--ink); }
   .a-navgroup + .a-navgroup { margin-top: 16px; }
   .a-navlabel {
     margin: 0 0 4px; padding: 0 12px;
-    font-size: 10.5px; font-weight: 800; letter-spacing: .09em;
+    font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
     text-transform: uppercase; color: var(--ink-32);
   }
   .a-railnav .a-tab {
@@ -1487,7 +1487,7 @@ a.ui-btn.secondary { color: var(--ink); }
 /* ---- Attention inbox & command actions ---- */
 .a-navcount {
   position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px;
-  border-radius: 999px; background: var(--loss); color: var(--ink); font-size: 10px; font-weight: 800;
+  border-radius: 999px; background: var(--loss); color: var(--ink); font-size: 10px; font-weight: 700;
   font-style: normal; display: flex; align-items: center; justify-content: center;
   border: 2px solid var(--bg); font-variant-numeric: tabular-nums;
 }
