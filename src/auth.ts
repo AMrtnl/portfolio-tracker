@@ -242,7 +242,7 @@ export function loginPageHtml(options: { error?: boolean } = {}): string {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>Meridian — Sign in</title>
+    <title>Sign in to Wealth Hub</title>
     <style>
       :root { color-scheme: dark; }
       * { box-sizing: border-box; }
@@ -281,7 +281,7 @@ export function loginPageHtml(options: { error?: boolean } = {}): string {
   <body>
     <main class="card">
       <div class="mark" aria-hidden="true">M</div>
-      <h1>Meridian</h1>
+      <h1>Wealth Hub</h1>
       <p class="sub">Private portfolio. Sign in to continue.</p>
       <form id="login-form" method="post" action="/api/auth/login">
         <label for="password">Password</label>

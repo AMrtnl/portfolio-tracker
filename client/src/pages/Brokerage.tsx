@@ -225,7 +225,7 @@ export function Brokerage() {
         <div className="ui-empty">
           <div className="ui-empty-icon">—</div>
           <b>No brokerage accounts yet</b>
-          <p>Connect a broker in the SnapTrade portal, then import it into Meridian.</p>
+          <p>Connect a broker in the SnapTrade portal, then import it into Wealth Hub.</p>
           <button
             type="button"
             className="ui-btn primary sm"

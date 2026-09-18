@@ -366,7 +366,7 @@ export function Subscriptions() {
             {sorted.length === 0 && (
               <p className="a-insnote spaced" style={{ paddingBottom: 12 }}>
                 Nothing tracked yet. Add one, or import a statement on Cash flow and let
-                Meridian detect them.
+                Wealth Hub detect them.
               </p>
             )}
             {sorted.map((s) => {

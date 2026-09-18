@@ -32,6 +32,7 @@ import { useQuickLook } from '@/wealth/QuickLook'
 import { useMergedHoldings } from '@/wealth/useMergedHoldings'
 import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccount'
 import { CLASSES } from '@/wealth/tokens'
+import { Lockup, Mark } from '@/wh/Mark'
 import { useMoney } from '@/wealth/format'
 import { LogoAvatar } from '@/wealth/logos'
 import { freshness } from '@/lib/utils'
@@ -613,11 +614,7 @@ export function AppShell() {
 
       <aside className="a-rail" aria-label="Workspace">
         <div className="a-brand">
-          <span className="a-brandmark">M</span>
-          <div>
-            <b>Meridian</b>
-            <em>Your money, one book</em>
-          </div>
+          <Lockup size={22} />
         </div>
         <RailNav accounts={accounts ?? []} />
         <p className="a-railnote">
@@ -645,9 +642,7 @@ export function AppShell() {
 
       <div className="a-main">
         <header className="a-topbar">
-          <span className="a-topbrand" aria-hidden>
-            M
-          </span>
+          <Mark width={42} className="a-topbrand" />
           <TopSearch
             openPrefs={() => setPrefsOpen(true)}
             openSync={() => setSyncOpen(true)}

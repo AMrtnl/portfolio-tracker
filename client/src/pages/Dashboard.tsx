@@ -85,7 +85,7 @@ function SetupChecklist({
     {
       done: subscriptions > 0,
       title: 'Confirm recurring charges',
-      sub: 'Meridian spots subscriptions in the ledger; you approve them',
+      sub: 'Wealth Hub spots subscriptions in the ledger; you approve them',
       to: '/subscriptions',
     },
   ]

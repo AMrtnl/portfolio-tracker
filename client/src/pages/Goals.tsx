@@ -122,7 +122,7 @@ export function Goals() {
             <section className="a-gcard pad a-goalempty">
               <b>Nothing is earmarked yet.</b>
               <p className="a-insnote">
-                A goal is a target, a date, and the accounts that fund it. Meridian works out
+                A goal is a target, a date, and the accounts that fund it. Wealth Hub works out
                 what it takes each month and tells you when you drift.
               </p>
               <button type="button" className="ui-btn primary md" onClick={() => setEditing('new')}>

@@ -222,7 +222,7 @@ export function HoldingDetail() {
         ) : (
           <p className="a-insnote spaced">
             {historyQ.data?.note ||
-              'Not enough daily closes to draw a line yet. Meridian never invents a curve.'}
+              'Not enough daily closes to draw a line yet. Wealth Hub never invents a curve.'}
           </p>
         )}
 
