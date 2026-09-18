@@ -1,153 +1,97 @@
-/* WealthApp visual system — dark iOS wealth tracker. */
+/* Wealth Hub visual system. Light is the default ground; a dark surface declares data-ground="dark". */
 
-/* ---- Tokens: Night is the default; Paper is the light, institutional theme. ---- */
-:root {
-  --bg: #000;
-  --bg-glow: radial-gradient(120% 70% at 50% -6%, #1C1C24 0%, transparent 60%);
-  --surface: rgba(28,28,30,.6);
-  --popover: rgba(22,22,27,.97);
-  --ink: #fff;
+/* ---- Legacy aliases: the a-* system reads these; every one resolves to a --wh-* token from wh/tokens.css.
+   Alpha scales are built from one ink triple per ground so they flip with the surface. ---- */
+:root, [data-ground="light"] {
+  --ink-rgb: 12, 18, 48;
+  --fill-k: .55;
+  --accent-rgb: 31, 63, 208;
+  --bg-rgb: 251, 246, 234;
   --knob: #fff;
-  --accent: #fff;
-  --on-accent: #000;
-  --accent-soft: rgba(255,255,255,.1);
-  --accent-soft-2: rgba(255,255,255,.16);
-  --accent-line: rgba(255,255,255,.55);
-  --gain: #30D158;
-  --gain-soft: rgba(48,209,88,.15);
-  --loss: #F0544C;
-  --loss-soft: rgba(240,84,76,.16);
-  --warn: #FF9F45;
-  --warn-soft: rgba(255,159,69,.16);
-  --well: #131316;
-  --panel: rgba(22,22,27,.96);
-  --scrim: rgba(2,2,6,.6);
-  --bar: rgba(2,2,6,.72);
-  --shadow: rgba(0,0,0,.6);
-  --ink-16: rgba(235,235,245,.16);
-  --ink-25: rgba(235,235,245,.25);
-  --ink-28: rgba(235,235,245,.28);
-  --ink-30: rgba(235,235,245,.3);
-  --ink-32: rgba(235,235,245,.32);
-  --ink-35: rgba(235,235,245,.35);
-  --ink-38: rgba(235,235,245,.38);
-  --ink-40: rgba(235,235,245,.4);
-  --ink-42: rgba(235,235,245,.42);
-  --ink-45: rgba(235,235,245,.45);
-  --ink-50: rgba(235,235,245,.5);
-  --ink-55: rgba(235,235,245,.55);
-  --ink-60: rgba(235,235,245,.6);
-  --ink-62: rgba(235,235,245,.62);
-  --ink-65: rgba(235,235,245,.65);
-  --ink-70: rgba(235,235,245,.7);
-  --ink-75: rgba(235,235,245,.75);
-  --ink-80: rgba(235,235,245,.8);
-  --ink-85: rgba(235,235,245,.85);
-  --ink-92: rgba(235,235,245,.92);
-  --line-03: rgba(255,255,255,.03);
-  --line-035: rgba(255,255,255,.035);
-  --line-04: rgba(255,255,255,.04);
-  --line-045: rgba(255,255,255,.045);
-  --line-05: rgba(255,255,255,.05);
-  --line-055: rgba(255,255,255,.055);
-  --line-06: rgba(255,255,255,.06);
-  --line-07: rgba(255,255,255,.07);
-  --line-08: rgba(255,255,255,.08);
-  --line-09: rgba(255,255,255,.09);
-  --line-10: rgba(255,255,255,.1);
-  --line-12: rgba(255,255,255,.12);
-  --line-13: rgba(255,255,255,.13);
-  --line-14: rgba(255,255,255,.14);
-  --line-15: rgba(255,255,255,.15);
-  --line-16: rgba(255,255,255,.16);
-  --line-28: rgba(255,255,255,.28);
-  --line-30: rgba(255,255,255,.3);
-  --line-60: rgba(255,255,255,.6);
-  --line-80: rgba(255,255,255,.8);
-  --fill-16: rgba(118,118,128,.16);
-  --fill-18: rgba(118,118,128,.18);
-  --fill-20: rgba(118,118,128,.2);
-  --fill-22: rgba(118,118,128,.22);
-  --fill-24: rgba(118,118,128,.24);
-  --fill-26: rgba(118,118,128,.26);
-  --fill-32: rgba(118,118,128,.32);
-  --fill-34: rgba(118,118,128,.34);
-  --fill-36: rgba(118,118,128,.36);
+  --on-accent: #fff;
+  --scrim: rgba(12, 18, 48, .38);
+  --shadow: rgba(12, 18, 48, .18);
 }
-:root[data-theme="paper"] {
-  --bg: #E7E7E4;
+[data-ground="dark"] {
+  --ink-rgb: 238, 241, 255;
+  --fill-k: 1;
+  --accent-rgb: 74, 108, 240;
+  --bg-rgb: 8, 12, 34;
+  --knob: #fff;
+  --on-accent: #fff;
+  --scrim: rgba(2, 4, 16, .6);
+  --shadow: rgba(0, 0, 0, .55);
+}
+:root, [data-ground="light"], [data-ground="dark"] {
+  --bg: var(--wh-marble);
   --bg-glow: none;
-  --surface: rgba(255,255,255,.58);
-  --popover: rgba(250,250,248,.98);
-  --ink: #141416;
-  --knob: #fff;
-  --accent: #141416;
-  --on-accent: #F4F4F2;
-  --accent-soft: rgba(20,20,22,.08);
-  --accent-soft-2: rgba(20,20,22,.14);
-  --accent-line: rgba(20,20,22,.5);
-  --gain: #2B7A4B;
-  --gain-soft: rgba(43,122,75,.14);
-  --loss: #C8524E;
-  --loss-soft: rgba(200,82,78,.14);
-  --warn: #B8742B;
-  --warn-soft: rgba(184,116,43,.16);
-  --well: rgba(255,255,255,.55);
-  --panel: rgba(244,244,242,.97);
-  --scrim: rgba(160,160,156,.45);
-  --bar: rgba(231,231,228,.78);
-  --shadow: rgba(0,0,0,.18);
-  --ink-16: rgba(20,20,22,.16);
-  --ink-25: rgba(20,20,22,.25);
-  --ink-28: rgba(20,20,22,.28);
-  --ink-30: rgba(20,20,22,.3);
-  --ink-32: rgba(20,20,22,.32);
-  --ink-35: rgba(20,20,22,.35);
-  --ink-38: rgba(20,20,22,.38);
-  --ink-40: rgba(20,20,22,.4);
-  --ink-42: rgba(20,20,22,.42);
-  --ink-45: rgba(20,20,22,.45);
-  --ink-50: rgba(20,20,22,.5);
-  --ink-55: rgba(20,20,22,.55);
-  --ink-60: rgba(20,20,22,.6);
-  --ink-62: rgba(20,20,22,.62);
-  --ink-65: rgba(20,20,22,.65);
-  --ink-70: rgba(20,20,22,.7);
-  --ink-75: rgba(20,20,22,.75);
-  --ink-80: rgba(20,20,22,.8);
-  --ink-85: rgba(20,20,22,.85);
-  --ink-92: rgba(20,20,22,.92);
-  --line-03: rgba(0,0,0,.03);
-  --line-035: rgba(0,0,0,.035);
-  --line-04: rgba(0,0,0,.04);
-  --line-045: rgba(0,0,0,.045);
-  --line-05: rgba(0,0,0,.05);
-  --line-055: rgba(0,0,0,.055);
-  --line-06: rgba(0,0,0,.06);
-  --line-07: rgba(0,0,0,.07);
-  --line-08: rgba(0,0,0,.08);
-  --line-09: rgba(0,0,0,.09);
-  --line-10: rgba(0,0,0,.1);
-  --line-12: rgba(0,0,0,.12);
-  --line-13: rgba(0,0,0,.13);
-  --line-14: rgba(0,0,0,.14);
-  --line-15: rgba(0,0,0,.15);
-  --line-16: rgba(0,0,0,.16);
-  --line-28: rgba(0,0,0,.28);
-  --line-30: rgba(0,0,0,.3);
-  --line-60: rgba(0,0,0,.6);
-  --line-80: rgba(0,0,0,.8);
-  --fill-16: rgba(60,60,67,.099);
-  --fill-18: rgba(60,60,67,.112);
-  --fill-20: rgba(60,60,67,.124);
-  --fill-22: rgba(60,60,67,.136);
-  --fill-24: rgba(60,60,67,.149);
-  --fill-26: rgba(60,60,67,.161);
-  --fill-32: rgba(60,60,67,.198);
-  --fill-34: rgba(60,60,67,.211);
-  --fill-36: rgba(60,60,67,.223);
+  --surface: var(--wh-card);
+  --popover: var(--wh-card);
+  --panel: var(--wh-card);
+  --well: var(--wh-panel);
+  --ink: var(--wh-ink);
+  --label: var(--wh-muted);
+  --accent: var(--wh-ultra);
+  --accent-soft: var(--wh-ultra-soft);
+  --accent-soft-2: rgba(var(--accent-rgb), .22);
+  --accent-line: rgba(var(--accent-rgb), .6);
+  --gain: var(--wh-gain);
+  --gain-soft: var(--wh-gain-soft);
+  --loss: var(--wh-owed);
+  --loss-soft: var(--wh-owed-soft);
+  --warn: var(--wh-stone-deep);
+  --warn-soft: var(--wh-stone-soft);
+  --bar: rgba(var(--bg-rgb), .82);
+  --ink-16: rgba(var(--ink-rgb), .16);
+  --ink-25: rgba(var(--ink-rgb), .25);
+  --ink-28: rgba(var(--ink-rgb), .28);
+  --ink-30: rgba(var(--ink-rgb), .3);
+  --ink-32: rgba(var(--ink-rgb), .32);
+  --ink-35: rgba(var(--ink-rgb), .35);
+  --ink-38: rgba(var(--ink-rgb), .38);
+  --ink-40: rgba(var(--ink-rgb), .4);
+  --ink-42: rgba(var(--ink-rgb), .42);
+  --ink-45: rgba(var(--ink-rgb), .45);
+  --ink-50: rgba(var(--ink-rgb), .5);
+  --ink-55: rgba(var(--ink-rgb), .55);
+  --ink-60: rgba(var(--ink-rgb), .6);
+  --ink-62: rgba(var(--ink-rgb), .62);
+  --ink-65: rgba(var(--ink-rgb), .65);
+  --ink-70: rgba(var(--ink-rgb), .7);
+  --ink-75: rgba(var(--ink-rgb), .75);
+  --ink-80: rgba(var(--ink-rgb), .8);
+  --ink-85: rgba(var(--ink-rgb), .85);
+  --ink-92: rgba(var(--ink-rgb), .92);
+  --line-03: rgba(var(--ink-rgb), .03);
+  --line-035: rgba(var(--ink-rgb), .035);
+  --line-04: rgba(var(--ink-rgb), .04);
+  --line-045: rgba(var(--ink-rgb), .045);
+  --line-05: rgba(var(--ink-rgb), .05);
+  --line-055: rgba(var(--ink-rgb), .055);
+  --line-06: rgba(var(--ink-rgb), .06);
+  --line-07: rgba(var(--ink-rgb), .07);
+  --line-08: rgba(var(--ink-rgb), .08);
+  --line-09: rgba(var(--ink-rgb), .09);
+  --line-10: rgba(var(--ink-rgb), .1);
+  --line-12: rgba(var(--ink-rgb), .12);
+  --line-13: rgba(var(--ink-rgb), .13);
+  --line-14: rgba(var(--ink-rgb), .14);
+  --line-15: rgba(var(--ink-rgb), .15);
+  --line-16: rgba(var(--ink-rgb), .16);
+  --line-28: rgba(var(--ink-rgb), .28);
+  --line-30: rgba(var(--ink-rgb), .3);
+  --line-60: rgba(var(--ink-rgb), .6);
+  --line-80: rgba(var(--ink-rgb), .8);
+  --fill-16: rgba(var(--ink-rgb), calc(.16 * var(--fill-k)));
+  --fill-18: rgba(var(--ink-rgb), calc(.18 * var(--fill-k)));
+  --fill-20: rgba(var(--ink-rgb), calc(.2 * var(--fill-k)));
+  --fill-22: rgba(var(--ink-rgb), calc(.22 * var(--fill-k)));
+  --fill-24: rgba(var(--ink-rgb), calc(.24 * var(--fill-k)));
+  --fill-26: rgba(var(--ink-rgb), calc(.26 * var(--fill-k)));
+  --fill-32: rgba(var(--ink-rgb), calc(.32 * var(--fill-k)));
+  --fill-34: rgba(var(--ink-rgb), calc(.34 * var(--fill-k)));
+  --fill-36: rgba(var(--ink-rgb), calc(.36 * var(--fill-k)));
 }
-
 
 .a-root {
   min-height: 100vh;
@@ -1558,9 +1502,6 @@ a.ui-btn.secondary { color: var(--ink); }
 
 .a-sugs { max-height: min(72vh, 680px); overflow: auto; }
 
-/* ---- Appearance swatches ---- */
-.a-swatch { width: 28px; height: 28px; flex: none; border-radius: 9px; border: .5px solid var(--line-14); background: linear-gradient(135deg, #E7E7E4 50%, #141416 50%); }
-.a-swatch[data-theme-swatch="night"] { background: linear-gradient(135deg, #000 50%, #fff 50%); }
 .a-plot.static { cursor: default; touch-action: auto; }
 
 /* ---- Micro typography: mono, uppercase, tracked — the terminal read ---- */
@@ -1588,9 +1529,6 @@ a.ui-btn.secondary { color: var(--ink); }
 .a-vital .a-spark { margin-top: 2px; }
 
 /* ---- Readability pass: fintech clarity over terminal terseness ---- */
-:root { --label: rgba(235,235,245,.66); }
-:root[data-theme="paper"] { --label: rgba(20,20,22,.64); --surface: rgba(255,255,255,.72); }
-:root:not([data-theme="paper"]) { --surface: #131316; --panel: #17171a; --well: #1c1c20; }
 .a-header, .a-header.sm {
   font-family: var(--font-body); font-size: 13.5px; font-weight: 700; letter-spacing: -.005em;
   text-transform: none; color: var(--ink); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;

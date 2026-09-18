@@ -3,33 +3,33 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --paper: 0 0% 0%;
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
-    --card: 240 6% 11%;
-    --card-foreground: 0 0% 100%;
-    --popover: 240 6% 11%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 0 0% 100%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 240 5% 16%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 240 5% 16%;
-    --muted-foreground: 240 6% 64%;
-    --accent: 240 5% 18%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 3 100% 62%;
+  :root, [data-ground="light"] {
+    --paper: 42 68% 95%;
+    --background: 42 68% 95%;
+    --foreground: 230 60% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 230 60% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 230 60% 12%;
+    --primary: 229 74% 47%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 44 46% 91%;
+    --secondary-foreground: 230 60% 12%;
+    --muted: 44 46% 91%;
+    --muted-foreground: 229 13% 41%;
+    --accent: 226 72% 94%;
+    --accent-foreground: 230 60% 12%;
+    --destructive: 8 74% 41%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 100%;
-    --input: 240 5% 22%;
-    --ring: 0 0% 100%;
+    --border: 42 41% 85%;
+    --input: 42 41% 85%;
+    --ring: 229 74% 47%;
     --radius: 0.875rem;
 
-    --gain: 145 70% 50%;
-    --loss: 4 84% 62%;
-    --warn: 32 100% 64%;
-    --ink: 0 0% 100%;
+    --gain: 156 71% 28%;
+    --loss: 8 74% 41%;
+    --warn: 40 86% 29%;
+    --ink: 230 60% 12%;
 
     --chart-1: 12 100% 64%;
     --chart-2: 28 100% 64%;
@@ -43,32 +43,32 @@
     --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   }
 
-  :root[data-theme="paper"] {
-    --paper: 60 6% 90%;
-    --background: 60 6% 90%;
-    --foreground: 240 5% 8%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 5% 8%;
-    --popover: 60 20% 98%;
-    --popover-foreground: 240 5% 8%;
-    --primary: 240 5% 8%;
-    --primary-foreground: 60 6% 96%;
-    --secondary: 240 4% 84%;
-    --secondary-foreground: 240 5% 8%;
-    --muted: 240 4% 84%;
-    --muted-foreground: 240 4% 42%;
-    --accent: 240 4% 82%;
-    --accent-foreground: 240 5% 8%;
-    --destructive: 2 52% 54%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 0%;
-    --input: 240 4% 80%;
-    --ring: 240 5% 8%;
+  [data-ground="dark"] {
+    --paper: 231 62% 8%;
+    --background: 231 62% 8%;
+    --foreground: 229 100% 97%;
+    --card: 230 49% 15%;
+    --card-foreground: 229 100% 97%;
+    --popover: 230 49% 15%;
+    --popover-foreground: 229 100% 97%;
+    --primary: 228 85% 62%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 231 57% 12%;
+    --secondary-foreground: 229 100% 97%;
+    --muted: 231 57% 12%;
+    --muted-foreground: 229 33% 70%;
+    --accent: 231 50% 21%;
+    --accent-foreground: 229 100% 97%;
+    --destructive: 13 100% 71%;
+    --destructive-foreground: 231 62% 8%;
+    --border: 230 42% 24%;
+    --input: 230 42% 24%;
+    --ring: 228 85% 62%;
 
-    --gain: 147 48% 33%;
-    --loss: 2 52% 54%;
-    --warn: 31 62% 45%;
-    --ink: 240 5% 8%;
+    --gain: 152 69% 58%;
+    --loss: 13 100% 71%;
+    --warn: 43 82% 68%;
+    --ink: 229 100% 97%;
   }
 }
 

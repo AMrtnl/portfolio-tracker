@@ -2,7 +2,6 @@ import { Check } from '@phosphor-icons/react'
 import { FloatSheet } from '@/wealth/FloatSheet'
 import { usePrivacy } from '@/wealth/PrivacyContext'
 import { useDemo } from '@/wealth/DemoContext'
-import { useTheme, type Theme } from '@/wealth/ThemeContext'
 import {
   useSettings,
   useUpdateSettings,
@@ -16,11 +15,6 @@ const CURRENCY_NAMES: Record<DisplayCurrency, string> = {
   USD: 'US dollar',
   GBP: 'Pound sterling',
 }
-
-const THEMES: Array<{ id: Theme; label: string; sub: string }> = [
-  { id: 'paper', label: 'Paper', sub: 'Light, ink on warm grey — the institutional read' },
-  { id: 'night', label: 'Night', sub: 'Black shell with the neon composition chart' },
-]
 
 export const HEADLINE_COPY: Record<HeadlineMetric, { label: string; sub: string }> = {
   net: { label: 'Net worth', sub: 'Everything you own, minus what you owe' },
@@ -36,7 +30,6 @@ export function PreferencesSheet({ open, onClose }: { open: boolean; onClose: ()
   const { enabled: sampleOn, toggle: toggleSample } = useDemo()
   const display = settings?.displayCurrency ?? 'USD'
   const metric = settings?.headlineMetric ?? 'net'
-  const { theme, setTheme } = useTheme()
 
   return (
     <FloatSheet open={open} onClose={onClose} title="Preferences">
@@ -44,29 +37,6 @@ export function PreferencesSheet({ open, onClose }: { open: boolean; onClose: ()
         Every total is converted into the display currency at today&rsquo;s rate.
         Balances stay stored in the currency their source reports.
       </p>
-
-      <div className="a-header">Appearance</div>
-      <section className="a-gcard">
-        {THEMES.map((t) => {
-          const active = t.id === theme
-          return (
-            <button
-              key={t.id}
-              type="button"
-              className={`a-arow tap ${active ? 'on' : ''}`}
-              onClick={() => setTheme(t.id)}
-              aria-pressed={active}
-            >
-              <span className="a-swatch" data-theme-swatch={t.id} aria-hidden />
-              <span className="a-atext">
-                <b>{t.label}</b>
-                <em>{t.sub}</em>
-              </span>
-              {active && <Check size={16} weight="bold" className="a-rowcheck" />}
-            </button>
-          )
-        })}
-      </section>
 
       <div className="a-header">Display currency</div>
       <section className="a-gcard">

@@ -8,7 +8,7 @@ import {
 } from 'react'
 import { curve, padDomain, scaleBand, scaleLinear, stack } from '@/wealth/math'
 import { PAD } from '@/wealth/tokens'
-import { useChartInk, type ChartInk } from '@/wealth/ThemeContext'
+import { useChartInk, type ChartInk } from '@/wh/ground'
 
 export function useWidth() {
   const ref = useRef<HTMLDivElement>(null)

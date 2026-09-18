@@ -8,7 +8,7 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom'
-import { ArrowsLeftRight, Briefcase, CalendarBlank, CaretDoubleLeft, CaretDoubleRight, Eye, EyeSlash, Stack, ChartPieSlice, ArrowsClockwise, MagnifyingGlass, Wallet, GearSix, Target, Plus, UploadSimple, Sparkle, CurrencyCircleDollar, Bell, Moon, Sun } from '@phosphor-icons/react'
+import { ArrowsLeftRight, Briefcase, CalendarBlank, CaretDoubleLeft, CaretDoubleRight, Eye, EyeSlash, Stack, ChartPieSlice, ArrowsClockwise, MagnifyingGlass, Wallet, GearSix, Target, Plus, UploadSimple, Sparkle, CurrencyCircleDollar, Bell } from '@phosphor-icons/react'
 import { Dashboard } from '@/pages/Dashboard'
 import { Accounts } from '@/pages/Accounts'
 import { Brokerage } from '@/pages/Brokerage'
@@ -22,7 +22,6 @@ import { useAccounts, type Account } from '@/hooks/useAccounts'
 import { PreferencesSheet } from '@/wealth/PreferencesSheet'
 import { AttentionSheet, useAttention } from '@/wealth/AttentionSheet'
 import { useSettings, useUpdateSettings } from '@/hooks/useSettings'
-import { useTheme } from '@/wealth/ThemeContext'
 import { Warmup } from '@/wealth/Warmup'
 import { useSubscriptions } from '@/hooks/useMoneyLedger'
 import { usePrivacy } from '@/wealth/PrivacyContext'
@@ -212,7 +211,6 @@ function TopSearch({
   const { enabled: sampleOn, toggle: toggleSample } = useDemo()
   const { data: settings } = useSettings()
   const setCurrency = useUpdateSettings().mutate
-  const { theme, toggle: toggleTheme } = useTheme()
   const { data: accounts } = useAccounts()
   const holdings = useMergedHoldings()
   const [query, setQuery] = useState('')
@@ -341,14 +339,6 @@ function TopSearch({
           run: () => setCurrency({ displayCurrency: c }),
         })),
       {
-        key: 'act-theme',
-        label: theme === 'paper' ? 'Switch to Night' : 'Switch to Paper',
-        sub: theme === 'paper' ? 'Black shell, neon chart' : 'Light, ink on warm grey',
-        keys: 'theme dark light appearance paper night',
-        icon: theme === 'paper' ? <Moon size={17} /> : <Sun size={17} />,
-        run: toggleTheme,
-      },
-      {
         key: 'act-prefs',
         label: 'Preferences',
         sub: 'Currency, headline figure, privacy',
@@ -461,8 +451,6 @@ function TopSearch({
     toggleSample,
     settings,
     setCurrency,
-    theme,
-    toggleTheme,
     openPrefs,
     openSync,
     openInbox,
@@ -563,7 +551,6 @@ export function AppShell() {
   const [prefsOpen, setPrefsOpen] = useState(false)
   const [inboxOpen, setInboxOpen] = useState(false)
   const attention = useAttention()
-  const { theme, toggle: toggleTheme } = useTheme()
   const [railMin, setRailMin] = useState(
     () => localStorage.getItem('meridian.railMin') === '1',
   )
@@ -708,15 +695,6 @@ export function AppShell() {
             >
               <ArrowsClockwise size={17} />
               {needsAttention && <i className="a-navbadge" />}
-            </button>
-            <button
-              type="button"
-              className="a-navbtn"
-              onClick={toggleTheme}
-              aria-label={theme === 'paper' ? 'Switch to dark' : 'Switch to light'}
-              title={theme === 'paper' ? 'Dark theme' : 'Light theme'}
-            >
-              {theme === 'paper' ? <Moon size={17} /> : <Sun size={17} />}
             </button>
             <button
               type="button"
