@@ -33,6 +33,7 @@ import { useMergedHoldings } from '@/wealth/useMergedHoldings'
 import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccount'
 import { CLASSES } from '@/wealth/tokens'
 import { Lockup, Mark } from '@/wh/Mark'
+import MarkPage from '@/wh/pages/MarkPage'
 import { useMoney } from '@/wealth/format'
 import { LogoAvatar } from '@/wealth/logos'
 import { freshness } from '@/lib/utils'
@@ -577,6 +578,8 @@ export function AppShell() {
     ),
   )
 
+  /* Brand pages (/brand/*) carry their own serif title. */
+  const brandPage = location.pathname.startsWith('/brand/')
   const title = titleFor(location.pathname)
   const subtitle = statusLoading
     ? 'Loading…'
@@ -703,10 +706,12 @@ export function AppShell() {
         </header>
 
         <div className="a-shell">
-          <header className="a-pagehead">
-            <h1 className="a-large">{title}</h1>
-            <p className="a-navsub">{subtitle}</p>
-          </header>
+          {!brandPage && (
+            <header className="a-pagehead">
+              <h1 className="a-large">{title}</h1>
+              <p className="a-navsub">{subtitle}</p>
+            </header>
+          )}
 
           <main id="main-content" tabIndex={-1} className="a-page" key={location.pathname}>
             {(
@@ -727,6 +732,7 @@ export function AppShell() {
                 <Route path="/goals" element={<Goals />} />
                 <Route path="/accounts" element={<Accounts />} />
                 <Route path="/brokerage" element={<Brokerage />} />
+                <Route path="/brand/mark" element={<MarkPage />} />
                 <Route path="/wallets" element={<Navigate to="/accounts" replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

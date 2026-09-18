@@ -1,0 +1,29 @@
+/* Brand pages: /brand/*. Unlinked from navigation; they prove the foundations. */
+.wh-brandpage { display: flex; flex-direction: column; gap: 22px; padding-bottom: 40px; }
+.wh-brandpage > header { display: flex; flex-direction: column; gap: 10px; max-width: 640px; }
+.wh-brandpage h1 { margin: 0; font-size: 34px; color: var(--wh-ink); }
+.wh-brandpage p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--wh-muted); }
+.wh-brandpage p b { font-weight: 600; color: var(--wh-ink); }
+
+.wh-grounds { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 900px) { .wh-grounds { grid-template-columns: 1fr; } }
+
+/* Each panel declares its ground once; the marks, the wordmark and the text inside follow. */
+.wh-ground {
+  position: relative; overflow: hidden; border-radius: 14px; box-sizing: border-box;
+  min-height: 300px; padding: 28px 24px 44px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+  color: var(--wh-ink); background: var(--ground, var(--wh-marble)); border: 1px solid var(--wh-rule);
+}
+.wh-ground[data-ground="dark"] { border-color: transparent; }
+.wh-ground > figure {
+  margin: 0; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 28px 32px;
+}
+.wh-ground > figure > div { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.wh-ground figcaption, .wh-ground > figure > div > span {
+  font-family: var(--wh-sans); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--wh-ink); opacity: .7;
+}
+.wh-ground-label {
+  position: absolute; left: 14px; bottom: 10px; font-size: 12px; color: var(--wh-ink); opacity: .7;
+}
+.wh-ground-label b { font-weight: 600; }

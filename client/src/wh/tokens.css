@@ -1,5 +1,6 @@
 /* Wealth Hub design tokens. Light is the default ground. */
-:root {
+/* App note: the light set also applies to any surface that declares data-ground="light" inside a dark one. */
+:root, [data-ground="light"] {
   /* grounds */
   --wh-marble: #FBF6EA;   /* page */
   --wh-panel:  #F2ECDC;   /* sidebar, segmented track */
