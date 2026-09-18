@@ -1,0 +1,10 @@
+/* Hover glow on the big chart, and a slow breathing gold point on today. A nod to the first Wealth Hub. */
+[data-chart] [data-line], [data-chart] [data-dots], [data-chart] [data-aura], [data-chart] [data-today] { transition: filter .4s ease, opacity .4s ease, fill-opacity .4s ease; }
+[data-chart] [data-aura] { opacity: 0; filter: blur(7px); }
+[data-chart]:hover [data-aura] { opacity: .5; }
+[data-chart]:hover [data-line] { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--wh-ultra) 60%, transparent)); }
+[data-chart]:hover [data-dots] { fill-opacity: .62; }
+[data-chart]:hover [data-today] { filter: drop-shadow(0 0 7px rgba(226, 178, 60, .95)); }
+[data-halo] { transform-box: fill-box; transform-origin: center; animation: wh-pulse 3s ease-out infinite; }
+@keyframes wh-pulse { 0% { transform: scale(1); opacity: .45; } 70%, 100% { transform: scale(2.7); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { [data-halo] { animation: none; opacity: 0; } }
