@@ -40,8 +40,9 @@ function isMetric(v: unknown): v is HeadlineMetric {
 
 function defaults(): Settings {
   const env = (process.env.BASE_CURRENCY || '').toUpperCase();
+  // One ledger in one currency: the household's, which is CHF unless BASE_CURRENCY says otherwise.
   return {
-    displayCurrency: isCurrency(env) ? env : 'USD',
+    displayCurrency: isCurrency(env) ? env : 'CHF',
     headlineMetric: 'net',
   };
 }

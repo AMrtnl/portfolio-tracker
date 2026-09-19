@@ -53,6 +53,8 @@
 .wh-ev > .wh-icon { color: var(--wh-muted); }
 .wh-ev-label { flex: 1 1 auto; min-width: 0; color: var(--wh-muted); }
 .wh-ev-value { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--wh-ink); text-align: right; }
+.wh-ev-value.wh-gain { color: var(--wh-gain); }
+.wh-ev-value.wh-owed { color: var(--wh-owed); }
 
 /* ---- Token: the rounded tile that starts every row ---- */
 .wh-token {
@@ -268,3 +270,4 @@ button.wh-pill { cursor: pointer; }
 @media (prefers-reduced-motion: no-preference) {
   .wh-seg-btn, .wh-tab, .wh-side, .wh-navpill-item, .wh-btn, .wh-round { transition: background-color .15s ease, color .15s ease; }
 }
+

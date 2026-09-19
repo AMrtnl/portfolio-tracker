@@ -47,7 +47,7 @@ describe('settings', () => {
     const { updateSettings, getSettings } = loadWithDataDir(dir);
     expect(() => updateSettings({ displayCurrency: 'DOGE' as never })).toThrow(/displayCurrency/);
     expect(() => updateSettings({ headlineMetric: 'vibes' as never })).toThrow(/headlineMetric/);
-    expect(getSettings().displayCurrency).toBe('USD');
+    expect(getSettings().displayCurrency).toBe('CHF');
     expect(fs.existsSync(path.join(dir, 'settings.json'))).toBe(false);
   });
 });

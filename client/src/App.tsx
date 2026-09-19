@@ -4,7 +4,7 @@ import { PrivacyProvider } from '@/wealth/PrivacyContext'
 import { QuickLookProvider } from '@/wealth/QuickLook'
 import { DemoProvider } from '@/wealth/DemoContext'
 import { GroundProvider } from '@/wh/ground'
-import { AppShell } from '@/wealth/Shell'
+import { AppShell } from '@/wh/Shell'
 
 /* VITE_PREVIEW builds run as a standalone page with no server and a sandbox
    that blocks history API calls — keep routing in memory there. */

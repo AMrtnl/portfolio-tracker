@@ -22,9 +22,9 @@ describe('baseCurrency', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it('defaults to USD', () => {
+  it('defaults to CHF, the household currency', () => {
     delete process.env.BASE_CURRENCY;
-    expect(baseCurrency()).toBe('USD');
+    expect(baseCurrency()).toBe('CHF');
   });
 
   it('honours a configured fiat currency', () => {
@@ -34,7 +34,7 @@ describe('baseCurrency', () => {
 
   it('ignores a nonsense configuration rather than breaking totals', () => {
     process.env.BASE_CURRENCY = 'DOGE';
-    expect(baseCurrency()).toBe('USD');
+    expect(baseCurrency()).toBe('CHF');
   });
 });
 
