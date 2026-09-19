@@ -8,6 +8,7 @@ import './index.css'
 import './wealth.css'
 import './wh/type.css'
 import './wh/mark.css'
+import './wh/primitives.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

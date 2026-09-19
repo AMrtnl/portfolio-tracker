@@ -27,3 +27,24 @@
   position: absolute; left: 14px; bottom: 10px; font-size: 12px; color: var(--wh-ink); opacity: .7;
 }
 .wh-ground-label b { font-weight: 600; }
+
+/* Components page: each ground panel declares itself once; the primitives inside follow. */
+.wh-groundpanel {
+  display: flex; flex-direction: column; gap: 18px; box-sizing: border-box;
+  padding: 28px 28px 36px; border-radius: 14px; background: var(--wh-marble); color: var(--wh-ink); border: 1px solid var(--wh-rule);
+}
+.wh-groundpanel[data-ground="dark"] { border-color: transparent; }
+.wh-groundtitle { margin: 0; font-size: 28px; color: var(--wh-ink); }
+.wh-brandh3 { margin: 10px 0 0; font-family: var(--wh-sans); font-size: 18px; font-weight: 600; letter-spacing: -.01em; color: var(--wh-ink); }
+.wh-brandpanel { display: flex; flex-direction: column; gap: 32px; padding: 32px; border-radius: 10px; background: var(--wh-panel); }
+.wh-brandcols { display: flex; gap: 40px; flex-wrap: wrap; }
+.wh-brandcol { display: flex; flex-direction: column; gap: 12px; flex: 1 1 260px; min-width: 0; }
+.wh-brandrow { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.wh-tokengrid { display: grid; gap: 18px 20px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.wh-tokencell { display: flex; gap: 14px; align-items: center; }
+.wh-tokenname { font-size: 14px; font-weight: 600; color: var(--wh-ink); }
+.wh-tokenhow { font-size: 12px; color: var(--wh-muted); }
+@media (max-width: 700px) {
+  .wh-brandpanel { padding: 20px; }
+  .wh-groundpanel { padding: 20px 16px 28px; }
+}

@@ -1,10 +1,12 @@
 /**
- * The Wealth Hub icon map, from the handoff (reference/screens/Icons.html).
- * Material Symbols Rounded names, weight 400, outlined at rest and filled
- * when active or inside a token. Never under 16 px. Colour inherits from text.
+ * The Wealth Hub icon map, from the handoff (reference/screens/Icons.html and
+ * the screens themselves). Material Symbols Rounded names, weight 400,
+ * outlined at rest and filled when active or inside a token. Never under
+ * 16 px. Colour inherits from text.
  *
  * scripts/fetch-fonts.mjs subsets the icon font to the names in this file:
- * add a name here, re-run the script, commit both.
+ * add a name here, re-run the script, commit both. Keep this file to names
+ * only: every quoted lowercase word in it ends up in the font.
  */
 export const ICONS = {
   nav: {
@@ -17,13 +19,14 @@ export const ICONS = {
     performance: 'monitoring',
     activity: 'receipt_long',
     connections: 'link',
-    planning: 'calendar_month',
+    planning: 'flag',
   },
   assetClass: {
     equities: 'show_chart',
     funds: 'pie_chart',
     cash: 'payments',
-    crypto: 'currency_bitcoin',
+    crypto: 'token',
+    bitcoin: 'currency_bitcoin',
     property: 'home',
     pension: 'savings',
     bonds: 'receipt_long',
@@ -58,6 +61,7 @@ export const ICONS = {
     debt: 'credit_card_off',
     subscription: 'autorenew',
     overlap: 'content_copy',
+    scenario: 'timeline',
   },
   evidence: {
     holdings: 'inventory_2',
@@ -68,6 +72,47 @@ export const ICONS = {
     modelledGain: 'paid',
     risk: 'warning',
     assumption: 'info',
+    insight: 'lightbulb',
+  },
+  /** The three headline figures beside net worth, and the cash flow trio. */
+  figure: {
+    own: 'account_balance_wallet',
+    owe: 'credit_card',
+    liquid: 'water_drop',
+    moneyIn: 'south_west',
+    moneyOut: 'north_east',
+    kept: 'savings',
+    opening: 'flag',
+  },
+  /** Look-through sectors on Exposure. */
+  sector: {
+    technology: 'memory',
+    financials: 'account_balance',
+    healthCare: 'medical_services',
+    industrials: 'factory',
+    consumerStaples: 'shopping_basket',
+    consumerDiscretionary: 'shopping_bag',
+    energy: 'bolt',
+    diversified: 'category',
+    other: 'more_horiz',
+  },
+  /** Where the month went, on Cash flow. */
+  spending: {
+    housing: 'home',
+    tax: 'request_quote',
+    food: 'restaurant',
+    leisure: 'sports_tennis',
+    insurance: 'health_and_safety',
+    transport: 'commute',
+    subscriptions: 'autorenew',
+    other: 'more_horiz',
+  },
+  /** Subscription kinds. */
+  kind: {
+    media: 'movie',
+    telecom: 'smartphone',
+    health: 'fitness_center',
+    software: 'cloud',
   },
   status: {
     synced: 'cloud_done',
@@ -78,6 +123,8 @@ export const ICONS = {
     stale: 'schedule',
     failed: 'error',
     readOnly: 'verified_user',
+    up: 'arrow_drop_up',
+    down: 'arrow_drop_down',
   },
   action: {
     add: 'add',
@@ -88,6 +135,11 @@ export const ICONS = {
     edit: 'edit',
     scan: 'qr_code_scanner',
     passkey: 'passkey',
+    evidence: 'fact_check',
+    email: 'mail',
+    emailLink: 'forward_to_inbox',
+    sort: 'sort',
+    education: 'school',
   },
   /** Chrome, not meaning: the few glyphs every interface needs to move and close. */
   ui: {
@@ -116,6 +168,9 @@ export const ICONS = {
     command: 'keyboard_command_key',
     gainArrow: 'north_east',
     lossArrow: 'south_east',
+    one: 'looks_one',
+    two: 'looks_two',
+    three: 'looks_3',
   },
 } as const
 

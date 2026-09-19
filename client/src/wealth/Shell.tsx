@@ -34,6 +34,7 @@ import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccoun
 import { CLASSES } from '@/wealth/tokens'
 import { Lockup, Mark } from '@/wh/Mark'
 import MarkPage from '@/wh/pages/MarkPage'
+import ComponentsPage from '@/wh/pages/ComponentsPage'
 import { useMoney } from '@/wealth/format'
 import { LogoAvatar } from '@/wealth/logos'
 import { freshness } from '@/lib/utils'
@@ -733,6 +734,7 @@ export function AppShell() {
                 <Route path="/accounts" element={<Accounts />} />
                 <Route path="/brokerage" element={<Brokerage />} />
                 <Route path="/brand/mark" element={<MarkPage />} />
+                <Route path="/brand/components" element={<ComponentsPage />} />
                 <Route path="/wallets" element={<Navigate to="/accounts" replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
