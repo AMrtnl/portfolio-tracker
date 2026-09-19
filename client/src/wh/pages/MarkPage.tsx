@@ -1,5 +1,6 @@
 import { useGround } from '@/wh/ground'
 import { Lockup, Mark, cutFor } from '@/wh/Mark'
+import { LivingMark } from '@/wh/LivingMark'
 import '@/wh/pages/brand.css'
 
 const SIZES = [300, 120, 64, 28] as const
@@ -29,6 +30,22 @@ export default function MarkPage() {
           dark ground; the two upper panels declare a light one, whatever the system says.
         </p>
       </header>
+
+      <section className="wh-ground" data-name="Living" aria-label="The living mark" style={{ ['--ground' as string]: 'var(--wh-card)' }}>
+        <figure>
+          <div>
+            <LivingMark width={200} />
+            <span>200 px · pivot</span>
+          </div>
+          <div>
+            <LivingMark width={96} effect="follow" />
+            <span>96 px · follow</span>
+          </div>
+        </figure>
+        <div className="wh-ground-label">
+          <b>Living</b> · engraved live from the light map. Hover swings the lines, tap toggles on touch, Enter on the keyboard.
+        </div>
+      </section>
 
       <div className="wh-grounds">
         {GROUNDS.map((g) => (

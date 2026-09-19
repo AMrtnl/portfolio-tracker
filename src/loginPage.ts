@@ -1,8 +1,8 @@
 /**
  * The sign-in page, served by the API before the app shell loads. It follows
  * the Wealth Hub design: the garden on the left, "Welcome back" on the right,
- * one blue, gold only in the roof of the mark. Fonts, the picture and the mark
- * come from the client's /wh/ assets, which stay
+ * one blue, gold only in the roof of the mark. Fonts, the picture, the mark and
+ * the living-mark module all come from the client's /wh/ assets, which stay
  * public because they hold no portfolio data. Nothing here chooses light or
  * dark by hand: the system preference sets the ground, and every token follows.
  */
@@ -142,6 +142,10 @@ export function renderLoginPage(options: LoginPageOptions = {}): string {
       <main class="form">
         <span class="living" id="living" role="img" aria-label="Wealth Hub" tabindex="0">
           <img src="/wh/logo/wh-l3-s-light.svg" alt="" width="96" height="77" decoding="async" />
+          <svg viewBox="0 8 100 84" aria-hidden="true" focusable="false">
+            <g class="fg" fill="none" stroke="currentColor" stroke-linecap="round"></g>
+            <g class="rf" fill="none" stroke="#E2B23C" stroke-linecap="round"></g>
+          </svg>
         </span>
         <h1>Welcome back</h1>
         <p class="lead">Sign in with the household password. Nothing on this side can move your money.</p>
@@ -205,6 +209,21 @@ export function renderLoginPage(options: LoginPageOptions = {}): string {
             .then(function () { button.disabled = false; });
         });
       })();
+    </script>
+    <script type="module">
+      // The living mark: the temple engraved from its light map, lines that swing on hover.
+      const dark = matchMedia('(prefers-color-scheme: dark)');
+      const el = document.getElementById('living');
+      el.querySelector('img').src = '/wh/logo/wh-l3-s-' + (dark.matches ? 'dark' : 'light') + '.svg';
+      Promise.all([import('/wh/living-mark.js'), fetch('/wh/temple-lightmap.txt').then((r) => (r.ok ? r.text() : Promise.reject(r.status)))])
+        .then(([mark, map]) => {
+          mark.setLightMap(map);
+          const it = mark.mount(el, { effect: 'pivot', dark: dark.matches, coarse: false });
+          el.classList.add('live');
+          el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+          dark.addEventListener('change', (e) => { it.setDark(e.matches); el.querySelector('img').src = '/wh/logo/wh-l3-s-' + (e.matches ? 'dark' : 'light') + '.svg'; });
+        })
+        .catch(() => undefined);
     </script>
   </body>
 </html>`;

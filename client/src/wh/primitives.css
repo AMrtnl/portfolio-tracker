@@ -271,3 +271,11 @@ button.wh-pill { cursor: pointer; }
   .wh-seg-btn, .wh-tab, .wh-side, .wh-navpill-item, .wh-btn, .wh-round { transition: background-color .15s ease, color .15s ease; }
 }
 
+/* ---- Living mark: the temple engraved live, lines that swing on hover ---- */
+.wh-living { position: relative; display: inline-block; color: var(--wh-ultra); cursor: pointer; border-radius: 12px; outline-offset: 6px; }
+.wh-living:focus-visible { outline: 2px solid var(--wh-ultra); }
+.wh-living > svg { position: absolute; inset: 0; display: block; opacity: 0; }
+.wh-living > .wh-living-static { display: block; }
+.wh-living.live > svg { opacity: 1; }
+.wh-living.live > .wh-living-static { visibility: hidden; }
+[data-ground="dark"] .wh-living { color: #EEF1FF; }

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Icon } from '@/wh/Icon'
 import { ICONS } from '@/wh/icons'
 import { Mark } from '@/wh/Mark'
+import { LivingMark } from '@/wh/LivingMark'
 import { Token } from '@/wh/Token'
 import { Button, ChangeChip, RoundButton, Segmented, StatusPill, TextLink } from '@/wh/controls'
 import { Card, GrowCard, Stat } from '@/wh/layout'
@@ -90,6 +91,7 @@ function Freshness({ accounts }: { accounts: BookAccount[] }) {
 function Empty() {
   return (
     <Card kind="pad" className="wh-empty">
+      <LivingMark width={120} decorative />
       <h2 className="wh-serif" style={{ margin: 0, fontSize: 28 }}>
         Nothing on the ledger yet
       </h2>
