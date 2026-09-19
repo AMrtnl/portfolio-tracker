@@ -48,3 +48,13 @@
   .wh-brandpanel { padding: 20px; }
   .wh-groundpanel { padding: 20px 16px 28px; }
 }
+
+/* Charts page */
+.wh-chartgrid { display: grid; gap: 26px 28px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-content: start; }
+.wh-meterrow { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; border-bottom: 1px solid var(--wh-rule); }
+.wh-meterrow:last-child { border-bottom: 0; }
+.wh-meterrow-label { flex: 0 0 36%; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.wh-meterrow-pct { flex: 0 0 auto; min-width: 42px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.wh-row.compact { gap: 12px; padding: 4px 0; }
+.wh-row.compact .wh-row-title { font-size: 15px; }
+.wh-row.compact .wh-row-sub { font-size: 12px; }
