@@ -24,7 +24,10 @@ import {
   listProviders,
   removeLiveAdapter,
   snaptrade,
+  watch,
 } from './providers';
+import type { SyncResult } from './providers';
+import { CHAIN_NAMES, describeWatchKey, detectWatchKey } from './wallets';
 import {
   errorMessage,
   fetchSnapAccountDetail,
@@ -41,6 +44,9 @@ import {
   startHistoryScheduler,
 } from './analytics';
 import { createMoneyRouter } from './money';
+import { createGoalsRouter } from './goals';
+import { FxConverter } from './market/fx';
+import { DISPLAY_CURRENCIES, HEADLINE_METRICS, getSettings, updateSettings } from './settings';
 
 dotenv.config();
 
@@ -69,9 +75,23 @@ app.set('trust proxy', 1);
 if (!IS_PRODUCTION) {
   app.use(cors());
 }
-app.use(express.json());
+// Statement imports post a whole CSV as text; the default 100 kB would
+// reject a yearly export before the handler could explain why.
+app.use(express.json({ limit: '2mb' }));
 
 const store = new Store();
+watch.attachStore(store);
+
+/** Records a sync's outcome on the account so the UI can show freshness and errors. */
+function finishSync(id: string, result: SyncResult): void {
+  const failed = Boolean(result.error && result.balances.length === 0);
+  store.updateAccount(id, {
+    status: failed ? 'error' : 'connected',
+    lastSyncedAt: new Date().toISOString(),
+    lastError: result.error ?? null,
+  });
+  invalidatePortfolioSnapshot();
+}
 
 function liveIds(): Set<string> {
   const ids = new Set<string>();
@@ -131,6 +151,35 @@ app.use('/api', requireApiAuth);
 
 app.get('/api/providers', (_req: Request, res: Response) => {
   res.json({ providers: listProviders() });
+});
+
+// ---- preferences ----
+
+/**
+ * Settings plus the FX rates the client needs to show account balances
+ * (stored in USD) in the display currency. `rates[X]` is how many units of
+ * the display currency one unit of X buys; a missing key means no rate.
+ */
+app.get('/api/settings', async (_req: Request, res: Response) => {
+  const settings = getSettings();
+  const fx = await FxConverter.load(settings.displayCurrency, [...DISPLAY_CURRENCIES]);
+  res.json({
+    ...settings,
+    currencies: DISPLAY_CURRENCIES,
+    metrics: HEADLINE_METRICS,
+    rates: fx.ratesUsed(),
+    warnings: fx.warnings,
+  });
+});
+
+app.put('/api/settings', (req: Request, res: Response) => {
+  try {
+    const next = updateSettings(req.body || {});
+    invalidatePortfolioSnapshot();
+    res.json(next);
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : 'Invalid settings' });
+  }
 });
 
 // ---- accounts ----
@@ -204,6 +253,68 @@ app.post('/api/accounts/manual', (req: Request, res: Response) => {
   });
   invalidatePortfolioSnapshot();
   console.log(`✅ Manual account added: "${label}" (${holdings.length} holdings)`);
+  res.json(store.getAccount(id));
+});
+
+/**
+ * Watch-only wallet: POST { label?, key, institution? } where key is a
+ * Bitcoin account key (xpub / ypub / zpub) or a BTC / ETH / SOL address.
+ * The first read runs inline for a few seconds so the row lands with a
+ * figure; a slow chain finishes in the background.
+ */
+app.post('/api/accounts/watch', async (req: Request, res: Response) => {
+  const body = req.body as { label?: string; key?: string; institution?: string };
+  const key = detectWatchKey(String(body.key || ''));
+  if (!key) {
+    return res.status(400).json({
+      error:
+        'Paste a Bitcoin account key (xpub, ypub, or zpub) or a Bitcoin, Ethereum, or Solana address.',
+    });
+  }
+  const duplicate = store
+    .getAllRaw()
+    .find(
+      (a) =>
+        a.provider === 'watch' &&
+        (a.externalId || '').toLowerCase() === key.key.toLowerCase(),
+    );
+  if (duplicate) {
+    return res.status(409).json({ error: `Already tracked as "${duplicate.label}"` });
+  }
+
+  const label =
+    (body.label || '').trim() ||
+    `${CHAIN_NAMES[key.chain]} · ${key.kind === 'xpub' ? 'Ledger' : 'Watch-only'}`;
+  const id = store.addWatchWallet(label, {
+    key: key.key,
+    chain: key.chain,
+    kind: key.kind,
+    institution: body.institution?.trim() || undefined,
+    notes: describeWatchKey(key),
+  });
+
+  const syncing = watch.sync(store.getAccount(id)!).then(
+    (result) => {
+      finishSync(id, result);
+      return result;
+    },
+    (err: unknown) => {
+      finishSync(id, {
+        balances: [],
+        positions: [],
+        totalValueUsd: 0,
+        error: errorMessage(err),
+      });
+      return null;
+    },
+  );
+  const timer = new Promise<null>((resolve) => {
+    setTimeout(() => resolve(null), 12_000).unref();
+  });
+  await Promise.race([syncing, timer]);
+
+  invalidatePortfolioSnapshot();
+  console.log(`✅ Watch-only wallet added: "${label}" (${describeWatchKey(key)})`);
   res.json(store.getAccount(id));
 });
 
@@ -428,15 +539,11 @@ app.post('/api/accounts/:id/sync', async (req: Request, res: Response) => {
   const account = store.getAccount(id, hasLiveAdapter(id));
   if (!account) return res.status(404).json({ error: 'Account not found' });
 
+  // An explicit sync should hit the chain, not the provider's read cache.
+  if (account.provider === 'watch') watch.forget(id);
   const provider = getProvider(account.provider);
   const result = await provider.sync(account);
-
-  const failed = Boolean(result.error && result.balances.length === 0);
-  store.updateAccount(id, {
-    status: failed ? 'error' : 'connected',
-    lastSyncedAt: new Date().toISOString(),
-    lastError: result.error ?? null,
-  });
+  finishSync(id, result);
 
   res.json({
     account: store.getAccount(id, hasLiveAdapter(id)),
@@ -576,6 +683,7 @@ app.get('/api/portfolio', async (_req: Request, res: Response) => {
 app.use('/api/analytics', createAnalyticsRouter(store));
 app.use('/api/market', createMarketRouter(store));
 app.use('/api/money', createMoneyRouter());
+app.use('/api/goals', createGoalsRouter());
 
 // ---- Static client (production single-service deploy) ----
 

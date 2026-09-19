@@ -51,3 +51,4 @@ client/preview-*.png
 .expo/
 mobile/ios/
 mobile/android/
+client/dist-preview/

@@ -1,0 +1,32 @@
+/* Wealth Hub type. Serif speaks, sans counts. Icons are Material Symbols Rounded. */
+:root { --wh-icons: "Material Symbols Rounded"; }
+
+/* Instrument Serif: screen titles, the wordmark, big statements. Never bold, never all caps. */
+.wh-serif {
+  font-family: var(--wh-serif); font-weight: 400; font-style: normal;
+  letter-spacing: -.015em; line-height: 1.05; text-transform: none;
+}
+.wh-serif b, .wh-serif strong { font-weight: 400; }
+
+/* DM Sans figures: tabular so columns line up, weight 600, tighter at display sizes. */
+.wh-figure { font-family: var(--wh-sans); font-variant-numeric: tabular-nums; font-weight: 600; }
+.wh-figure.display { letter-spacing: -.04em; }
+
+/* Icon glyphs. Outlined at rest (FILL 0); .fill when active or inside a token. Optical size follows the pixel size. */
+.wh-icon {
+  font-family: var(--wh-icons); font-weight: 400; font-style: normal;
+  font-size: 24px; line-height: 1; width: 1em; height: 1em; flex: 0 0 auto;
+  display: inline-block; overflow: hidden; white-space: nowrap; vertical-align: middle;
+  letter-spacing: normal; text-transform: none; direction: ltr; user-select: none;
+  font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' var(--wh-fill, 0), 'wght' 400, 'GRAD' 0, 'opsz' var(--wh-opsz, 24);
+}
+.wh-icon.fill { --wh-fill: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .wh-icon { transition: font-variation-settings .2s ease; }
+}
+
+/* Bridges for the current a-* screens until each is rebuilt: figures count in DM Sans at 600. */
+.a-value, .a-insval, .a-gnum b, .a-anum b, .a-stat b, .a-vital > b, .num, .a-tip span b {
+  font-variant-numeric: tabular-nums; font-weight: 600;
+}

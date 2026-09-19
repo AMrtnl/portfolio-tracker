@@ -21,7 +21,12 @@ export type BookClass =
   | 'crypto'
   | 'other';
 
-export type ProviderId = 'hyperliquid' | 'snaptrade' | 'manual';
+export type ProviderId = 'hyperliquid' | 'snaptrade' | 'manual' | 'watch';
+
+/** Chains a watch-only wallet can be read from. */
+export type WatchChain = 'btc' | 'eth' | 'sol';
+/** An account-level public key (BIP32) or a single address. */
+export type WatchKeyKind = 'xpub' | 'address';
 
 export type AccountStatus =
   | 'connected'
@@ -67,6 +72,8 @@ export interface PublicAccount {
   totalValueUsd?: number;
   /** Rate, pillar, address — shown as the row subtitle. */
   notes?: string;
+  /** Watch-only wallets: which network the key lives on. */
+  chain?: WatchChain;
 }
 
 export function isLiabilityAccount(account: {
@@ -110,5 +117,5 @@ export interface ProviderInfo {
   configured: boolean;
   /** Regions / coverage notes for the UI */
   coverage: string;
-  connectMode: 'mnemonic' | 'oauth' | 'manual' | 'import';
+  connectMode: 'mnemonic' | 'oauth' | 'manual' | 'import' | 'watch';
 }

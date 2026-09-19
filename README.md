@@ -71,6 +71,46 @@ Without keys, SnapTrade routes return **503** and other providers still work. Fa
 3. Or choose **Crypto wallet** and paste a Hyperliquid recovery phrase.
 4. Portfolio shows combined total + **Sources** breakdown.
 
+## Cash flow, statements, and subscriptions
+
+There is no bank aggregator wired (Swiss retail banks are mostly outside
+Plaid/GoCardless coverage anyway), so the ledger fills itself from what you
+give it and does the sorting for you:
+
+- **Log a transaction** — the category is guessed from the note as you type
+  (`Migros` → Groceries, `SBB` → Transport, `Lohn` → Salary). Pick another one
+  to override.
+- **Import a bank statement** — paste or upload the CSV your bank exports.
+  Delimiters, date formats (`16.09.2026`, `2026-09-16`, `16/09/2026`), amount
+  formats (`1'234.50`, `1.234,50`, `(45.00)`), signed-amount or debit/credit
+  columns, and header rows are all detected. Every line is categorised;
+  lines already in the ledger are skipped, so re-importing is safe.
+- **Recurring charges are detected** — anything at the same merchant with a
+  stable amount that repeats monthly, quarterly, or yearly shows up on the
+  Subscriptions page as a suggestion. Add it as-is, open it to adjust, or
+  dismiss it. Suggestions disappear once tracked.
+
+The rules live in `src/money/detect.ts` and the parser in
+`src/money/import.ts`; both are covered by unit tests.
+
+## Watch-only wallets (Ledger, or any address)
+
+Track cold storage without ever typing a seed phrase. Paste a Bitcoin account key (`xpub`, `ypub`, or `zpub` — what Ledger Live shows under *Account settings → Advanced*) or a single Bitcoin, Ethereum, or Solana address, and Meridian reads the balance from the network:
+
+- **Bitcoin** — every receive and change address is derived from the account key (BIP44 / 49 / 84) and totalled from an Esplora API with the standard 20-address gap limit. `BTC_API_URL` defaults to `https://mempool.space/api`.
+- **Ethereum** — ETH plus USDC, USDT, DAI, WBTC, stETH, LINK, and UNI over JSON-RPC. `ETH_RPC_URL` defaults to `https://ethereum-rpc.publicnode.com`.
+- **Solana** — SOL plus USDC and USDT. `SOLANA_RPC_URL` defaults to `https://api.mainnet-beta.solana.com`.
+
+In Chrome, Edge, or Brave, **Read device** pulls the key straight from a plugged-in Ledger over WebHID (Bitcoin or Ethereum app open). The device only ever exports public material, and Meridian stores just the key — nothing that can sign. Reads are cached for five minutes, and the last successful read stays on the account so a flaky RPC never zeroes the dashboard.
+
+## Goals, budget targets, and the command palette
+
+- **Goals** (`/goals`, `/api/goals`): a target, an optional date, a monthly contribution, an expected return, and the accounts that fund it. Progress is the live balance of those accounts; each card shows what is needed per month to land on the date and when the current pace gets there.
+- **Budget targets** (`/api/money/budgets`): a monthly ceiling per spend category, shown against the running average in Cash flow › Where it goes. Bars fill against the target and turn red when a month runs over.
+- **⌘K / Ctrl K / `/`** opens the palette: pages, asset classes, accounts, positions, and actions (add a transaction, import a statement, add an account, new goal, sync everything, hide balances, switch the display currency, open preferences).
+- **Appearance** (Preferences, or ⌘K → "Switch to…"): **Paper** is the light, institutional theme — warm grey ground, ink and grey series, one muted red for anything that needs attention, mono tick labels on dotted grids; **Night** keeps the black shell and the neon composition chart. Both run off the same CSS tokens.
+- **Needs attention** (the bell): failed or stale syncs, recurring charges waiting for a decision, and goals that have slipped — each with its one next step.
+
 ## API (selected)
 
 | Method | Endpoint | Description |

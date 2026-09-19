@@ -1,0 +1,44 @@
+/* Wealth Hub design tokens. Light is the default ground. */
+/* App note: the light set also applies to any surface that declares data-ground="light" inside a dark one. */
+:root, [data-ground="light"] {
+  /* grounds */
+  --wh-marble: #FBF6EA;   /* page */
+  --wh-panel:  #F2ECDC;   /* sidebar, segmented track */
+  --wh-card:   #FFFFFF;
+  --wh-rule:   #E9E0CB;
+  /* ink */
+  --wh-ink:    #0C1230;
+  --wh-muted:  #5B6076;
+  /* brand */
+  --wh-ultra:  #1F3FD0;   /* the blue. primary action, chart line */
+  --wh-ultra-soft: #E6EBFB;
+  --wh-stone:  #E2B23C;   /* gold. once per screen: the figure that matters, today's point */
+  --wh-stone-soft: #FBF0D2;
+  --wh-stone-deep: #8A5F0A;
+  --wh-olive:  #4F6B3A;  --wh-olive-soft: #E6ECDC;
+  --wh-night-soft: #E4E6EE;
+  /* meaning. never decorative */
+  --wh-gain:   #157A52;  --wh-gain-soft: #DDF1E7;
+  --wh-owed:   #B5301B;  --wh-owed-soft: #FBE3DD;
+  /* shape */
+  --wh-r-control: 999px; --wh-r-card: 28px; --wh-r-field: 16px; --wh-r-tile: 32%;
+  --wh-shadow: 0 18px 40px -28px rgba(12, 18, 48, 0.35);
+  /* type */
+  --wh-serif: "Instrument Serif", Georgia, serif;   /* speaks: titles, wordmark. never bold, sentence case */
+  --wh-sans:  "DM Sans", Helvetica, Arial, sans-serif; /* counts: everything else. tabular-nums on every figure */
+  /* adaptive logo switches */
+  --wh-l: block; --wh-d: none;
+}
+/* Any dark surface declares itself once. Everything inside follows, including the logo. */
+[data-ground="dark"] {
+  --wh-marble: #080C22; --wh-panel: #0D1230; --wh-card: #141A3A; --wh-rule: #232B55;
+  --wh-ink: #EEF1FF; --wh-muted: #9AA3CC;
+  --wh-ultra: #4A6CF0; --wh-ultra-soft: #1B2350;
+  --wh-stone-soft: #3A2F12; --wh-stone-deep: #F0CB6A;
+  --wh-olive: #8FA56E; --wh-olive-soft: #1F2A18; --wh-night-soft: #232B55;
+  --wh-gain: #4ADE9A; --wh-gain-soft: #123A2C; --wh-owed: #FF8A6B; --wh-owed-soft: #3A1D19;
+  --wh-shadow: 0 0 0 1px #1E2650;
+  --wh-l: none; --wh-d: block;
+}
+[data-ground="light"] { --wh-l: block; --wh-d: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-ground="light"]) { color-scheme: dark; } }

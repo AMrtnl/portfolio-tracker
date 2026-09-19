@@ -1,8 +1,9 @@
-import { Check, ChevronLeft, RotateCw, X } from 'lucide-react'
+import { Check, ArrowsClockwise, X } from '@phosphor-icons/react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { freshness, providerName, relativeTime } from '@/lib/utils'
 import { useAccounts, type Account } from '@/hooks/useAccounts'
+import { FloatSheet } from '@/wealth/FloatSheet'
 
 function methodOf(account: Account): { name: string; note: string; color: string } {
   if (account.provider === 'snaptrade') {
@@ -11,6 +12,9 @@ function methodOf(account: Account): { name: string; note: string; color: string
   if (account.provider === 'hyperliquid') {
     return { name: 'On-chain', note: 'Public address', color: '#A57BFF' }
   }
+  if (account.provider === 'watch') {
+    return { name: 'Watch-only', note: 'Public key · nothing to sign', color: '#F7931A' }
+  }
   return { name: 'Manual', note: 'You update this', color: '#8E8E93' }
 }
 
@@ -18,14 +22,14 @@ function SyncDot({ account, spinning }: { account: Account; spinning: boolean })
   if (spinning) {
     return (
       <span className="s-dot spin">
-        <RotateCw size={13} strokeWidth={2.6} />
+        <ArrowsClockwise size={13} />
       </span>
     )
   }
   if (account.status === 'error') {
     return (
       <span className="s-dot err">
-        <X size={13} strokeWidth={3} />
+        <X size={13} />
       </span>
     )
   }
@@ -35,7 +39,7 @@ function SyncDot({ account, spinning }: { account: Account; spinning: boolean })
   if (account.status === 'connected') {
     return (
       <span className="s-dot ok">
-        <Check size={13} strokeWidth={3} />
+        <Check size={13} />
       </span>
     )
   }
@@ -60,32 +64,20 @@ export function SyncSheet({ open, onClose }: { open: boolean; onClose: () => voi
     },
   })
 
-  if (!open) return null
-
   const live = accounts.filter((a) => a.provider !== 'manual')
   const manual = accounts.filter((a) => a.provider === 'manual')
   const failed = accounts.filter((a) => a.status === 'error')
   const stale = accounts.filter((a) => freshness(a.lastSyncedAt) === 'stale')
 
   return (
-    <div className="a-sheet" role="dialog" aria-label="Connections">
-      <div className="a-shell">
-        <header className="a-detnav">
-          <button type="button" className="a-back" onClick={onClose}>
-            <ChevronLeft size={20} strokeWidth={2.5} />
-            Back
-          </button>
-        </header>
-
-        <div className="a-detid">
-          <div>
-            <h2 className="a-dettitle">Connections</h2>
-            <p className="a-detsub">
-              {accounts.length} {accounts.length === 1 ? 'source' : 'sources'}
-              {failed.length > 0 && ` · ${failed.length} need attention`}
-            </p>
-          </div>
-        </div>
+    <FloatSheet open={open} onClose={onClose} title="Connections">
+      <p className="a-qlead">
+        {accounts.length} {accounts.length === 1 ? 'source' : 'sources'} on the book
+        {failed.length > 0
+          ? ` · ${failed.length} ${failed.length === 1 ? 'needs' : 'need'} attention`
+          : ''}
+        . Live sources refresh on demand; manual ones stay as you last set them.
+      </p>
 
         <section className="a-gcard pad">
           <div className="s-runhead">
@@ -172,9 +164,8 @@ export function SyncSheet({ open, onClose }: { open: boolean; onClose: () => voi
         )}
 
         {accounts.length === 0 && (
-          <p className="a-footnote">No accounts connected yet.</p>
+          <p className="a-insnote spaced">No accounts connected yet.</p>
         )}
-      </div>
-    </div>
+    </FloatSheet>
   )
 }

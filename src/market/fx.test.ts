@@ -1,10 +1,25 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { FxConverter, baseCurrency } from './fx';
+import { resetSettingsCache } from '../settings';
 
 describe('baseCurrency', () => {
-  const original = process.env.BASE_CURRENCY;
+  const original = { ...process.env };
+  let dir: string;
+
+  // A saved display currency would win over BASE_CURRENCY, so read from an
+  // empty scratch data dir rather than whatever the developer has saved.
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meridian-fx-'));
+    process.env.DATA_DIR = dir;
+    resetSettingsCache();
+  });
+
   afterEach(() => {
-    if (original === undefined) delete process.env.BASE_CURRENCY;
-    else process.env.BASE_CURRENCY = original;
+    process.env = { ...original };
+    resetSettingsCache();
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 
   it('defaults to USD', () => {

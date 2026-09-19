@@ -1,29 +1,8 @@
 import * as React from 'react'
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import {
-  Eye,
-  EyeOff,
-  Plus,
-  Trash2,
-  Pencil,
-  Check,
-  X,
-  Loader2,
-  ArrowRight,
-  ArrowLeft,
-  RefreshCw,
-  Wallet,
-  Building2,
-  PenLine,
-  ExternalLink,
-  MoreHorizontal,
-  Landmark,
-  Home,
-  Umbrella,
-  CreditCard,
-} from 'lucide-react'
+import { Eye, EyeSlash, Plus, Trash, PencilSimple, Check, X, CircleNotch, ArrowRight, ArrowsClockwise, Wallet, Buildings, PencilSimpleLine, ArrowSquareOut, DotsThree, Bank, House, Umbrella, CreditCard, Key, Usb } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Amount } from '@/components/ui/Amount'
 import { Banner, SkeletonRows } from '@/components/ui/states'
@@ -32,6 +11,7 @@ import {
   useAccounts,
   useAddCryptoAccount,
   useAddManualAccount,
+  useAddWatchWallet,
   useDeleteAccount,
   useRenameAccount,
   useProviders,
@@ -50,9 +30,18 @@ import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccoun
 import { CLASSES } from '@/wealth/tokens'
 import { isDemoId } from '@/wealth/demo'
 import { LogoAvatar } from '@/wealth/logos'
+import { FloatSheet } from '@/wealth/FloatSheet'
+import {
+  detectKey,
+  ledgerErrorMessage,
+  ledgerSupported,
+  readFromLedger,
+  type LedgerChain,
+} from '@/wealth/watchKey'
 
 type AddStep =
   | 'chooser'
+  | 'watch'
   | 'crypto'
   | 'manual'
   | 'broker'
@@ -63,7 +52,7 @@ type AddStep =
 
 /** One field treatment for every input on the route. */
 const fieldClass =
-  'w-full rounded-[14px] border-[0.5px] border-white/[0.07] bg-[rgba(118,118,128,0.18)] px-3.5 py-3 text-[15px] font-semibold text-white placeholder:text-white/30'
+  'w-full rounded-[14px] border-[0.5px] border-border/10 bg-[rgba(118,118,128,0.18)] px-3.5 py-3 text-[15px] font-semibold text-foreground placeholder:text-muted-foreground/70'
 
 function typeLabel(a: Account): string {
   switch (a.type) {
@@ -84,19 +73,6 @@ function typeLabel(a: Account): string {
   }
 }
 
-function BackLink({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-    >
-      <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-      Back
-    </button>
-  )
-}
-
 function FormError({ error, fallback }: { error: unknown; fallback: string }) {
   const message =
     (error as { response?: { data?: { message?: string; error?: string } } })
@@ -109,7 +85,7 @@ function FormError({ error, fallback }: { error: unknown; fallback: string }) {
 
 /* ---------- Add forms ---------- */
 
-function CryptoForm({ onDone, onBack }: { onDone?: () => void; onBack: () => void }) {
+function CryptoForm({ onDone }: { onDone?: () => void }) {
   const [label, setLabel] = useState('')
   const [mnemonic, setMnemonic] = useState('')
   const [showMnemonic, setShowMnemonic] = useState(false)
@@ -127,7 +103,6 @@ function CryptoForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-label="Add crypto wallet">
-      <BackLink onClick={onBack} />
 
       <div className="space-y-1.5">
         <label className="text-sm font-medium" htmlFor="acct-label">
@@ -187,7 +162,7 @@ function CryptoForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
             aria-label={showMnemonic ? 'Hide recovery phrase' : 'Show recovery phrase'}
           >
             {showMnemonic ? (
-              <EyeOff className="h-4 w-4" aria-hidden />
+              <EyeSlash className="h-4 w-4" aria-hidden />
             ) : (
               <Eye className="h-4 w-4" aria-hidden />
             )}
@@ -205,7 +180,7 @@ function CryptoForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
         disabled={wordCount < 12 || addAccount.isPending}
       >
         {addAccount.isPending ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+          <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
         ) : (
           <ArrowRight className="mr-2 h-4 w-4" aria-hidden />
         )}
@@ -215,7 +190,170 @@ function CryptoForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
   )
 }
 
-function ManualForm({ onDone, onBack }: { onDone?: () => void; onBack: () => void }) {
+function WatchForm({ onDone }: { onDone?: () => void }) {
+  const add = useAddWatchWallet()
+  const [label, setLabel] = useState('')
+  const [key, setKey] = useState('')
+  const [institution, setInstitution] = useState('')
+  const [ledgerChain, setLedgerChain] = useState<LedgerChain>('btc')
+  const [ledgerBusy, setLedgerBusy] = useState(false)
+  const [ledgerError, setLedgerError] = useState<string | null>(null)
+  const detected = detectKey(key)
+  const canLedger = ledgerSupported()
+
+  async function handleLedger() {
+    setLedgerBusy(true)
+    setLedgerError(null)
+    try {
+      const read = await readFromLedger(ledgerChain)
+      setKey(read.key)
+      setInstitution(read.institution)
+      add.reset()
+    } catch (err) {
+      setLedgerError(ledgerErrorMessage(err))
+    } finally {
+      setLedgerBusy(false)
+    }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!detected) return
+    add.mutate(
+      {
+        label: label.trim() || undefined,
+        key: key.trim(),
+        institution: institution.trim() || undefined,
+      },
+      { onSuccess: () => onDone?.() },
+    )
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4" aria-label="Add watch-only wallet">
+      <p className="a-qlead">
+        Paste a public key or address. Balances are read from the network — nothing here can
+        sign or spend.
+      </p>
+
+      <section className="a-gcard pad">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[15px] font-semibold">Read from a Ledger</div>
+            <div className="text-[12.5px] text-muted-foreground">
+              {canLedger
+                ? 'Plug it in, unlock it, and open the Bitcoin or Ethereum app.'
+                : 'Needs Chrome, Edge, or Brave over USB — or paste the key from Ledger Live.'}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="ui-btn tinted sm"
+            onClick={handleLedger}
+            disabled={!canLedger || ledgerBusy}
+          >
+            {ledgerBusy ? (
+              <CircleNotch className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Usb size={15} aria-hidden />
+            )}
+            {ledgerBusy ? 'Reading…' : 'Read device'}
+          </button>
+        </div>
+        <div className="a-pills mt-3">
+          {(['btc', 'eth'] as const).map((c) => (
+            <button
+              key={c}
+              type="button"
+              className={cn('a-pill', ledgerChain === c && 'on')}
+              onClick={() => setLedgerChain(c)}
+              aria-pressed={ledgerChain === c}
+            >
+              {c === 'btc' ? 'Bitcoin' : 'Ethereum'}
+            </button>
+          ))}
+        </div>
+        {ledgerError && <p className="mt-2 text-[12.5px] text-loss">{ledgerError}</p>}
+      </section>
+
+      <div className="space-y-1.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <label className="text-sm font-medium" htmlFor="watch-key">
+            Public key or address
+          </label>
+          <span
+            className={cn('text-xs', detected ? 'text-gain' : 'text-muted-foreground')}
+          >
+            {detected
+              ? detected.label
+              : key.trim()
+                ? 'Not recognised yet'
+                : 'xpub · zpub · 0x… · bc1… · Solana'}
+          </span>
+        </div>
+        <textarea
+          id="watch-key"
+          rows={3}
+          placeholder="zpub6r… or 0x… or bc1q…"
+          value={key}
+          onChange={(e) => {
+            setKey(e.target.value)
+            add.reset()
+          }}
+          className={cn(
+            fieldClass,
+            'resize-none font-mono text-[13px]',
+            add.isError && 'border-destructive',
+          )}
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium" htmlFor="watch-label">
+            Account name
+          </label>
+          <input
+            id="watch-label"
+            type="text"
+            placeholder={detected ? `Ledger · ${detected.label.split(' · ')[0]}` : 'Cold storage'}
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium" htmlFor="watch-institution">
+            Kept on
+          </label>
+          <input
+            id="watch-institution"
+            type="text"
+            placeholder="Ledger · Trezor · Exchange"
+            value={institution}
+            onChange={(e) => setInstitution(e.target.value)}
+            className={fieldClass}
+          />
+        </div>
+      </div>
+
+      {add.isError && <FormError error={add.error} fallback="Could not add this wallet." />}
+
+      <Button type="submit" className="h-11 w-full" disabled={!detected || add.isPending}>
+        {add.isPending ? (
+          <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+        ) : (
+          <ArrowRight className="mr-2 h-4 w-4" aria-hidden />
+        )}
+        {add.isPending ? 'Reading balances…' : 'Track wallet'}
+      </Button>
+    </form>
+  )
+}
+
+function ManualForm({ onDone }: { onDone?: () => void }) {
   const [label, setLabel] = useState('')
   const [institution, setInstitution] = useState('')
   const [symbol, setSymbol] = useState('')
@@ -267,7 +405,6 @@ function ManualForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-label="Add manual account">
-      <BackLink onClick={onBack} />
 
       <div className="space-y-3">
         <div className="space-y-1.5">
@@ -386,7 +523,7 @@ function ManualForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
         disabled={!label.trim() || addManual.isPending}
       >
         {addManual.isPending ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+          <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
         ) : (
           <ArrowRight className="mr-2 h-4 w-4" aria-hidden />
         )}
@@ -399,11 +536,9 @@ function ManualForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
 function SimpleBalanceForm({
   kind,
   onDone,
-  onBack,
 }: {
   kind: 'cash' | 'pension' | 'estate' | 'loan'
   onDone?: () => void
-  onBack: () => void
 }) {
   const add = useAddManualAccount()
   const [label, setLabel] = useState('')
@@ -478,7 +613,6 @@ function SimpleBalanceForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-label={copy.title}>
-      <BackLink onClick={onBack} />
       <div className="space-y-1.5">
         <label className="text-sm font-medium" htmlFor="simple-label">
           Name
@@ -551,7 +685,7 @@ function SimpleBalanceForm({
       {add.isError && <FormError error={add.error} fallback="Could not save this account." />}
       <Button type="submit" className="h-11 w-full" disabled={!label.trim() || add.isPending}>
         {add.isPending ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+          <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
         ) : (
           <ArrowRight className="mr-2 h-4 w-4" aria-hidden />
         )}
@@ -572,11 +706,12 @@ function AddFlow({
   onBack: () => void
   onDone?: () => void
 }) {
-  if (step === 'crypto') return <CryptoForm onDone={onDone} onBack={onBack} />
-  if (step === 'manual') return <ManualForm onDone={onDone} onBack={onBack} />
+  if (step === 'watch') return <WatchForm onDone={onDone} />
+  if (step === 'crypto') return <CryptoForm onDone={onDone} />
+  if (step === 'manual') return <ManualForm onDone={onDone} />
   if (step === 'broker') return <BrokerForm onDone={onDone} onBack={onBack} />
   if (step === 'cash' || step === 'pension' || step === 'estate' || step === 'loan') {
-    return <SimpleBalanceForm kind={step} onDone={onDone} onBack={onBack} />
+    return <SimpleBalanceForm kind={step} onDone={onDone} />
   }
   return <AddChooser onPick={onPick} />
 }
@@ -599,18 +734,12 @@ function BrokerForm({ onDone, onBack }: { onDone?: () => void; onBack: () => voi
 
   return (
     <div className="space-y-5" aria-label="Import brokerage">
-      <BackLink onClick={onBack} />
 
-      <div>
-        <h2 className="font-display text-lg tracking-tight">
-          Brokerage via SnapTrade
-        </h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          Import accounts already linked to your SnapTrade Personal key,
-          read-only. Best for US, CA, UK, and EU brokers — use a manual account
-          for unsupported Swiss banks.
-        </p>
-      </div>
+      <p className="a-qlead">
+        Import accounts already linked to your SnapTrade Personal key,
+        read-only. Best for US, CA, UK, and EU brokers — use a manual account
+        for unsupported Swiss banks.
+      </p>
 
       {!snap?.configured ? (
         <div className="space-y-2.5 rounded-md border border-border/70 bg-secondary/40 px-4 py-3.5 text-sm">
@@ -683,9 +812,9 @@ SNAPTRADE_CONSUMER_KEY=…`}
             }
           >
             {importAccts.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+              <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
             ) : (
-              <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
+              <ArrowsClockwise className="mr-2 h-4 w-4" aria-hidden />
             )}
             Import connected accounts
           </Button>
@@ -704,9 +833,9 @@ SNAPTRADE_CONSUMER_KEY=…`}
             }
           >
             {connect.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+              <CircleNotch className="mr-2 h-4 w-4 animate-spin" aria-hidden />
             ) : (
-              <ExternalLink className="mr-2 h-4 w-4" aria-hidden />
+              <ArrowSquareOut className="mr-2 h-4 w-4" aria-hidden />
             )}
             Add or repair brokerage
           </Button>
@@ -744,30 +873,34 @@ function AddChooser({
   const { data: providers } = useProviders()
   const snapConfigured = providers?.find((p) => p.id === 'snaptrade')?.configured
 
-  const options: Array<{
+  interface AddOption {
     id: Exclude<AddStep, 'chooser'>
     title: string
     subtitle: string
     icon: typeof Wallet
     color: string
     badge?: string
-  }> = [
-    {
-      id: 'cash',
-      title: 'Cash',
-      subtitle: 'Checking, savings, or a wallet of cash',
-      icon: Landmark,
-      color: '#4BD57E',
-    },
+    badgeTone?: 'gain' | 'warn'
+  }
+
+  const live: AddOption[] = [
     {
       id: 'broker',
       title: 'Brokerage',
       subtitle: snapConfigured
         ? 'Import accounts already connected in SnapTrade'
-        : 'SnapTrade — needs API keys, or add holdings by hand',
-      icon: Building2,
+        : 'SnapTrade — needs API keys first',
+      icon: Buildings,
       color: '#FFD84D',
       badge: snapConfigured ? 'Ready' : 'Needs keys',
+      badgeTone: snapConfigured ? 'gain' : 'warn',
+    },
+    {
+      id: 'watch',
+      title: 'Ledger or any wallet',
+      subtitle: 'Bitcoin, Ethereum, Solana — from a public key, nothing to sign',
+      icon: Key,
+      color: '#F7931A',
     },
     {
       id: 'crypto',
@@ -775,6 +908,16 @@ function AddChooser({
       subtitle: 'Hyperliquid perps and spot, via recovery phrase',
       icon: Wallet,
       color: '#A57BFF',
+    },
+  ]
+
+  const byHand: AddOption[] = [
+    {
+      id: 'cash',
+      title: 'Cash',
+      subtitle: 'Checking, savings, or a wallet of cash',
+      icon: Bank,
+      color: '#4BD57E',
     },
     {
       id: 'pension',
@@ -787,7 +930,7 @@ function AddChooser({
       id: 'estate',
       title: 'Real estate',
       subtitle: 'A home or property at estimated value',
-      icon: Home,
+      icon: House,
       color: '#FF5C48',
     },
     {
@@ -801,44 +944,53 @@ function AddChooser({
       id: 'manual',
       title: 'Holdings by hand',
       subtitle: 'Tickers, quantities, and prices you enter yourself',
-      icon: PenLine,
+      icon: PencilSimpleLine,
       color: '#3ABEFF',
     },
   ]
 
+  const row = (opt: AddOption) => (
+    <button
+      key={opt.id}
+      type="button"
+      onClick={() => onPick(opt.id)}
+      className="a-arow tap"
+    >
+      <span
+        className="a-av"
+        style={{ background: `${opt.color}22`, color: opt.color }}
+      >
+        <opt.icon size={16} aria-hidden />
+      </span>
+      <span className="a-atext">
+        <b>{opt.title}</b>
+        <em>{opt.subtitle}</em>
+      </span>
+      {opt.badge && (
+        <span className={`ui-tag ${opt.badgeTone ?? 'flat'}`}>{opt.badge}</span>
+      )}
+      <ArrowRight size={15} className="a-rowchev" aria-hidden />
+    </button>
+  )
+
   return (
-    <div className="a-arows">
-      {options.map((opt) => (
-        <button
-          key={opt.id}
-          type="button"
-          onClick={() => onPick(opt.id)}
-          className="a-arow tap"
-        >
-          <span
-            className="a-av"
-            style={{ background: `${opt.color}22`, color: opt.color }}
-          >
-            <opt.icon size={16} strokeWidth={2.2} aria-hidden />
-          </span>
-          <span className="a-atext">
-            <b>
-              {opt.title}
-              {opt.badge ? ` · ${opt.badge}` : ''}
-            </b>
-            <em>{opt.subtitle}</em>
-          </span>
-          <ArrowRight size={15} strokeWidth={2.5} className="a-rowchev" aria-hidden />
-        </button>
-      ))}
-    </div>
+    <>
+      <p className="a-qlead">
+        Everything lands on the same book — synced accounts refresh themselves,
+        manual ones you update when things change.
+      </p>
+      <div className="a-header">Syncs itself</div>
+      <section className="a-gcard">{live.map(row)}</section>
+      <div className="a-header">Tracked by hand</div>
+      <section className="a-gcard">{byHand.map(row)}</section>
+    </>
   )
 }
 
 /* ---------- Account row ---------- */
 
 const menuItemClass =
-  'flex w-full cursor-pointer items-center gap-2 rounded-[12px] px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-white/10'
+  'flex w-full cursor-pointer items-center gap-2 rounded-[12px] px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-foreground/10'
 
 function AccountRow({ account }: { account: Account }) {
   const [editing, setEditing] = useState(false)
@@ -887,7 +1039,7 @@ function AccountRow({ account }: { account: Account }) {
       : 'Not synced yet'
 
   return (
-    <li className="flex items-center gap-3 border-b border-border/50 py-3 last:border-0">
+    <li className="flex items-center gap-3 border-b border-border/50 px-1.5 py-2.5 last:border-0">
       <LogoAvatar
         institution={account.institution}
         name={account.label}
@@ -932,26 +1084,27 @@ function AccountRow({ account }: { account: Account }) {
             </button>
           </div>
         ) : (
-          <p className="truncate text-sm font-semibold">{account.label}</p>
+          <p className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+            <span className="truncate">{account.label}</span>
+            {demo && <span className="a-tag cycle shrink-0">Sample</span>}
+          </p>
         )}
 
-        <p className="truncate text-xs text-muted-foreground">
-          {[typeLabel(account), institution].filter(Boolean).join(' · ')}
-          {idDisplay && <span className="num"> · {idDisplay}</span>}
-        </p>
-        <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground/90">
+        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
           <span
             aria-hidden
             className={cn('h-1.5 w-1.5 shrink-0 rounded-full', statusTone)}
           />
           <span className="truncate">
+            {[typeLabel(account), institution].filter(Boolean).join(' · ')}
+            {idDisplay && <span className="num"> · {idDisplay}</span>}
+            {' · '}
             {demo
-              ? 'Sample account'
+              ? 'Sample book'
               : failed
                 ? account.lastError || 'Needs attention'
                 : syncedNote}
           </span>
-          {demo && <span className="a-tag cycle">Sample</span>}
           {!demo && failed && (
             <Link
               to="/brokerage"
@@ -983,7 +1136,7 @@ function AccountRow({ account }: { account: Account }) {
             disabled={remove.isPending}
           >
             {remove.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              <CircleNotch className="h-3.5 w-3.5 animate-spin" aria-hidden />
             ) : (
               'Yes'
             )}
@@ -1005,9 +1158,9 @@ function AccountRow({ account }: { account: Account }) {
               aria-label={`Actions for ${account.label}`}
             >
               {sync.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                <CircleNotch className="h-4 w-4 animate-spin" aria-hidden />
               ) : (
-                <MoreHorizontal className="h-4 w-4" aria-hidden />
+                <DotsThree className="h-4 w-4" aria-hidden />
               )}
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
@@ -1020,14 +1173,14 @@ function AccountRow({ account }: { account: Account }) {
                   className={menuItemClass}
                   onSelect={() => sync.mutate(account.id)}
                 >
-                  <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                  <ArrowsClockwise className="h-3.5 w-3.5" aria-hidden />
                   Sync now
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className={menuItemClass}
                   onSelect={() => setEditing(true)}
                 >
-                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                  <PencilSimple className="h-3.5 w-3.5" aria-hidden />
                   Rename
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator className="my-1 h-px bg-border/70" />
@@ -1035,7 +1188,7 @@ function AccountRow({ account }: { account: Account }) {
                   className={cn(menuItemClass, 'text-destructive')}
                   onSelect={() => setConfirming(true)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  <Trash className="h-3.5 w-3.5" aria-hidden />
                   Disconnect
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
@@ -1065,14 +1218,19 @@ function AccountGroups({ accounts }: { accounts: Account[] }) {
         const headingId = `class-${c.id}`
         return (
           <section key={c.id} className="a-gcard" aria-labelledby={headingId}>
-            <div className="flex items-baseline justify-between gap-3 px-3 pt-3 pb-1">
-              <h3 id={headingId} className="text-[13px] font-bold">
+            <div className="flex items-center justify-between gap-3 px-3.5 pt-3.5 pb-1.5">
+              <h3 id={headingId} className="flex items-center gap-2 text-[15px] font-bold tracking-tight">
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ background: c.color }}
+                  aria-hidden
+                />
                 {c.name}
-                <span className="ml-2 font-medium text-white/40">
-                  {items.length} {items.length === 1 ? 'account' : 'accounts'}
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {items.length === 1 ? '1 account' : `${items.length} accounts`}
                 </span>
               </h3>
-              <span className="num text-xs font-bold">
+              <span className="num text-[13px] font-bold">
                 {formatCurrency(subtotal, { compact: true })}
               </span>
             </div>
@@ -1086,14 +1244,18 @@ function AccountGroups({ accounts }: { accounts: Account[] }) {
       })}
       {loans.length > 0 && (
         <section className="a-gcard" aria-labelledby="class-loans">
-          <div className="flex items-baseline justify-between gap-3 px-3 pt-3 pb-1">
-            <h3 id="class-loans" className="text-[13px] font-bold">
+          <div className="flex items-center justify-between gap-3 px-3.5 pt-3.5 pb-1.5">
+            <h3 id="class-loans" className="flex items-center gap-2 text-[15px] font-bold tracking-tight">
+              <span
+                className="a-tiledot hatch h-2.5 w-2.5 shrink-0"
+                aria-hidden
+              />
               Loans
-              <span className="ml-2 font-medium text-white/40">
-                {loans.length} {loans.length === 1 ? 'account' : 'accounts'}
+              <span className="text-xs font-semibold text-muted-foreground">
+                {loans.length === 1 ? '1 account' : `${loans.length} accounts`}
               </span>
             </h3>
-            <span className="num text-xs font-bold text-[#FF453A]">
+            <span className="num text-[13px] font-bold text-loss">
               −{formatCurrency(
                 loans.reduce((s, a) => s + accountValue(a), 0),
                 { compact: true },
@@ -1113,67 +1275,44 @@ function AccountGroups({ accounts }: { accounts: Account[] }) {
 
 /* ---------- Page ---------- */
 
+const STEP_TITLES: Record<AddStep, string> = {
+  chooser: 'Add an account',
+  watch: 'Ledger or any wallet',
+  crypto: 'Crypto wallet',
+  broker: 'Brokerage',
+  manual: 'Holdings by hand',
+  cash: 'Cash account',
+  pension: 'Pension',
+  estate: 'Real estate',
+  loan: 'Loan or mortgage',
+}
+
 export function Accounts() {
   const { data: accounts, isLoading } = useAccounts()
   const [step, setStep] = useState<AddStep | null>(null)
   const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
   const hasAccounts = Boolean(accounts && accounts.length > 0)
 
   useEffect(() => {
     document.title = hasAccounts ? 'Accounts' : 'Connect'
   }, [hasAccounts])
 
-  // With nothing connected the chooser *is* the page; otherwise it's opt-in.
+  // ⌘K "Add an account" lands here with ?add=1.
   useEffect(() => {
-    if (!isLoading && !hasAccounts && step === null) setStep('chooser')
-  }, [isLoading, hasAccounts, step])
+    if (params.get('add') === '1') {
+      setStep('chooser')
+      setParams({}, { replace: true })
+    }
+  }, [params, setParams])
 
   function handleAdded() {
     setStep(null)
     if (!hasAccounts) navigate('/')
   }
 
-  /* ---- First run: a single focused task, no dashboard chrome ---- */
-  if (!isLoading && !hasAccounts) {
-    return (
-      <article>
-        <div className="ui-empty">
-          <div className="ui-empty-icon">
-            <Wallet className="h-5 w-5" />
-          </div>
-          <b>One picture of everything you own and owe</b>
-          <p>Cash, brokers, crypto, pension, property, and loans on a single book.</p>
-        </div>
-
-        <section className="a-gcard pad">
-            <h2 id="add-account-heading" className="sr-only">
-              Choose an account type
-            </h2>
-            <AddFlow
-              step={step ?? 'chooser'}
-              onPick={setStep}
-              onBack={() => setStep('chooser')}
-              onDone={handleAdded}
-            />
-        </section>
-
-        <p className="a-footnote">
-          Secrets stay on the server. Recovery phrases are encrypted at rest.
-        </p>
-      </article>
-    )
-  }
-
-  /* ---- Managing existing accounts ---- */
   return (
     <article>
-      {step === null && (
-        <button type="button" className="a-add" onClick={() => setStep('chooser')}>
-          <Plus size={17} strokeWidth={2.5} />
-          Add account
-        </button>
-      )}
-
       {isLoading ? (
         <>
           <p role="status" aria-live="polite" className="sr-only">
@@ -1181,48 +1320,71 @@ export function Accounts() {
           </p>
           <SkeletonRows rows={3} />
         </>
-      ) : (
+      ) : hasAccounts ? (
         <>
-          {/* Two columns only while adding: the list keeps the full measure
-           * the rest of the time rather than carrying filler beside it. */}
-          <div className="space-y-3">
-            <section aria-labelledby="connected-accounts-heading">
-              <h2 id="connected-accounts-heading" className="sr-only">
-                Connected accounts
-              </h2>
-              <AccountGroups accounts={accounts!} />
-            </section>
-
-            {step !== null && (
-              <section className="a-gcard pad">
-                <div className="mb-3 flex items-baseline justify-between gap-3">
-                  <h2 id="add-account-heading" className="text-[15px] font-bold">
-                    Add an account
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() => setStep(null)}
-                    className="a-navbtn"
-                    aria-label="Close add account panel"
-                  >
-                    <X className="h-4 w-4" aria-hidden />
-                  </button>
-                </div>
-                <AddFlow
-                  step={step}
-                  onPick={setStep}
-                  onBack={() => setStep('chooser')}
-                  onDone={handleAdded}
-                />
-              </section>
-            )}
+          <div className="a-pagebar">
+            <div className="a-header">Connected accounts <em>Grouped by what they hold</em></div>
+            <button
+              type="button"
+              className="ui-btn tinted sm"
+              onClick={() => setStep('chooser')}
+            >
+              <Plus size={15} />
+              Add account
+            </button>
           </div>
+
+          <section aria-labelledby="connected-accounts-heading">
+            <h2 id="connected-accounts-heading" className="sr-only">
+              Connected accounts
+            </h2>
+            <AccountGroups accounts={accounts!} />
+          </section>
+
+          <p className="a-footnote">
+            Secrets stay on the server. Recovery phrases are encrypted at rest.
+          </p>
+        </>
+      ) : (
+        /* ---- First run: one focused task, no dashboard chrome ---- */
+        <>
+          <div className="ui-empty">
+            <div className="ui-empty-icon">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <b>One picture of everything you own and owe</b>
+            <p>Cash, brokers, crypto, pension, property, and loans on a single book.</p>
+          </div>
+
+          <button type="button" className="a-add" onClick={() => setStep('chooser')}>
+            <Plus size={17} />
+            Add your first account
+          </button>
 
           <p className="a-footnote">
             Secrets stay on the server. Recovery phrases are encrypted at rest.
           </p>
         </>
       )}
+
+      <FloatSheet
+        open={step !== null}
+        title={step ? STEP_TITLES[step] : undefined}
+        onClose={() => setStep(null)}
+        onBack={step && step !== 'chooser' ? () => setStep('chooser') : undefined}
+        onEscape={
+          step && step !== 'chooser' ? () => setStep('chooser') : () => setStep(null)
+        }
+      >
+        {step && (
+          <AddFlow
+            step={step}
+            onPick={setStep}
+            onBack={() => setStep('chooser')}
+            onDone={handleAdded}
+          />
+        )}
+      </FloatSheet>
     </article>
   )
 }

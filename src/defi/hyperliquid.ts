@@ -184,7 +184,9 @@ export class HyperliquidAdapter {
   public async getPnl(): Promise<AccountPnl> {
     try {
       await this.ensureReady();
-      const periods = (await this.sdk.info.portfolio(this.walletAddress)) as any;
+      const periods = (await this.sdk.info.portfolio(
+        this.walletAddress,
+      )) as unknown as Parameters<typeof periodPct>[0];
       const day = periodPct(periods, 'day');
       const week = periodPct(periods, 'week');
       const month = periodPct(periods, 'month');
@@ -218,7 +220,7 @@ export class HyperliquidAdapter {
     size: number,
     price: number,
     orderType: 'LIMIT' | 'MARKET' = 'LIMIT'
-  ): Promise<any> {
+  ): Promise<unknown> {
     await this.ensureReady();
     const order = {
       coin: symbol,

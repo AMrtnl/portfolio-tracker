@@ -9,6 +9,8 @@ import {
   Holding,
   ProviderId,
   PublicAccount,
+  WatchChain,
+  WatchKeyKind,
   inferBookClass,
   inferKind,
 } from './types/accounts';
@@ -45,8 +47,10 @@ interface StoredAccountV2 {
   encryptedMnemonic?: string;
   iv?: string;
   tag?: string;
-  // Manual holdings
+  // Manual holdings, or the last successful read of a watch-only wallet
   holdings?: Holding[];
+  // Watch-only wallets
+  chain?: WatchChain;
 }
 
 interface StoreDataV1 {
@@ -144,10 +148,11 @@ function toPublic(acct: StoredAccountV2, live?: boolean): PublicAccount {
     createdAt: acct.createdAt,
     live: live ?? false,
   };
-  if (acct.provider === 'manual') {
+  if (acct.provider === 'manual' || acct.provider === 'watch') {
     pub.holdings = acct.holdings || [];
     pub.totalValueUsd = Math.abs(holdingsTotal(acct.holdings));
   }
+  if (acct.chain) pub.chain = acct.chain;
   return pub;
 }
 
@@ -297,6 +302,39 @@ export class Store {
       lastSyncedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       holdings,
+    });
+    this.save();
+    return id;
+  }
+
+  /** Track a wallet from its public key or address — nothing secret is stored. */
+  addWatchWallet(
+    label: string,
+    input: {
+      key: string;
+      chain: WatchChain;
+      kind: WatchKeyKind;
+      institution?: string;
+      notes?: string;
+    },
+  ): string {
+    const id = crypto.randomUUID();
+    this.data.accounts.push({
+      id,
+      label,
+      type: 'crypto_wallet',
+      provider: 'watch',
+      status: 'pending',
+      kind: 'asset',
+      bookClass: 'crypto',
+      notes: input.notes?.trim() || undefined,
+      externalId: input.key,
+      maskedIdentifier: maskAddress(input.key),
+      institution: input.institution || (input.kind === 'xpub' ? 'Ledger' : 'Watch-only'),
+      currency: 'USD',
+      chain: input.chain,
+      createdAt: new Date().toISOString(),
+      holdings: [],
     });
     this.save();
     return id;

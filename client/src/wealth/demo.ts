@@ -5,6 +5,7 @@
  */
 
 import type { Account } from '@/hooks/useAccounts'
+import type { Goal } from '@/hooks/useGoals'
 import type {
   CashflowMonth,
   CashflowResponse,
@@ -259,15 +260,21 @@ export function buildCashflow(
   const byKey = new Map(buckets.map((b) => [b.key, b]))
   const latest = buckets[buckets.length - 1]
   const spendByCat = new Map<string, number>()
+  const windowByCat = new Map<string, number>()
   for (const t of transactions) {
     const bucket = byKey.get(t.date.slice(0, 7))
     if (!bucket) continue
     if (t.kind === 'income') bucket.income += t.amount
     else bucket.spend += t.amount
-    if (t.kind === 'spend' && latest && t.date.slice(0, 7) === latest.key) {
-      spendByCat.set(t.category, (spendByCat.get(t.category) || 0) + t.amount)
+    if (t.kind === 'spend') {
+      windowByCat.set(t.category, (windowByCat.get(t.category) || 0) + t.amount)
+      if (latest && t.date.slice(0, 7) === latest.key) {
+        spendByCat.set(t.category, (spendByCat.get(t.category) || 0) + t.amount)
+      }
     }
   }
+  const averages: Record<string, number> = {}
+  for (const [id, total] of windowByCat) averages[id] = total / months
   const categories = [...spendByCat.entries()]
     .map(([id, amount]) => {
       const cat: MoneyCategory =
@@ -278,12 +285,97 @@ export function buildCashflow(
   return {
     months: buckets,
     categories,
+    averages,
     hasActivity: transactions.length > 0,
     retrievedAt: new Date().toISOString(),
   }
 }
 
 export const DEMO_CASHFLOW = buildCashflow(DEMO_TRANSACTIONS, 6)
+
+/** Three goals in different states: behind, on track, and open-ended. */
+export const DEMO_GOALS: Goal[] = (() => {
+  const now = new Date()
+  const iso = (d: Date) => d.toISOString().slice(0, 10)
+  const created = new Date(now.getFullYear(), now.getMonth() - 4, 12).toISOString()
+  return [
+    {
+      id: 'demo-goal-emergency',
+      name: 'Emergency fund',
+      targetAmount: 30000,
+      targetDate: iso(new Date(now.getFullYear(), now.getMonth() + 10, 1)),
+      accountIds: ['demo-cash-savings'],
+      monthlyContribution: 800,
+      expectedReturn: 0.01,
+      createdAt: created,
+      updatedAt: created,
+    },
+    {
+      id: 'demo-goal-home',
+      name: 'Apartment deposit',
+      targetAmount: 250000,
+      targetDate: iso(new Date(now.getFullYear() + 3, 5, 1)),
+      accountIds: ['demo-broker-ibkr', 'demo-cash-savings'],
+      monthlyContribution: 1500,
+      expectedReturn: 0.05,
+      createdAt: created,
+      updatedAt: created,
+    },
+    {
+      id: 'demo-goal-sabbatical',
+      name: 'Sabbatical year',
+      targetAmount: 60000,
+      accountIds: ['demo-cash-checking'],
+      monthlyContribution: 400,
+      expectedReturn: 0,
+      createdAt: created,
+      updatedAt: created,
+    },
+  ]
+})()
+
+export function mergeGoals(live: Goal[] | undefined, enabled: boolean): Goal[] {
+  const real = (live ?? []).filter((g) => !isDemoId(g.id))
+  if (!enabled) return real
+  const names = new Set(real.map((g) => g.name.toLowerCase()))
+  return [...real, ...DEMO_GOALS.filter((g) => !names.has(g.name.toLowerCase()))]
+}
+
+/** What the recurring-charge detector would surface for the sample household. */
+export function demoRecurringSuggestions() {
+  const d = new Date()
+  const iso = (monthsAgo: number, day: number) => {
+    const x = new Date(d.getFullYear(), d.getMonth() - monthsAgo, day)
+    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+  return [
+    {
+      key: 'zurich versicherung|quarterly',
+      name: 'Zürich Versicherung',
+      amount: 312,
+      cycle: 'quarterly' as const,
+      day: 1,
+      month: d.getMonth(),
+      cat: 'essentials',
+      category: 'insurance',
+      occurrences: 3,
+      firstDate: iso(6, 1),
+      lastDate: iso(0, 1),
+    },
+    {
+      key: 'adobe creative cloud|monthly',
+      name: 'Adobe Creative Cloud',
+      amount: 62.9,
+      cycle: 'monthly' as const,
+      day: 17,
+      cat: 'software',
+      category: 'subscriptions',
+      occurrences: 4,
+      firstDate: iso(3, 17),
+      lastDate: iso(0, 17),
+    },
+  ]
+}
 
 export function mergeAccounts(live: Account[] | undefined, enabled: boolean): Account[] {
   const real = live ?? []
@@ -831,6 +923,15 @@ export function demoNews(symbol: string): NewsResponse | undefined {
     }),
     retrievedAt: stamp(),
   }
+}
+
+/** Every sample symbol's headlines merged into one feed, newest first. */
+export function demoNewsFeed(limit = 8): NewsResponse {
+  const all = Object.keys(DEMO_HEADLINES).flatMap(
+    (sym) => demoNews(sym)?.articles ?? [],
+  )
+  all.sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || ''))
+  return { articles: all.slice(0, limit), retrievedAt: stamp() }
 }
 
 export const DEMO_MOVERS_RES: MoversResponse = {

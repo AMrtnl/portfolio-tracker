@@ -65,6 +65,8 @@ export function providerName(id?: string | null): string {
       return 'Hyperliquid'
     case 'manual':
       return 'Manual'
+    case 'watch':
+      return 'Watch-only'
     default:
       return id || '—'
   }

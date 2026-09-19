@@ -18,7 +18,10 @@
   },
   "dependencies": {
     "axios": "^1.6.2",
+    "bip32": "^5.0.1",
     "bip39": "^3.1.0",
+    "bitcoinjs-lib": "^7.0.2",
+    "bs58check": "^4.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "ethers": "^6.9.0",
@@ -27,6 +30,7 @@
     "hyperliquid": "^1.7.7",
     "playwright": "^1.62.1",
     "snaptrade-typescript-sdk": "^11.0.4",
+    "tiny-secp256k1": "^2.2.4",
     "web3": "^4.2.2",
     "ws": "^8.14.2",
     "yahoo-finance2": "^4.0.0"
