@@ -1,0 +1,451 @@
+{
+ "currency": "CHF",
+ "asOf": "2026-09-17",
+ "netWorth": 1284650,
+ "assets": 1520650,
+ "liabilities": 236000,
+ "liquid": 710650,
+ "change12m": {
+  "amount": 77650,
+  "pct": 6.4
+ },
+ "ytd": {
+  "amount": 18420,
+  "pct": 1.45
+ },
+ "accounts": [
+  {
+   "name": "Apartment",
+   "kind": "property",
+   "source": "manual",
+   "value": 668000,
+   "share": 43.9,
+   "note": "valued Mar 2026"
+  },
+  {
+   "name": "Interactive Brokers",
+   "kind": "broker",
+   "mono": "IB",
+   "value": 412300,
+   "share": 27.1,
+   "change12m": 8.4,
+   "fresh": "2 min"
+  },
+  {
+   "name": "UBS",
+   "kind": "bank",
+   "mono": "UBS",
+   "value": 187400,
+   "share": 12.3,
+   "change12m": 1.9,
+   "fresh": "1 h"
+  },
+  {
+   "name": "Pillar 3a",
+   "kind": "pension",
+   "mono": "3a",
+   "value": 142000,
+   "share": 9.3,
+   "change12m": 3.1
+  },
+  {
+   "name": "Ledger",
+   "kind": "wallet",
+   "mono": "L",
+   "readOnly": true,
+   "value": 96250,
+   "share": 6.3,
+   "change12m": 21.6,
+   "fresh": "6 min"
+  },
+  {
+   "name": "Revolut",
+   "kind": "bank",
+   "logo": "revolut",
+   "value": 14700
+  },
+  {
+   "name": "Mortgage",
+   "kind": "mortgage",
+   "value": -221000,
+   "note": "UBS, fixed to 2031"
+  },
+  {
+   "name": "Car loan",
+   "kind": "loan",
+   "value": -15000
+  }
+ ],
+ "holdings": [
+  {
+   "name": "Vanguard FTSE All-World",
+   "mono": "VG",
+   "account": "IBKR",
+   "class": "Fund, world",
+   "sector": "Diversified",
+   "country": "World",
+   "currency": "USD",
+   "value": 184200,
+   "weight": 12.1,
+   "change": 8.2
+  },
+  {
+   "name": "UBS Strategy Fund",
+   "mono": "UBS",
+   "account": "UBS",
+   "class": "Fund, balanced",
+   "ter": 1.42,
+   "currency": "CHF",
+   "value": 100000,
+   "weight": 6.6,
+   "change": 2.4
+  },
+  {
+   "name": "iShares SPI",
+   "mono": "iSh",
+   "account": "IBKR",
+   "class": "Fund, equity",
+   "country": "CH",
+   "currency": "CHF",
+   "value": 96400,
+   "weight": 6.3,
+   "change": 5.0
+  },
+  {
+   "name": "Apple",
+   "logo": "apple",
+   "account": "IBKR",
+   "class": "Equity",
+   "sector": "Technology",
+   "country": "US",
+   "currency": "USD",
+   "value": 92200,
+   "weight": 6.1,
+   "change": -1.8
+  },
+  {
+   "name": "Nestle",
+   "account": "UBS",
+   "class": "Equity",
+   "value": 39500
+  },
+  {
+   "name": "Bitcoin",
+   "logo": "bitcoin",
+   "account": "Ledger",
+   "units": "0.62 BTC",
+   "value": 61100,
+   "weight": 4.0,
+   "change": 24
+  },
+  {
+   "name": "Ethereum",
+   "logo": "ethereum",
+   "account": "Ledger",
+   "units": "10.4 ETH",
+   "staked": false,
+   "value": 35150,
+   "weight": 2.3
+  }
+ ],
+ "allocation": [
+  [
+   "Property",
+   44
+  ],
+  [
+   "Equities and funds",
+   34
+  ],
+  [
+   "Pension",
+   9
+  ],
+  [
+   "Cash",
+   7
+  ],
+  [
+   "Crypto",
+   6
+  ]
+ ],
+ "exposure": {
+  "sector": [
+   [
+    "Technology",
+    24
+   ],
+   [
+    "Financials",
+    17
+   ],
+   [
+    "Health care",
+    14
+   ],
+   [
+    "Industrials",
+    11
+   ],
+   [
+    "Consumer staples",
+    10
+   ],
+   [
+    "Consumer discretionary",
+    9
+   ],
+   [
+    "Energy",
+    4
+   ],
+   [
+    "Other",
+    11
+   ]
+  ],
+  "country": [
+   [
+    "Switzerland",
+    38
+   ],
+   [
+    "United States",
+    39
+   ],
+   [
+    "Eurozone",
+    9
+   ],
+   [
+    "Japan",
+    4
+   ],
+   [
+    "United Kingdom",
+    3
+   ],
+   [
+    "Emerging markets",
+    5
+   ],
+   [
+    "Other",
+    2
+   ]
+  ],
+  "currency": [
+   [
+    "CHF",
+    71
+   ],
+   [
+    "USD",
+    19
+   ],
+   [
+    "EUR",
+    4
+   ],
+   [
+    "Crypto",
+    6
+   ]
+  ],
+  "insight": "Apple is 18% of equities: held directly, and again inside two funds."
+ },
+ "cashflow": {
+  "months": [
+   "Apr",
+   "May",
+   "Jun",
+   "Jul",
+   "Aug",
+   "Sep",
+   "Oct",
+   "Nov",
+   "Dec"
+  ],
+  "in": [
+   9200,
+   9200,
+   11650,
+   9200,
+   9450,
+   9200,
+   9200,
+   9200,
+   12900
+  ],
+  "out": [
+   6840,
+   7120,
+   8300,
+   6590,
+   7480,
+   6910,
+   7000,
+   7050,
+   8400
+  ],
+  "cashPosition": [
+   88200,
+   90280,
+   93630,
+   96240,
+   98210,
+   102100,
+   104300,
+   106450,
+   110950
+  ],
+  "forecastFromIndex": 6,
+  "september": {
+   "Housing": 2450,
+   "Tax provision": 1200,
+   "Food": 980,
+   "Leisure": 640,
+   "Insurance": 620,
+   "Other": 423,
+   "Transport": 410,
+   "Subscriptions": 187
+  }
+ },
+ "subscriptions": {
+  "monthly": 187.35,
+  "yearly": 2248,
+  "history12m": [
+   151,
+   151,
+   156,
+   156,
+   163,
+   163,
+   172,
+   172,
+   172,
+   185,
+   185,
+   187
+  ],
+  "items": [
+   {
+    "name": "Swisscom",
+    "mono": "SC",
+    "plan": "Mobile plan",
+    "price": 59.0,
+    "since": "2014",
+    "next": "1 Oct"
+   },
+   {
+    "name": "Gym",
+    "plan": "Yearly, paid monthly",
+    "price": 38.5,
+    "since": "Feb 2026",
+    "next": "ends 31 Jan"
+   },
+   {
+    "name": "Netflix",
+    "logo": "netflix",
+    "price": 20.9,
+    "since": "2019",
+    "next": "2 Oct"
+   },
+   {
+    "name": "YouTube Premium",
+    "logo": "youtube",
+    "price": 17.9,
+    "since": "2021",
+    "flag": "up 2.00 since March"
+   },
+   {
+    "name": "Claude",
+    "logo": "claude",
+    "plan": "Pro",
+    "price": 17.6,
+    "since": "2025",
+    "next": "21 Oct"
+   },
+   {
+    "name": "Spotify",
+    "logo": "spotify",
+    "price": 13.95,
+    "since": "2017",
+    "next": "9 Oct"
+   },
+   {
+    "name": "iCloud+",
+    "logo": "icloud",
+    "plan": "2 TB",
+    "price": 10.0,
+    "since": "2016",
+    "next": "28 Sep"
+   },
+   {
+    "name": "Notion",
+    "logo": "notion",
+    "price": 9.5,
+    "since": "2023",
+    "next": "14 Oct"
+   }
+  ],
+  "alerts": [
+   {
+    "kind": "priceRise",
+    "text": "YouTube Premium went from 15.90 to 17.90 in March: CHF 24 more a year."
+   },
+   {
+    "kind": "overlap",
+    "text": "Spotify and YouTube Premium both include music streaming."
+   }
+  ]
+ },
+ "grow": [
+  {
+   "rank": 1,
+   "kind": "fund",
+   "title": "Reduce avoidable fund fees",
+   "because": "CHF 412,000 in funds across UBS and Interactive Brokers costs 0.71% a year.",
+   "savingPerYear": 2270,
+   "evidence": {
+    "holdingsAnalysed": 12,
+    "currentFeePct": 0.71,
+    "comparableMedianPct": 0.16,
+    "tradingCost": 620
+   },
+   "assumptions": {
+    "returnPct": 5.0,
+    "years": 10,
+    "modelledGain": 33900,
+    "breakEvenMonths": 3
+   },
+   "risks": [
+    "Alternatives may follow different strategies.",
+    "Switching can trigger taxes and costs.",
+    "Results are modelled, not guaranteed."
+   ]
+  },
+  {
+   "rank": 2,
+   "kind": "cash",
+   "title": "Cash exceeds your target",
+   "because": "CHF 102,100 sits in cash against your target of CHF 40,000.",
+   "savingPerYear": 1920
+  },
+  {
+   "rank": 3,
+   "kind": "eth",
+   "title": "Ether sitting unstaked",
+   "because": "10.4 ETH on your Ledger earns nothing. Staking is modelled at 3.0%, with a lock-up.",
+   "savingPerYear": 1050
+  },
+  {
+   "rank": 4,
+   "kind": "stock",
+   "title": "Single-stock concentration",
+   "because": "Apple is 18% of your invested portfolio.",
+   "effect": "Lower risk"
+  }
+ ]
+}
