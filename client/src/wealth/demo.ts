@@ -39,7 +39,7 @@ import type {
   Quote,
   TradesResponse,
 } from '@/hooks/useAnalytics'
-import { FIXTURE } from '@/wh/data/fixture'
+import { FIXTURE } from '@/wh/model/fixture'
 
 const SPEND_CATS: MoneyCategory[] = [
   { id: 'housing', name: 'Housing', color: '#FF9F45' },
