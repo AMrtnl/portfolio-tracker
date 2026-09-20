@@ -41,8 +41,9 @@ coverage/
 .temp/
 *.tsbuildinfo
 
-# Persisted account data (contains encrypted mnemonics)
-data/
+# Persisted account data at the repository root (contains encrypted mnemonics).
+# Anchored on purpose: a source folder named data/ anywhere else must stay tracked.
+/data/
 
 # Local UI preview screenshots
 client/preview-*.png
