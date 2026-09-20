@@ -138,7 +138,7 @@ export function selectRange(
       points: [],
       firstRecordedAt: null,
       isPartial: true,
-      note: 'No history recorded yet. Meridian stores one portfolio value per day starting from the first time the portfolio is computed; this chart fills in from tomorrow.',
+      note: 'No history recorded yet. Wealth Hub stores one portfolio value per day starting from the first time the portfolio is computed; this chart fills in from tomorrow.',
     };
   }
 

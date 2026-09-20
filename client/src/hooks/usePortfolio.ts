@@ -56,6 +56,8 @@ export function usePortfolio(opts?: { enabled?: boolean }) {
       return data
     },
     enabled: opts?.enabled ?? true,
-    refetchInterval: 30000,
+    // A gentle background refresh; the sync button covers anything urgent.
+    refetchInterval: 5 * 60_000,
+    refetchIntervalInBackground: false,
   })
 }

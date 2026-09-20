@@ -7,14 +7,16 @@
  * cannot be fetched we do NOT fall back to 1:1 — the position is excluded from
  * the base-currency total and reported in `unconverted`, so the UI can say so.
  */
+import { getSettings } from '../settings';
 import { TTL, TtlCache } from './cache';
 import { fxSymbol, isFiat, normalizeTicker } from './symbols';
 import { getYahooClient, guarded } from './yahoo';
 
 const rateCache = new TtlCache<number>('fx', TTL.FX, true);
 
+/** The user's display currency — every analytics total is converted into it. */
 export function baseCurrency(): string {
-  const configured = normalizeTicker(process.env.BASE_CURRENCY || 'USD');
+  const configured = normalizeTicker(getSettings().displayCurrency);
   return isFiat(configured) ? configured : 'USD';
 }
 

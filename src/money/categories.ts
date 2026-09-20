@@ -6,8 +6,9 @@ export interface MoneyCategory {
 
 export const SPEND_CATEGORIES: MoneyCategory[] = [
   { id: 'housing', name: 'Housing', color: '#FF9F45' },
+  { id: 'tax', name: 'Tax provision', color: '#8E8E93' },
   { id: 'insurance', name: 'Insurance', color: '#4BD57E' },
-  { id: 'groceries', name: 'Groceries', color: '#FFD84D' },
+  { id: 'groceries', name: 'Food', color: '#FFD84D' },
   { id: 'subscriptions', name: 'Subscriptions', color: '#A57BFF' },
   { id: 'transport', name: 'Transport', color: '#3ABEFF' },
   { id: 'leisure', name: 'Leisure', color: '#FF5C48' },
@@ -25,7 +26,8 @@ export const SUB_CATEGORIES: MoneyCategory[] = [
   { id: 'telecom', name: 'Telecom', color: '#3ABEFF' },
   { id: 'transport', name: 'Transport', color: '#FFD84D' },
   { id: 'software', name: 'Software', color: '#A57BFF' },
-  { id: 'media', name: 'Media', color: '#FF5C48' },
+  { id: 'media', name: 'Video and music', color: '#FF5C48' },
+  { id: 'health', name: 'Health', color: '#4F6B3A' },
   { id: 'home', name: 'Home', color: '#FF9F45' },
 ];
 

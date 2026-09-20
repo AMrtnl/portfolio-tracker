@@ -9,6 +9,7 @@
  */
 import crypto from 'crypto';
 import type { NextFunction, Request, Response } from 'express';
+import { renderLoginPage } from './loginPage';
 
 const COOKIE_NAME = 'meridian_session';
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -228,100 +229,7 @@ export function requirePageAuth(req: Request, res: Response, next: NextFunction)
 }
 
 export function loginPageHtml(options: { error?: boolean } = {}): string {
-  const mode = authMode();
-  const notice =
-    mode === 'misconfigured'
-      ? '<p class="notice">This deployment has no <code>APP_PASSWORD</code> set. Add it in the hosting dashboard, then reload.</p>'
-      : '';
-  const initialError = options.error
-    ? '<p class="error" role="alert">Incorrect password.</p>'
-    : '';
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow" />
-    <title>Meridian — Sign in</title>
-    <style>
-      :root { color-scheme: dark; }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0; min-height: 100vh; display: grid; place-items: center;
-        background: #0b0d10; color: #e8eaed; padding: 24px;
-        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-      }
-      .card {
-        width: 100%; max-width: 360px; padding: 28px;
-        background: #14171c; border: 1px solid #23272e; border-radius: 14px;
-      }
-      .mark {
-        width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center;
-        background: #e8eaed; color: #0b0d10; font-weight: 800; margin-bottom: 18px;
-      }
-      h1 { margin: 0 0 4px; font-size: 19px; letter-spacing: -0.01em; }
-      p.sub { margin: 0 0 22px; font-size: 13px; color: #9aa3ad; }
-      label { display: block; font-size: 12px; color: #9aa3ad; margin-bottom: 7px; }
-      input {
-        width: 100%; padding: 11px 12px; font-size: 14px; color: #e8eaed;
-        background: #0b0d10; border: 1px solid #2b3038; border-radius: 9px;
-      }
-      input:focus { outline: 2px solid #4c7dff; outline-offset: 1px; border-color: #4c7dff; }
-      button {
-        width: 100%; margin-top: 16px; padding: 11px 12px; font-size: 14px; font-weight: 600;
-        color: #0b0d10; background: #e8eaed; border: 0; border-radius: 9px; cursor: pointer;
-      }
-      button:disabled { opacity: 0.6; cursor: progress; }
-      .error, .notice { margin: 14px 0 0; font-size: 13px; }
-      .error { color: #ff8080; }
-      .notice { color: #ffcc66; }
-      code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-    </style>
-  </head>
-  <body>
-    <main class="card">
-      <div class="mark" aria-hidden="true">M</div>
-      <h1>Meridian</h1>
-      <p class="sub">Private portfolio. Sign in to continue.</p>
-      <form id="login-form" method="post" action="/api/auth/login">
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="current-password"
-               required autofocus />
-        <button type="submit" id="submit">Sign in</button>
-      </form>
-      ${initialError}
-      ${notice}
-      <p class="error" id="message" role="alert" hidden></p>
-    </main>
-    <script>
-      const form = document.getElementById('login-form');
-      const button = document.getElementById('submit');
-      const message = document.getElementById('message');
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        message.hidden = true;
-        button.disabled = true;
-        try {
-          const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify({ password: document.getElementById('password').value }),
-          });
-          if (res.ok) { window.location.replace('/'); return; }
-          const body = await res.json().catch(() => ({}));
-          message.textContent = body.message || body.error || 'Sign in failed.';
-          message.hidden = false;
-        } catch {
-          message.textContent = 'Network error. Try again.';
-          message.hidden = false;
-        } finally {
-          button.disabled = false;
-        }
-      });
-    </script>
-  </body>
-</html>`;
+  return renderLoginPage({ error: options.error, misconfigured: authMode() === 'misconfigured' });
 }
 
 export const AUTH_COOKIE_NAME = COOKIE_NAME;

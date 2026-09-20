@@ -1,6 +1,6 @@
-export const GAIN = '#30D158'
-export const LOSS = '#FF453A'
-export const TINT = '#0A84FF'
+export const GAIN = 'var(--gain)'
+export const LOSS = 'var(--loss)'
+export const TINT = 'var(--accent)'
 export const MUTED = '#8E8E93'
 
 export const PAD = { top: 16, right: 14, bottom: 20, left: 14 }

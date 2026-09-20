@@ -14,6 +14,14 @@ const DATA_DIR = process.env.DATA_DIR
   : path.resolve(__dirname, '..', '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'money.json');
 
+export interface TransactionInput {
+  date: string;
+  kind: TxKind;
+  amount: number;
+  category: string;
+  note?: string;
+}
+
 function emptyFile(): MoneyFile {
   return { version: 1, transactions: [], subscriptions: [] };
 }
@@ -40,6 +48,8 @@ export class MoneyStore {
             subscriptions: Array.isArray(parsed.subscriptions)
               ? parsed.subscriptions
               : [],
+            budgets:
+              parsed.budgets && typeof parsed.budgets === 'object' ? parsed.budgets : {},
           };
         }
       }
@@ -58,13 +68,32 @@ export class MoneyStore {
     return [...this.data.transactions].sort((a, b) => b.date.localeCompare(a.date));
   }
 
-  addTransaction(input: {
-    date: string;
-    kind: TxKind;
-    amount: number;
-    category: string;
-    note?: string;
-  }): MoneyTransaction {
+  getBudgets(): Record<string, number> {
+    return { ...(this.data.budgets ?? {}) };
+  }
+
+  /** Sets monthly targets per category; null or zero clears one. */
+  setBudgets(patch: Record<string, number | null>): Record<string, number> {
+    const next = { ...(this.data.budgets ?? {}) };
+    for (const [rawId, value] of Object.entries(patch)) {
+      const id = rawId.trim();
+      if (!id) continue;
+      if (value === null || value === 0) {
+        delete next[id];
+        continue;
+      }
+      const amount = Number(value);
+      if (!Number.isFinite(amount) || amount < 0) {
+        throw new Error(`budget for ${id} must be a positive number`);
+      }
+      next[id] = amount;
+    }
+    this.data.budgets = next;
+    this.save();
+    return { ...next };
+  }
+
+  private buildTransaction(input: TransactionInput): MoneyTransaction {
     if (!isIsoDate(input.date)) {
       throw new Error('date must be YYYY-MM-DD');
     }
@@ -78,7 +107,7 @@ export class MoneyStore {
     const category = String(input.category || '').trim();
     if (!category) throw new Error('category is required');
 
-    const row: MoneyTransaction = {
+    return {
       id: crypto.randomUUID(),
       date: input.date,
       kind: input.kind,
@@ -87,9 +116,22 @@ export class MoneyStore {
       note: input.note?.trim() || undefined,
       createdAt: new Date().toISOString(),
     };
+  }
+
+  addTransaction(input: TransactionInput): MoneyTransaction {
+    const row = this.buildTransaction(input);
     this.data.transactions.push(row);
     this.save();
     return row;
+  }
+
+  /** Validates every row before touching the store, then writes once. */
+  addTransactions(inputs: TransactionInput[]): MoneyTransaction[] {
+    const rows = inputs.map((input) => this.buildTransaction(input));
+    if (rows.length === 0) return rows;
+    this.data.transactions.push(...rows);
+    this.save();
+    return rows;
   }
 
   removeTransaction(id: string): boolean {

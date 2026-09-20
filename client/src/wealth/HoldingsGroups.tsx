@@ -1,13 +1,11 @@
-import { Link } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { CaretRight } from '@phosphor-icons/react'
 import { useAccounts } from '@/hooks/useAccounts'
-import { useAnalyticsHoldings } from '@/hooks/useAnalytics'
 import { useMoney } from '@/wealth/format'
 import { accountClass, accountValue, isLiability } from '@/wealth/classifyAccount'
 import { CLASSES, type AssetClassId } from '@/wealth/tokens'
-import { isDemoId } from '@/wealth/demo'
 import { LogoAvatar } from '@/wealth/logos'
-import type { AnalyticsHolding } from '@/hooks/useAnalytics'
+import { useQuickLook } from '@/wealth/QuickLook'
+import { useMergedHoldings } from '@/wealth/useMergedHoldings'
 
 export function HoldingsGroups({
   gross,
@@ -23,8 +21,9 @@ export function HoldingsGroups({
   onToggle: (id: string) => void
 }) {
   const { chf, pctStr } = useMoney()
+  const { look } = useQuickLook()
   const { data: accounts } = useAccounts()
-  const { data: holdings } = useAnalyticsHoldings()
+  const mergedHoldings = useMergedHoldings()
 
   const assets = (accounts ?? []).filter((a) => !isLiability(a))
   const loans = (accounts ?? []).filter(isLiability)
@@ -37,31 +36,6 @@ export function HoldingsGroups({
     grouped.set(id, list)
   }
 
-  const fromAccounts: AnalyticsHolding[] = []
-  for (const a of accounts ?? []) {
-    for (const h of a.holdings ?? []) {
-      fromAccounts.push({
-        symbol: h.symbol,
-        name: h.name,
-        units: h.quantity,
-        price: h.priceUsd,
-        marketValue: h.quantity * h.priceUsd,
-        accountId: a.id,
-        accountLabel: a.label,
-        currency: a.currency,
-      })
-    }
-  }
-  const liveHoldings = holdings?.holdings ?? []
-  const seenHoldings = new Set(liveHoldings.map((h) => `${h.symbol}-${h.accountId}`))
-  const mergedHoldings = liveHoldings.length
-    ? [
-        ...liveHoldings,
-        ...fromAccounts.filter(
-          (h) => isDemoId(h.accountId) && !seenHoldings.has(`${h.symbol}-${h.accountId}`),
-        ),
-      ]
-    : fromAccounts
   const topPositions = [...mergedHoldings]
     .sort((a, b) => (b.marketValue || 0) - (a.marketValue || 0))
     .slice(0, 8)
@@ -95,16 +69,20 @@ export function HoldingsGroups({
                 <b>{chf(sum, false, currency)}</b>
                 <em>{share.toFixed(0)}%</em>
               </span>
-              <ChevronRight
+              <CaretRight
                 size={16}
-                strokeWidth={2.5}
                 className={`a-chev ${open ? 'open' : ''}`}
               />
             </button>
             {open && (
               <div className="a-arows">
                 {rows.map((a) => (
-                  <Link key={a.id} to="/accounts" className="a-arow tap">
+                  <button
+                    key={a.id}
+                    type="button"
+                    className="a-arow tap"
+                    onClick={() => look({ kind: 'account', id: a.id })}
+                  >
                     <LogoAvatar
                       institution={a.institution}
                       name={a.label}
@@ -126,8 +104,8 @@ export function HoldingsGroups({
                     <span className="a-anum">
                       <b>{chf(accountValue(a), false, currency)}</b>
                     </span>
-                    <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
-                  </Link>
+                    <CaretRight size={15} className="a-rowchev" />
+                  </button>
                 ))}
               </div>
             )}
@@ -156,16 +134,20 @@ export function HoldingsGroups({
                   {loans.length} {loans.length === 1 ? 'account' : 'accounts'}
                 </em>
               </span>
-              <ChevronRight
+              <CaretRight
                 size={16}
-                strokeWidth={2.5}
                 className={`a-chev ${debtOpen ? 'open' : ''}`}
               />
             </button>
             {debtOpen && (
               <div className="a-arows">
                 {loans.map((l) => (
-                  <Link key={l.id} to="/accounts" className="a-arow tap">
+                  <button
+                    key={l.id}
+                    type="button"
+                    className="a-arow tap"
+                    onClick={() => look({ kind: 'account', id: l.id })}
+                  >
                     <LogoAvatar
                       institution={l.institution}
                       name={l.label}
@@ -178,8 +160,8 @@ export function HoldingsGroups({
                     <span className="a-anum">
                       <b className="loss">−{chf(accountValue(l), false, currency)}</b>
                     </span>
-                    <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
-                  </Link>
+                    <CaretRight size={15} className="a-rowchev" />
+                  </button>
                 ))}
               </div>
             )}
@@ -194,10 +176,11 @@ export function HoldingsGroups({
             {topPositions.map((h) => {
               const pl = h.unrealizedPnlPercent
               return (
-                <Link
+                <button
                   key={`${h.symbol}-${h.accountId}`}
-                  to={`/holdings/${encodeURIComponent(h.symbol)}`}
+                  type="button"
                   className="a-arow tap"
+                  onClick={() => look({ kind: 'holding', symbol: h.symbol })}
                 >
                   <LogoAvatar symbol={h.symbol} name={h.name} color="#FFD84D" />
                   <span className="a-atext">
@@ -214,8 +197,8 @@ export function HoldingsGroups({
                       {pl == null ? '—' : pctStr(pl)}
                     </em>
                   </span>
-                  <ChevronRight size={15} strokeWidth={2.5} className="a-rowchev" />
-                </Link>
+                  <CaretRight size={15} className="a-rowchev" />
+                </button>
               )
             })}
           </section>

@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useDemo } from '@/wealth/DemoContext'
 import {
   buildCashflow,
+  demoRecurringSuggestions,
   mergeSubscriptions,
   mergeTransactions,
 } from '@/wealth/demo'
@@ -50,14 +52,40 @@ export interface CashflowMonth {
 export interface CashflowResponse {
   months: CashflowMonth[]
   categories: Array<{ id: string; name: string; color: string; amount: number }>
+  /** Monthly spend average per category over the requested window. */
+  averages?: Record<string, number>
   hasActivity: boolean
   retrievedAt: string
 }
 
+/** Monthly spending targets per category id. */
+export function useBudgets() {
+  return useQuery<Record<string, number>>({
+    queryKey: ['money', 'budgets'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/money/budgets')
+      return data.budgets as Record<string, number>
+    },
+    placeholderData: {},
+  })
+}
+
+export function useSetBudgets() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (budgets: Record<string, number | null>) => {
+      const { data } = await axios.put('/api/money/budgets', { budgets })
+      return data.budgets as Record<string, number>
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['money', 'budgets'] }),
+  })
+}
+
 const SPEND_FALLBACK: MoneyCategory[] = [
   { id: 'housing', name: 'Housing', color: '#FF9F45' },
+  { id: 'tax', name: 'Tax provision', color: '#8E8E93' },
   { id: 'insurance', name: 'Insurance', color: '#4BD57E' },
-  { id: 'groceries', name: 'Groceries', color: '#FFD84D' },
+  { id: 'groceries', name: 'Food', color: '#FFD84D' },
   { id: 'subscriptions', name: 'Subscriptions', color: '#A57BFF' },
   { id: 'transport', name: 'Transport', color: '#3ABEFF' },
   { id: 'leisure', name: 'Leisure', color: '#FF5C48' },
@@ -75,7 +103,8 @@ const SUB_FALLBACK: MoneyCategory[] = [
   { id: 'telecom', name: 'Telecom', color: '#3ABEFF' },
   { id: 'transport', name: 'Transport', color: '#FFD84D' },
   { id: 'software', name: 'Software', color: '#A57BFF' },
-  { id: 'media', name: 'Media', color: '#FF5C48' },
+  { id: 'media', name: 'Video and music', color: '#FF5C48' },
+  { id: 'health', name: 'Health', color: '#4F6B3A' },
   { id: 'home', name: 'Home', color: '#FF9F45' },
 ]
 
@@ -223,6 +252,83 @@ export function useDeleteSubscription() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['money'] })
     },
+  })
+}
+
+export interface RecurringSuggestion {
+  key: string
+  name: string
+  amount: number
+  cycle: BillingCycle
+  day: number
+  month?: number
+  cat: string
+  category: string
+  occurrences: number
+  firstDate: string
+  lastDate: string
+}
+
+/** Recurring charges the ledger detected that are not tracked yet. */
+export function useRecurringSuggestions() {
+  const { enabled } = useDemo()
+  const query = useQuery({
+    queryKey: ['money', 'suggestions'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/money/subscriptions/suggestions')
+      return data.suggestions as RecurringSuggestion[]
+    },
+  })
+  return {
+    ...query,
+    data: query.data?.length ? query.data : enabled ? demoRecurringSuggestions() : query.data,
+  }
+}
+
+export interface ImportResult {
+  imported: number
+  skipped: number
+  unreadable: number
+  errors: string[]
+}
+
+/** Paste or upload a bank CSV; rows come back categorised and deduplicated. */
+export function useImportStatement() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (text: string) => {
+      const { data } = await axios.post('/api/money/import', { text })
+      return data as ImportResult
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['money'] })
+    },
+  })
+}
+
+/** A value that only settles once typing pauses. */
+function useDebounced<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(value), ms)
+    return () => clearTimeout(t)
+  }, [value, ms])
+  return settled
+}
+
+/** Category the server would pick for this note; null while typing is too short. */
+export function useCategorySuggestion(note: string, kind: TxKind) {
+  const trimmed = useDebounced(note.trim(), 300)
+  return useQuery({
+    queryKey: ['money', 'categorize', kind, trimmed.toLowerCase()],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/money/categorize', {
+        params: { note: trimmed, kind },
+      })
+      return (data.category as string | null) ?? null
+    },
+    enabled: trimmed.length >= 3,
+    staleTime: 5 * 60_000,
   })
 }
 

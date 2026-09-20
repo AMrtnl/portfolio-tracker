@@ -1,15 +1,30 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { FxConverter, baseCurrency } from './fx';
+import { resetSettingsCache } from '../settings';
 
 describe('baseCurrency', () => {
-  const original = process.env.BASE_CURRENCY;
-  afterEach(() => {
-    if (original === undefined) delete process.env.BASE_CURRENCY;
-    else process.env.BASE_CURRENCY = original;
+  const original = { ...process.env };
+  let dir: string;
+
+  // A saved display currency would win over BASE_CURRENCY, so read from an
+  // empty scratch data dir rather than whatever the developer has saved.
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meridian-fx-'));
+    process.env.DATA_DIR = dir;
+    resetSettingsCache();
   });
 
-  it('defaults to USD', () => {
+  afterEach(() => {
+    process.env = { ...original };
+    resetSettingsCache();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('defaults to CHF, the household currency', () => {
     delete process.env.BASE_CURRENCY;
-    expect(baseCurrency()).toBe('USD');
+    expect(baseCurrency()).toBe('CHF');
   });
 
   it('honours a configured fiat currency', () => {
@@ -19,7 +34,7 @@ describe('baseCurrency', () => {
 
   it('ignores a nonsense configuration rather than breaking totals', () => {
     process.env.BASE_CURRENCY = 'DOGE';
-    expect(baseCurrency()).toBe('USD');
+    expect(baseCurrency()).toBe('CHF');
   });
 });
 

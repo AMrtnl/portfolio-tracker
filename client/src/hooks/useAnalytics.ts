@@ -17,6 +17,7 @@ import {
   demoIncome,
   demoOverview,
   demoNews,
+  demoNewsFeed,
   demoPriceHistory,
   demoQuote,
   demoTrades,
@@ -263,7 +264,7 @@ function analyticsQuery<T>(
     queryKey: key,
     queryFn: () => get<T>(path),
     retry: 0,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
     ...extra,
   } as UseQueryOptions<T>
 }
@@ -294,7 +295,6 @@ export function useOverview() {
     analyticsQuery<AnalyticsOverview>(
       ['analytics', 'overview'],
       '/api/analytics/overview',
-      { refetchInterval: 60_000 },
     ),
   )
   return useSampled(q, (d) => !d?.totalValue, demoOverview)
@@ -325,7 +325,6 @@ export function useAnalyticsHoldings() {
     analyticsQuery<HoldingsResponse>(
       ['analytics', 'holdings'],
       '/api/analytics/holdings',
-      { refetchInterval: 60_000 },
     ),
   )
   return useSampled(q, (d) => !d?.holdings?.length, () => DEMO_HOLDINGS_RES)
@@ -384,9 +383,7 @@ export function useBenchmark(range: BenchmarkRange, symbol = 'SPY') {
 
 export function useMovers() {
   const q = useQuery(
-    analyticsQuery<MoversResponse>(['market', 'movers'], '/api/market/movers', {
-      refetchInterval: 120_000,
-    }),
+    analyticsQuery<MoversResponse>(['market', 'movers'], '/api/market/movers'),
   )
   return useSampled(
     q,
@@ -402,7 +399,7 @@ export function useNews(limit = 20, symbol?: string) {
   const q = useQuery(
     analyticsQuery<NewsResponse>(['market', 'news', limit, symbol ?? 'all'], path),
   )
-  const demo = symbol ? demoNews(symbol.toUpperCase()) : undefined
+  const demo = symbol ? demoNews(symbol.toUpperCase()) : demoNewsFeed(limit)
   const sampled = useSampled(q, (d) => !d?.articles?.length, () => demo as NewsResponse)
   return demo ? sampled : q
 }
