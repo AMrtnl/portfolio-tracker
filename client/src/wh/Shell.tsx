@@ -29,6 +29,7 @@ import { HoldingDetail } from '@/pages/HoldingDetail'
 import MarkPage from '@/wh/pages/MarkPage'
 import ComponentsPage from '@/wh/pages/ComponentsPage'
 import ChartsPage from '@/wh/pages/ChartsPage'
+import EffectsPage from '@/wh/pages/EffectsPage'
 import '@/wh/shell.css'
 
 interface Section {
@@ -222,6 +223,7 @@ export function AppShell() {
           <Route path="/brand/mark" element={<MarkPage />} />
           <Route path="/brand/components" element={<ComponentsPage />} />
           <Route path="/brand/charts" element={<ChartsPage />} />
+          <Route path="/brand/effects" element={<EffectsPage />} />
           <Route path="/accounts" element={<Navigate to="/connect" replace />} />
           <Route path="/analysis" element={<Navigate to="/performance" replace />} />
           <Route path="/brokerage" element={<Navigate to="/activity" replace />} />

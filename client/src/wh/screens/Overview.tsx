@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Icon } from '@/wh/Icon'
 import { ICONS } from '@/wh/icons'
 import { Mark } from '@/wh/Mark'
-import { LivingMark } from '@/wh/LivingMark'
+import { DotField } from '@/wh/effects/DotField'
+import { GridLift } from '@/wh/effects/GridLift'
 import { Token } from '@/wh/Token'
 import { Button, ChangeChip, RoundButton, Segmented, StatusPill, TextLink } from '@/wh/controls'
 import { Card, GrowCard, Stat } from '@/wh/layout'
@@ -91,7 +92,9 @@ function Freshness({ accounts }: { accounts: BookAccount[] }) {
 function Empty() {
   return (
     <Card kind="pad" className="wh-empty">
-      <LivingMark width={120} decorative />
+      <GridLift height={280} style={{ alignSelf: 'stretch' }}>
+        <span className="wh-lift-hint">Move across the grid, or press Enter.</span>
+      </GridLift>
       <h2 className="wh-serif" style={{ margin: 0, fontSize: 28 }}>
         Nothing on the ledger yet
       </h2>
@@ -154,8 +157,7 @@ export function Overview() {
             </>
           }
         />
-        <div className="wh-hero-plate">
-          <img src="/wh/images/garden-dots-marble.png" alt="" style={{ objectPosition: '46% 38%' }} />
+        <DotField className="wh-hero-plate" image="/wh/images/garden-dots-marble.png" darkImage="/wh/images/garden-dots-night.png" position={[46, 38]}>
           <div className="wh-hero-panel">
             <div className="wh-nw-label">Net worth</div>
             <div className="wh-figure">{headline(book.net)}</div>
@@ -164,7 +166,7 @@ export function Overview() {
               {changeLine}
             </div>
           </div>
-        </div>
+        </DotField>
         <Card kind="bare" style={{ padding: 14, borderRadius: 26 }}>
           {series.thin ? <p className="wh-caption">{series.note ?? 'History starts with the first snapshot.'}</p> : <AreaChart values={series.values} width={315} height={85} unit={unit} />}
           <div style={{ marginTop: 12 }}>{rangeControl}</div>
@@ -254,10 +256,9 @@ export function Overview() {
           </Card>
         </div>
         <div className="wh-col">
-          <div className="wh-picture">
-            <img src="/wh/images/garden-dots-marble.png" alt="" style={{ objectPosition: '60% 40%' }} />
+          <DotField className="wh-picture" image="/wh/images/garden-dots-marble.png" darkImage="/wh/images/garden-dots-night.png" position={[60, 40]} spacing={5}>
             <div className="wh-picture-line">Own the whole picture.</div>
-          </div>
+          </DotField>
           {growCard}
           {parts.length > 0 && (
             <Card kind="bare" style={{ padding: 20 }}>
