@@ -164,7 +164,7 @@ function Grid({
 /* ---------- tooltip ---------- */
 
 type Money = (v: number) => string
-const plain: Money = (v) => v.toLocaleString('de-CH', { maximumFractionDigits: 2 }).replace(/’/g, "'")
+const plain: Money = (v) => v.toLocaleString('en-GB', { maximumFractionDigits: 2 })
 
 /**
  * One readout for every series at the cursor. It's HTML over the plot, so it

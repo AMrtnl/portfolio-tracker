@@ -1,0 +1,33 @@
+/* Connect: a search, a short list, one form. */
+.wh-featured { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.wh-featured-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 6px 10px; border: 0; border-radius: 12px;
+  background: var(--wh-card); box-shadow: var(--wh-shadow-card); color: var(--wh-ink); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+  white-space: nowrap; overflow: hidden;
+}
+.wh-featured-btn:hover { box-shadow: var(--wh-shadow-card), 0 0 0 1px var(--wh-rule-strong); }
+.wh-featured-btn span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 480px) { .wh-featured { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; } .wh-featured-btn { font-size: 11px; padding: 10px 4px 8px; } }
+
+.wh-connect-head { display: flex; gap: 12px; align-items: center; }
+.wh-connect-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.wh-connect-ro { display: flex; align-items: center; gap: 5px; color: var(--wh-gain); font-size: 13px; margin-top: 1px; }
+.wh-connect-ro.hand { color: var(--wh-muted); }
+.wh-connect-p { margin: 14px 0; color: var(--wh-muted); font-size: 14px; line-height: 1.5; }
+
+.wh-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; counter-reset: step; }
+.wh-steps li { display: grid; grid-template-columns: 26px 1fr; grid-template-rows: auto auto; column-gap: 12px; align-items: baseline; counter-increment: step; }
+.wh-steps li::before {
+  content: counter(step); grid-row: 1 / span 2; align-self: start; display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 999px; background: var(--wh-fill); color: var(--wh-ink); font-size: 12px; font-weight: 600;
+}
+.wh-steps li b { font-size: 14px; font-weight: 600; }
+.wh-steps li span { font-size: 13px; color: var(--wh-muted); line-height: 1.45; }
+
+.wh-promise { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--wh-muted); }
+.wh-promise span { display: flex; align-items: center; gap: 8px; }
+.wh-promise .wh-icon { color: var(--wh-gain); }
+
+.wh-highlight { border-radius: 10px; margin: 0 -8px; padding: 0 8px; background: var(--wh-accent-soft); animation: wh-fade-highlight 2.4s ease-out 1s both; }
+@keyframes wh-fade-highlight { to { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .wh-highlight { animation: none; } }

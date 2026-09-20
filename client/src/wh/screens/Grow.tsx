@@ -8,10 +8,10 @@ import { useFigures } from '@/wh/format'
 import { GROW_ICON, GROW_TINT, useGrow, type Opportunity } from '@/wh/model/grow'
 import { useDesktop } from '@/wh/useMediaQuery'
 import { curve } from '@/wealth/math'
+import { R } from '@/routes'
 import { ScreenHeader } from './ScreenHeader'
 import '@/wh/screens/screens.css'
 
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
 
 /** Two smooth paths over the years: with the change, and the current path. No axes, no library. */
 function ScenarioChart({ scenario, label }: { scenario: NonNullable<Opportunity['scenario']>; label: string }) {
@@ -119,9 +119,9 @@ export function Grow() {
       {opportunities.map((o, i) => {
         const on = desktop && selected?.id === o.id
         return (
-          <Link key={o.id} to={`/grow/${o.id}`} className={`wh-growrow${on ? ' on' : ''}`} aria-current={on ? 'true' : undefined}>
-            <span className="wh-growrow-rank" style={{ color: on ? 'var(--wh-ultra)' : 'var(--wh-muted)' }}>
-              {ROMAN[i] ?? i + 1}
+          <Link key={o.id} to={R.growItem(o.id)} className={`wh-growrow${on ? ' on' : ''}`} aria-current={on ? 'true' : undefined}>
+            <span className="wh-growrow-rank" style={{ color: on ? 'var(--wh-accent)' : undefined }}>
+              {i + 1}
             </span>
             <span className={`wh-growrow-tile wh-tint-${GROW_TINT[o.kind]}`} style={{ background: 'var(--wh-token-bg)', color: 'var(--wh-token-fg)' }}>
               <Icon name={GROW_ICON[o.kind]} size={26} filled />
@@ -153,7 +153,7 @@ export function Grow() {
         <div className="wh-screen">
           <ScreenHeader
             title={selected.title}
-            lead={<RoundButton icon={ICONS.ui.back} label="Back to Grow" onClick={() => navigate('/grow')} />}
+            lead={<RoundButton icon={ICONS.ui.back} label="Back to Grow" onClick={() => navigate(R.grow)} />}
             phoneMid={`Grow, ${selected.rank} of ${count}`}
             actions={
               typeof navigator !== 'undefined' && 'share' in navigator ? (

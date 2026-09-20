@@ -2,28 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/wh/logo/wh-l3-xs-light.svg" />
+    <link rel="icon" type="image/svg+xml" href="/wh/mark.svg" />
+    <link rel="apple-touch-icon" href="/wh/mark-180.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Wealth Hub</title>
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FBF6EA" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#080C22" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B0C10" />
     <script>
-      /* The root follows the system. Nothing chooses light or dark by hand. */
+      /* The ground follows the system unless a preference was saved in Settings. Set before paint so nothing flashes. */
       try {
-        document.documentElement.dataset.ground = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        var pref = localStorage.getItem("wh.appearance");
+        var dark = pref === "dark" || (pref !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.ground = dark ? "dark" : "light";
       } catch (e) {
         document.documentElement.dataset.ground = "light";
       }
     </script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta
-      name="description"
-      content="Everything you own, minus everything you owe."
-    />
-    <link rel="preload" href="/wh/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/wh/fonts/instrument-serif-latin.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/wh/fonts/material-symbols-rounded.woff2" as="font" type="font/woff2" crossorigin />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="description" content="Wealth Hub. Every account, every asset, one clear picture. Banks, brokers, pensions, property and crypto, read-only, in one currency." />
+    <meta property="og:title" content="Wealth Hub" />
+    <meta property="og:description" content="Every account, every asset, one clear picture." />
+    <meta property="og:type" content="website" />
+    <link rel="preload" href="/wh/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
     <div id="root"></div>

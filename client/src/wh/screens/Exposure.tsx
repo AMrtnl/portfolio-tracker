@@ -10,6 +10,7 @@ import { useFigures } from '@/wh/format'
 import { useExposure, type ExposureRow } from '@/wh/model/exposure'
 import { useHoldingRows } from '@/wh/model/holdings'
 import { useDesktop } from '@/wh/useMediaQuery'
+import { R } from '@/routes'
 import { ScreenHeader } from './ScreenHeader'
 import '@/wh/screens/screens.css'
 
@@ -151,7 +152,7 @@ export function Exposure() {
           </span>
         </div>
         {positions.map((r) => (
-          <Link key={r.key} to={`/holdings/${encodeURIComponent(r.symbol)}`} className="wh-trow tap">
+          <Link key={r.key} to={R.holding(r.symbol)} className="wh-trow tap">
             <span className="wh-cell lead" style={{ flex: '2.4 1 0' }}>
               <span className="wh-cell-name">
                 <Token name={r.name} symbol={r.symbol} classId={r.classId} size={36} />

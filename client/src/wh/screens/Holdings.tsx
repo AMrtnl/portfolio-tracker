@@ -10,6 +10,7 @@ import { useBook } from '@/wh/model/book'
 import { useHoldingRows, type HoldingRow } from '@/wh/model/holdings'
 import { BUCKET_LABEL } from '@/wh/model/classify'
 import { useDesktop } from '@/wh/useMediaQuery'
+import { R } from '@/routes'
 import { ScreenHeader } from './ScreenHeader'
 import '@/wh/screens/screens.css'
 
@@ -43,7 +44,7 @@ function inFilter(r: HoldingRow, f: Filter): boolean {
 
 function rowTo(r: HoldingRow): string | undefined {
   if (r.kind === 'account' || r.classId === 'cash') return undefined
-  return `/holdings/${encodeURIComponent(r.symbol)}`
+  return R.holding(r.symbol)
 }
 
 function HoldingToken({ r, size }: { r: HoldingRow; size: number }) {
@@ -58,7 +59,7 @@ function phoneSub(r: HoldingRow): string {
   if (r.kind === 'account') return r.classId === 'property' ? `${r.classLabel}, ${r.account}` : `${r.classLabel}, ${r.currency}`
   const place = r.country.length <= 3 && !/world/i.test(r.classLabel) ? r.country : r.currency
   const what = r.classId === 'equities' && r.sector ? r.sector : r.classLabel
-  return `${what}, ${place}`
+  return place && place !== '—' ? `${what}, ${place}` : what
 }
 
 export function Holdings() {
@@ -100,13 +101,13 @@ export function Holdings() {
     <Card kind="bare" style={{ padding: desktop ? '10px 24px' : '4px 16px', borderRadius: 26 }}>
       {desktop && (
         <div className="wh-thead">
-          <span className="wh-cell lead" style={{ flex: '2.4 1 0' }}>
+          <span className="wh-cell lead" style={{ flex: '2.6 1 0' }}>
             Holding
           </span>
           <span className="wh-cell" style={{ flex: '1.1 1 0' }}>
             Class
           </span>
-          <span className="wh-cell" style={{ flex: '1 1 0' }}>
+          <span className="wh-cell" style={{ flex: '1.3 1 0' }}>
             Held at
           </span>
           <span className="wh-cell" style={{ flex: '0.9 1 0' }}>
@@ -198,9 +199,9 @@ export function Holdings() {
 function DesktopCells({ r, money, pct }: { r: HoldingRow; money: (n: number) => string; pct: (p: number) => string }) {
   return (
     <>
-      <span className="wh-cell lead" style={{ flex: '2.4 1 0' }}>
+      <span className="wh-cell lead" style={{ flex: '2.6 1 0' }}>
         <span className="wh-cell-name">
-          <HoldingToken r={r} size={36} />
+          <HoldingToken r={r} size={34} />
           <span>
             <b>{r.name}</b>
             <small>{r.units ? `${r.account}, ${r.units}` : r.account}</small>
@@ -210,7 +211,7 @@ function DesktopCells({ r, money, pct }: { r: HoldingRow; money: (n: number) => 
       <span className="wh-cell wh-muted" style={{ flex: '1.1 1 0' }}>
         {r.classLabel}
       </span>
-      <span className="wh-cell" style={{ flex: '1 1 0' }}>
+      <span className="wh-cell" style={{ flex: '1.3 1 0' }}>
         {r.account}
       </span>
       <span className="wh-cell" style={{ flex: '0.9 1 0' }}>

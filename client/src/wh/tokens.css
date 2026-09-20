@@ -1,44 +1,125 @@
-/* Wealth Hub design tokens. Light is the default ground. */
-/* App note: the light set also applies to any surface that declares data-ground="light" inside a dark one. */
+/* Wealth Hub design tokens.
+   One neutral ground, one accent, hairline rules, and colour only where it carries meaning.
+   Light is the default. A surface that declares data-ground="dark" flips every token inside it,
+   and the root follows the system unless the person chooses otherwise in Settings. */
+
 :root, [data-ground="light"] {
-  /* grounds */
-  --wh-marble: #FBF6EA;   /* page */
-  --wh-panel:  #F2ECDC;   /* sidebar, segmented track */
-  --wh-card:   #FFFFFF;
-  --wh-rule:   #E9E0CB;
-  /* ink */
-  --wh-ink:    #0C1230;
-  --wh-muted:  #5B6076;
-  /* brand */
-  --wh-ultra:  #1F3FD0;   /* the blue. primary action, chart line */
-  --wh-ultra-soft: #E6EBFB;
-  --wh-stone:  #E2B23C;   /* gold. once per screen: the figure that matters, today's point */
-  --wh-stone-soft: #FBF0D2;
-  --wh-stone-deep: #8A5F0A;
-  --wh-olive:  #4F6B3A;  --wh-olive-soft: #E6ECDC;
-  --wh-night-soft: #E4E6EE;
-  /* meaning. never decorative */
-  --wh-gain:   #157A52;  --wh-gain-soft: #DDF1E7;
-  --wh-owed:   #B5301B;  --wh-owed-soft: #FBE3DD;
-  /* shape */
-  --wh-r-control: 999px; --wh-r-card: 28px; --wh-r-field: 16px; --wh-r-tile: 32%;
-  --wh-shadow: 0 18px 40px -28px rgba(12, 18, 48, 0.35);
-  /* type */
-  --wh-serif: "Instrument Serif", Georgia, serif;   /* speaks: titles, wordmark. never bold, sentence case */
-  --wh-sans:  "DM Sans", Helvetica, Arial, sans-serif; /* counts: everything else. tabular-nums on every figure */
-  /* adaptive logo switches */
-  --wh-l: block; --wh-d: none;
+  color-scheme: light;
+
+  /* Grounds */
+  --wh-bg:      #F5F5F7;   /* the canvas */
+  --wh-card:    #FFFFFF;   /* anything you can act on */
+  --wh-panel:   #ECECF0;   /* inset wells: segmented tracks, code, skeletons */
+  --wh-well:    #F7F7F9;   /* a quieter inset inside a card */
+  --wh-rule:    rgba(0, 0, 0, 0.08);
+  --wh-rule-strong: rgba(0, 0, 0, 0.14);
+  --wh-fill:    rgba(0, 0, 0, 0.05);   /* secondary control background */
+  --wh-fill-hover: rgba(0, 0, 0, 0.08);
+  --wh-scrim:   rgba(0, 0, 0, 0.32);
+  --wh-glass:   rgba(245, 245, 247, 0.78);
+
+  /* Ink */
+  --wh-ink:     #1D1D1F;
+  --wh-muted:   #6E6E73;
+  --wh-faint:   #AEAEB2;
+  --wh-on-accent: #FFFFFF;
+
+  /* Accent */
+  --wh-accent:  #0071E3;
+  --wh-accent-hover: #0077ED;
+  --wh-accent-press: #006EDB;
+  --wh-accent-soft: rgba(0, 113, 227, 0.10);
+  --wh-accent-ring: rgba(0, 113, 227, 0.32);
+
+  /* Meaning. Never decorative. */
+  --wh-gain:    #1B7F43;  --wh-gain-soft: rgba(27, 127, 67, 0.12);
+  --wh-loss:    #D70015;  --wh-loss-soft: rgba(215, 0, 21, 0.10);
+  --wh-warn:    #B25000;  --wh-warn-soft: rgba(178, 80, 0, 0.12);
+
+  /* Allocation palette: one family, five members. */
+  --wh-c-property: #A2845E;
+  --wh-c-equities: #0071E3;
+  --wh-c-pension:  #5E5CE6;
+  --wh-c-cash:     #30B0C7;
+  --wh-c-crypto:   #AF52DE;
+
+  /* Shape */
+  --wh-r-card: 16px;
+  --wh-r-sheet: 20px;
+  --wh-r-control: 10px;
+  --wh-r-field: 10px;
+  --wh-r-pill: 999px;
+  --wh-r-tile: 24%;
+
+  /* Depth: a hairline and a breath of shadow. */
+  --wh-shadow-card: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --wh-shadow-float: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 12px 40px -8px rgba(0, 0, 0, 0.18);
+  --wh-shadow-seg: 0 1px 3px rgba(0, 0, 0, 0.10), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+
+  /* Type */
+  --wh-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --wh-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Motion */
+  --wh-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --wh-fast: 140ms;
+  --wh-slow: 260ms;
+
+  /* Compatibility names for screens that still read the old vocabulary. */
+  --wh-marble: var(--wh-bg);
+  --wh-ultra: var(--wh-accent);
+  --wh-ultra-soft: var(--wh-accent-soft);
+  --wh-owed: var(--wh-loss);
+  --wh-owed-soft: var(--wh-loss-soft);
+  --wh-stone: var(--wh-warn);
+  --wh-stone-deep: var(--wh-warn);
+  --wh-stone-soft: var(--wh-warn-soft);
+  --wh-olive: var(--wh-c-pension);
+  --wh-olive-soft: rgba(94, 92, 230, 0.12);
+  --wh-night-soft: var(--wh-fill);
+  --wh-serif: var(--wh-sans);
+  --wh-shadow: var(--wh-shadow-card);
+  --wh-r-control-old: 999px;
 }
-/* Any dark surface declares itself once. Everything inside follows, including the logo. */
+
 [data-ground="dark"] {
-  --wh-marble: #080C22; --wh-panel: #0D1230; --wh-card: #141A3A; --wh-rule: #232B55;
-  --wh-ink: #EEF1FF; --wh-muted: #9AA3CC;
-  --wh-ultra: #4A6CF0; --wh-ultra-soft: #1B2350;
-  --wh-stone-soft: #3A2F12; --wh-stone-deep: #F0CB6A;
-  --wh-olive: #8FA56E; --wh-olive-soft: #1F2A18; --wh-night-soft: #232B55;
-  --wh-gain: #4ADE9A; --wh-gain-soft: #123A2C; --wh-owed: #FF8A6B; --wh-owed-soft: #3A1D19;
-  --wh-shadow: 0 0 0 1px #1E2650;
-  --wh-l: none; --wh-d: block;
+  color-scheme: dark;
+
+  --wh-bg:      #0B0C10;
+  --wh-card:    #16171C;
+  --wh-panel:   #202128;
+  --wh-well:    #111216;
+  --wh-rule:    rgba(255, 255, 255, 0.09);
+  --wh-rule-strong: rgba(255, 255, 255, 0.16);
+  --wh-fill:    rgba(255, 255, 255, 0.07);
+  --wh-fill-hover: rgba(255, 255, 255, 0.11);
+  --wh-scrim:   rgba(0, 0, 0, 0.6);
+  --wh-glass:   rgba(11, 12, 16, 0.72);
+
+  --wh-ink:     #F5F5F7;
+  --wh-muted:   #A1A1A8;
+  --wh-faint:   #636369;
+  --wh-on-accent: #FFFFFF;
+
+  --wh-accent:  #2997FF;
+  --wh-accent-hover: #3AA1FF;
+  --wh-accent-press: #1F8AF0;
+  --wh-accent-soft: rgba(41, 151, 255, 0.16);
+  --wh-accent-ring: rgba(41, 151, 255, 0.38);
+
+  --wh-gain:    #30D158;  --wh-gain-soft: rgba(48, 209, 88, 0.14);
+  --wh-loss:    #FF453A;  --wh-loss-soft: rgba(255, 69, 58, 0.14);
+  --wh-warn:    #FFB340;  --wh-warn-soft: rgba(255, 179, 64, 0.14);
+
+  --wh-c-property: #B99A78;
+  --wh-c-equities: #2997FF;
+  --wh-c-pension:  #7D7AFF;
+  --wh-c-cash:     #5AC8E5;
+  --wh-c-crypto:   #DA8FFF;
+
+  --wh-shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --wh-shadow-float: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 16px 48px -8px rgba(0, 0, 0, 0.7);
+  --wh-shadow-seg: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+
+  --wh-olive-soft: rgba(125, 122, 255, 0.16);
 }
-[data-ground="light"] { --wh-l: block; --wh-d: none; }
-@media (prefers-color-scheme: dark) { :root:not([data-ground="light"]) { color-scheme: dark; } }

@@ -19,12 +19,14 @@ interface MenuProps {
   items: Array<MenuItem | 'rule'>
   label: string
   align?: 'left' | 'right'
+  /** Open above the trigger, for a menu at the foot of a sidebar. */
+  up?: boolean
   /** Free content above the items, for a control that is not a menu item. */
   head?: ReactNode
 }
 
 /** A small card of choices under a button. Escape, outside click and a choice close it; arrows move. */
-export function Menu({ trigger, items, label, align = 'right', head }: MenuProps) {
+export function Menu({ trigger, items, label, align = 'right', up = false, head }: MenuProps) {
   const [open, setOpen] = useState(false)
   const id = useId()
   const ref = useRef<HTMLDivElement>(null)
@@ -63,7 +65,7 @@ export function Menu({ trigger, items, label, align = 'right', head }: MenuProps
     <div className="wh-menuwrap" ref={ref}>
       {trigger({ onClick: () => setOpen((v) => !v), 'aria-haspopup': 'menu', 'aria-expanded': open, 'aria-controls': id })}
       {open && (
-        <div id={id} role="menu" aria-label={label} className={`wh-menu ${align}`}>
+        <div id={id} role="menu" aria-label={label} className={`wh-menu ${align}${up ? ' up' : ''}`}>
           {head}
           {items.map((it, i) =>
             it === 'rule' ? (
@@ -80,12 +82,12 @@ export function Menu({ trigger, items, label, align = 'right', head }: MenuProps
                   it.onSelect()
                 }}
               >
-                {it.icon && <Icon name={it.icon} size={20} filled={it.on} />}
+                {it.icon && <Icon name={it.icon} size={18} />}
                 <span className="wh-menu-text">
                   <span>{it.label}</span>
                   {it.sub && <span className="wh-menu-sub">{it.sub}</span>}
                 </span>
-                {it.on && <Icon name="check" size={18} />}
+                {it.on && <Icon name="check" size={16} />}
               </button>
             ),
           )}

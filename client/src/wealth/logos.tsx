@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Token, type ClassId } from '@/wh/Token'
 
 /**
  * Rounded brand avatars: real logos where we know the brand, tinted
@@ -89,43 +89,25 @@ export function logoUrl(opts: {
   return null
 }
 
+/** The legacy avatar now draws the product token, so every row starts with the same tile. */
 export function LogoAvatar({
   symbol,
   name,
   institution,
-  color = '#8E8E93',
   className = '',
 }: {
   symbol?: string
   name?: string
   institution?: string
-  /** Tint for the letter fallback. */
+  /** Kept for callers; the token takes its colour from the brand. */
   color?: string
-  /** Extra classes on the `.a-av` shell, e.g. `lg`. */
+  /** `lg` for the identity block at the top of a holding. */
   className?: string
 }) {
-  const [failed, setFailed] = useState(false)
-  const url = failed ? null : logoUrl({ symbol, name, institution })
-  const letter = (institution || name || symbol || '?').slice(0, 1).toUpperCase()
-  return (
-    <span
-      className={`a-av ${url ? 'logo' : ''} ${className}`.trim()}
-      style={url ? undefined : { background: `${color}22`, color }}
-      aria-hidden
-    >
-      {url ? (
-        <img
-          src={url}
-          alt=""
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        letter
-      )}
-    </span>
-  )
+  const sym = symbol?.toUpperCase()
+  const classId: ClassId = sym === 'BTC' ? 'bitcoin' : sym === 'ETH' || sym === 'SOL' ? 'crypto' : sym ? 'equities' : institution ? 'bank' : 'other'
+  const size = className.includes('lg') ? 46 : 32
+  return <Token name={institution || name || sym} symbol={sym} classId={classId} size={size} />
 }
 
 /** Country / region flags for allocation rows. Emoji renders crisply on Apple platforms. */

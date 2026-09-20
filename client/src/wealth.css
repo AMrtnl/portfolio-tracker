@@ -3,27 +3,27 @@
 /* ---- Legacy aliases: the a-* system reads these; every one resolves to a --wh-* token from wh/tokens.css.
    Alpha scales are built from one ink triple per ground so they flip with the surface. ---- */
 :root, [data-ground="light"] {
-  --ink-rgb: 12, 18, 48;
-  --fill-k: .55;
-  --accent-rgb: 31, 63, 208;
-  --bg-rgb: 251, 246, 234;
+  --ink-rgb: 29, 29, 31;
+  --fill-k: .45;
+  --accent-rgb: 0, 113, 227;
+  --bg-rgb: 245, 245, 247;
   --knob: #fff;
   --on-accent: #fff;
-  --scrim: rgba(12, 18, 48, .38);
-  --shadow: rgba(12, 18, 48, .18);
+  --scrim: rgba(0, 0, 0, .32);
+  --shadow: rgba(0, 0, 0, .14);
 }
 [data-ground="dark"] {
-  --ink-rgb: 238, 241, 255;
-  --fill-k: 1;
-  --accent-rgb: 74, 108, 240;
-  --bg-rgb: 8, 12, 34;
+  --ink-rgb: 245, 245, 247;
+  --fill-k: .9;
+  --accent-rgb: 41, 151, 255;
+  --bg-rgb: 11, 12, 16;
   --knob: #fff;
   --on-accent: #fff;
-  --scrim: rgba(2, 4, 16, .6);
+  --scrim: rgba(0, 0, 0, .6);
   --shadow: rgba(0, 0, 0, .55);
 }
 :root, [data-ground="light"], [data-ground="dark"] {
-  --bg: var(--wh-marble);
+  --bg: var(--wh-bg);
   --bg-glow: none;
   --surface: var(--wh-card);
   --popover: var(--wh-card);
@@ -31,16 +31,16 @@
   --well: var(--wh-panel);
   --ink: var(--wh-ink);
   --label: var(--wh-muted);
-  --accent: var(--wh-ultra);
-  --accent-soft: var(--wh-ultra-soft);
+  --accent: var(--wh-accent);
+  --accent-soft: var(--wh-accent-soft);
   --accent-soft-2: rgba(var(--accent-rgb), .22);
   --accent-line: rgba(var(--accent-rgb), .6);
   --gain: var(--wh-gain);
   --gain-soft: var(--wh-gain-soft);
-  --loss: var(--wh-owed);
-  --loss-soft: var(--wh-owed-soft);
-  --warn: var(--wh-stone-deep);
-  --warn-soft: var(--wh-stone-soft);
+  --loss: var(--wh-loss);
+  --loss-soft: var(--wh-loss-soft);
+  --warn: var(--wh-warn);
+  --warn-soft: var(--wh-warn-soft);
   --bar: rgba(var(--bg-rgb), .82);
   --ink-16: rgba(var(--ink-rgb), .16);
   --ink-25: rgba(var(--ink-rgb), .25);

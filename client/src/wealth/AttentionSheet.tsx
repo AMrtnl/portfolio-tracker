@@ -10,6 +10,7 @@ import { accountValue } from '@/wealth/classifyAccount'
 import { goalStatus } from '@/wealth/goals'
 import { useMoney } from '@/wealth/format'
 import { freshness, relativeTime } from '@/lib/utils'
+import { R } from '@/routes'
 
 export interface AttentionItem {
   key: string
@@ -75,7 +76,7 @@ export function useAttention(): AttentionItem[] {
           .map((s) => s.name)
           .join(' · '),
         action: 'Review',
-        run: () => navigate('/subscriptions'),
+        run: () => navigate(R.subscriptions),
         closes: true,
       })
     }
@@ -93,7 +94,7 @@ export function useAttention(): AttentionItem[] {
         title: `${goal.name} is behind`,
         sub: `Needs ${chf(status.needed - goal.monthlyContribution)} more a month to land on time`,
         action: 'Open',
-        run: () => navigate('/goals'),
+        run: () => navigate(R.planning),
         closes: true,
       })
     }

@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * One money language across the app: de-CH grouping (1'120'000), no symbol,
+ * One money language across the app: comma grouping (1,120,000), no symbol,
  * true minus sign, cents only where they carry information (values under
  * 1000, e.g. prices) or when `digits` is set explicitly.
  */
@@ -30,7 +30,7 @@ export function formatCurrency(
         .replace(/^-/, '−')
     }
 
-    return new Intl.NumberFormat('de-CH', {
+    return new Intl.NumberFormat('en-GB', {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
     })

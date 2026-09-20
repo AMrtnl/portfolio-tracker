@@ -24,6 +24,7 @@ import { LogoAvatar } from '@/wealth/logos'
 import { CLASS_BY_KEY, classOf, type AssetClassId } from '@/wealth/tokens'
 import { useMergedHoldings } from '@/wealth/useMergedHoldings'
 import { freshness, relativeTime } from '@/lib/utils'
+import { R } from '@/routes'
 
 export type QuickLookTarget =
   | { kind: 'class'; id: AssetClassId }
@@ -192,7 +193,7 @@ function ClassLook({
         </>
       )}
 
-      <Link to="/accounts" className="a-qlink" onClick={onClose}>
+      <Link to={R.connect} className="a-qlink" onClick={onClose}>
         Manage accounts
         <ArrowUpRight size={15} />
       </Link>
@@ -411,7 +412,7 @@ function HoldingLook({
       )}
 
       <Link
-        to={`/holdings/${encodeURIComponent(symbol)}`}
+        to={R.holding(symbol)}
         className="a-qlink"
         onClick={onClose}
       >

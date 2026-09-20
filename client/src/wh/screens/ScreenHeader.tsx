@@ -16,7 +16,7 @@ interface ScreenHeaderProps {
   stacked?: boolean
 }
 
-/** The serif title of a screen. Web: title and subtitle above the grid. Phone: title beside its round buttons. */
+/** The title of a screen. Desktop: title and subtitle above the grid. Phone: title beside its round buttons. */
 export function ScreenHeader({ title, subtitle, actions, lead, phoneLead, phoneMid, stacked }: ScreenHeaderProps) {
   const desktop = useDesktop()
   if (!desktop) {

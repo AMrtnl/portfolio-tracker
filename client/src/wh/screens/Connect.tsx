@@ -1,8 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Icon } from '@/wh/Icon'
 import { ICONS } from '@/wh/icons'
-import { Token, type ClassId } from '@/wh/Token'
+import { Token } from '@/wh/Token'
 import { Button, Field, RoundButton, StatusPill } from '@/wh/controls'
 import { Card, Note, Row } from '@/wh/layout'
 import { Menu } from '@/wh/Menu'
@@ -10,83 +10,199 @@ import { useFigures } from '@/wh/format'
 import { useBook, type BookAccount } from '@/wh/model/book'
 import { useDesktop } from '@/wh/useMediaQuery'
 import { useAddManualAccount, useAddWatchWallet, useDeleteAccount, useProviders, useRenameAccount, useSnaptradeConnect, useSnaptradeImport, useSyncAccount, type Account, type Holding } from '@/hooks/useAccounts'
-import { useSnaptradeStatus } from '@/hooks/useSnaptrade'
 import { holdingClassId } from '@/wh/model/classify'
+import { FEATURED_IDS, INSTITUTIONS, KIND_LABEL, METHOD_LABEL, groupByKind, searchInstitutions, type Institution } from '@/wh/model/institutions'
+import { R } from '@/routes'
 import { ScreenHeader } from './ScreenHeader'
 import '@/wh/screens/screens.css'
-
-type Kind = 'wallet' | 'bank' | 'broker' | 'pension' | 'property' | 'loan' | 'holdings'
-
-const KINDS: Array<{ id: Kind; label: string; classId: ClassId }> = [
-  { id: 'bank', label: 'Bank', classId: 'bank' },
-  { id: 'broker', label: 'Broker', classId: 'broker' },
-  { id: 'pension', label: 'Pension', classId: 'pension' },
-  { id: 'property', label: 'Property', classId: 'property' },
-  { id: 'loan', label: 'Loan or mortgage', classId: 'mortgage' },
-  { id: 'holdings', label: 'Holdings by hand', classId: 'equities' },
-]
+import './connect.css'
 
 function errorText(err: unknown, fallback: string): string {
   const e = err as { response?: { data?: { message?: string; error?: string } } }
   return e?.response?.data?.message || e?.response?.data?.error || fallback
 }
 
-/** Ledger by public address or xpub, read-only, with what was found. */
-function WatchWallet({ found, onFound }: { found: Account | null; onFound: (a: Account) => void }) {
+/* ---------------- Step 1: pick a source ---------------- */
+
+function Picker({ onPick }: { onPick: (i: Institution) => void }) {
+  const [query, setQuery] = useState('')
+  const results = useMemo(() => searchInstitutions(query), [query])
+  const featured = useMemo(() => FEATURED_IDS.map((id) => INSTITUTIONS.find((i) => i.id === id)!).filter(Boolean), [])
+  const groups = useMemo(() => groupByKind(results), [results])
+  const searching = query.trim().length > 0
+  return (
+    <div className="wh-stack">
+      <Field icon={ICONS.action.search} type="search" placeholder="Search a bank, broker, wallet or pension" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search institutions" autoFocus variant="lg" />
+      {!searching && (
+        <div className="wh-featured" aria-label="Popular">
+          {featured.map((i) => (
+            <button key={i.id} type="button" className="wh-featured-btn" onClick={() => onPick(i)}>
+              <Token name={i.name} domain={i.domain} classId={i.classId} size={34} classOnly={!i.domain} />
+              <span>{i.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {groups.length === 0 && (
+        <Note tone="plain" icon={ICONS.action.search}>
+          Nothing matches. Try the name of the bank or broker, or pick “Another bank”, “Property” or “Positions by hand”.
+        </Note>
+      )}
+      {groups.map((g) => (
+        <Card key={g.kind} kind="list">
+          <div className="wh-eyebrow" style={{ padding: '10px 0 2px' }}>
+            {KIND_LABEL[g.kind]}
+          </div>
+          {g.items.map((i) => {
+            const m = METHOD_LABEL[i.method]
+            return (
+              <Row
+                key={i.id}
+                onClick={() => onPick(i)}
+                token={<Token name={i.name} domain={i.domain} classId={i.classId} size={36} classOnly={!i.domain} />}
+                title={i.name}
+                sub={`${i.region} · ${m.title}`}
+                right={
+                  m.ro ? (
+                    <span className="wh-chip gain plain" style={{ fontSize: 12 }}>
+                      Read-only
+                    </span>
+                  ) : (
+                    <span className="wh-chip neutral plain" style={{ fontSize: 12 }}>
+                      By hand
+                    </span>
+                  )
+                }
+                trailing={<Icon name={ICONS.ui.chevronRight} size={16} className="wh-row-chev" />}
+              />
+            )
+          })}
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+/* ---------------- Step 2: one form per method ---------------- */
+
+function FormHead({ i, onBack }: { i: Institution; onBack: () => void }) {
+  const m = METHOD_LABEL[i.method]
+  return (
+    <div className="wh-connect-head">
+      <RoundButton icon={ICONS.ui.back} label="Choose another source" flat onClick={onBack} />
+      <Token name={i.name} domain={i.domain} classId={i.classId} size={44} classOnly={!i.domain} />
+      <div style={{ minWidth: 0 }}>
+        <div className="wh-connect-title">{i.name}</div>
+        <div className={`wh-connect-ro${m.ro ? '' : ' hand'}`}>
+          <Icon name={m.ro ? ICONS.status.readOnly : ICONS.action.edit} size={14} />
+          {m.title}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** A broker or an exchange through the portal: one button, then straight back here. */
+function PortalForm({ i, onBack, onDone }: { i: Institution; onBack: () => void; onDone: () => void }) {
+  const { data: providers } = useProviders()
+  const configured = Boolean(providers?.find((p) => p.id === 'snaptrade')?.configured)
+  const connect = useSnaptradeConnect()
+  const importAccts = useSnaptradeImport()
+  const m = METHOD_LABEL[i.method]
+  function start() {
+    const customRedirect = `${window.location.origin}${R.connect}?snaptrade=done`
+    connect.mutate({ broker: i.brokerSlug, customRedirect }, { onSuccess: (d) => d.redirectUrl && window.location.assign(d.redirectUrl) })
+  }
+  return (
+    <Card kind="pad">
+      <FormHead i={i} onBack={onBack} />
+      <p className="wh-connect-p">{m.sub}</p>
+      {!configured ? (
+        <>
+          <Note tone="info" title="Broker links are not switched on for this deployment">
+            The server needs SnapTrade keys before a portal can open. Until then, keep {i.name} by hand and it still counts in every total.
+          </Note>
+          <div className="wh-form-actions" style={{ marginTop: 14 }}>
+            <Button icon={ICONS.action.edit} onClick={() => onDone()}>
+              Keep positions by hand instead
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <ol className="wh-steps">
+            <li>
+              <b>Sign in on {i.name}'s page</b>
+              <span>The portal is SnapTrade's, in read-only mode. Your password never reaches Wealth Hub.</span>
+            </li>
+            <li>
+              <b>Come straight back</b>
+              <span>Your accounts are imported the moment you land here.</span>
+            </li>
+          </ol>
+          {connect.isError && <p className="wh-err">{errorText(connect.error, 'The portal could not be opened.')}</p>}
+          <div className="wh-form-actions" style={{ marginTop: 14 }}>
+            <Button icon={ICONS.ui.openInNew} size="lg" disabled={connect.isPending} onClick={start}>
+              {connect.isPending ? 'Opening' : `Continue to ${i.name}`}
+            </Button>
+            <Button variant="tertiary" disabled={importAccts.isPending} onClick={() => importAccts.mutate(undefined, { onSuccess: (d) => (d.imported?.length ?? 0) > 0 && onDone() })}>
+              {importAccts.isPending ? 'Importing' : 'Already linked? Import'}
+            </Button>
+          </div>
+          {importAccts.data?.message && <p className="wh-caption" style={{ marginTop: 10 }}>{importAccts.data.message}</p>}
+        </>
+      )}
+    </Card>
+  )
+}
+
+/** A wallet by public key or address. */
+function WalletForm({ i, onBack, onFound }: { i: Institution; onBack: () => void; onFound: (a: Account) => void }) {
   const add = useAddWatchWallet()
   const { money } = useFigures()
   const [key, setKey] = useState('')
   const [label, setLabel] = useState('')
-  const holdings = found?.holdings ?? []
+  const [found, setFound] = useState<Account | null>(null)
+  const placeholder = i.id === 'ethereum' ? '0x…' : i.id === 'solana' ? 'A Solana address' : 'bc1q… or xpub…'
   function submit(e: FormEvent) {
     e.preventDefault()
     if (!key.trim()) return
-    add.mutate({ key: key.trim(), label: label.trim() || undefined, institution: 'Ledger' }, { onSuccess: (a) => onFound(a) })
+    add.mutate(
+      { key: key.trim(), label: label.trim() || undefined, institution: i.kind === 'wallet' && i.domain ? i.name : undefined },
+      {
+        onSuccess: (a) => {
+          setFound(a)
+          onFound(a)
+        },
+      },
+    )
   }
+  const holdings = found?.holdings ?? []
   return (
     <>
-      <Card kind="bare" style={{ padding: 18 }}>
-        <div className="wh-connect-head">
-          <Token name="Ledger" classId="wallet" remote={false} />
-          <div>
-            <div className="wh-connect-title">Ledger hardware wallet</div>
-            <div className="wh-connect-ro">
-              <Icon name={ICONS.status.readOnly} size={16} />
-              Read-only, by public address
-            </div>
+      <Card kind="pad">
+        <FormHead i={i} onBack={onBack} />
+        <p className="wh-connect-p">{i.id === 'ledger' || i.id === 'trezor' ? `Paste an address or xpub from ${i.name}'s app. Your keys stay on the device. We never ask for your recovery phrase.` : METHOD_LABEL.wallet.sub}</p>
+        <form onSubmit={submit} className="wh-form" aria-label="Add a watch-only wallet">
+          <Field icon={ICONS.account.hardwareWallet} label="Address or xpub" placeholder={placeholder} value={key} onChange={(e) => setKey(e.target.value)} autoComplete="off" spellCheck={false} hint="Bitcoin addresses and xpub, ypub or zpub keys, Ethereum and Solana addresses." variant="lg" />
+          <Field icon={ICONS.action.edit} label="Name" placeholder="Optional" value={label} onChange={(e) => setLabel(e.target.value)} />
+          {add.isError && <p className="wh-err">{errorText(add.error, 'This key or address is not recognised.')}</p>}
+          <div className="wh-form-actions">
+            <Button type="submit" size="lg" icon={ICONS.account.hardwareWallet} disabled={add.isPending || !key.trim()}>
+              {add.isPending ? 'Reading the chain' : 'Add this wallet'}
+            </Button>
           </div>
-        </div>
-        <p className="wh-connect-p">Paste an address or xpub from Ledger Live. Your keys stay on the device. We never ask for your 24 words.</p>
-        <form onSubmit={submit} aria-label="Add a watch-only wallet">
-          <label htmlFor="xpub" className="wh-label" style={{ fontSize: 13 }}>
-            Address or xpub
-          </label>
-          <div className="wh-connect-field">
-            <Field icon={ICONS.account.hardwareWallet} id="xpub" placeholder="bc1q… or xpub…" value={key} onChange={(e) => setKey(e.target.value)} autoComplete="off" spellCheck={false} aria-describedby="xpub-hint" />
-          </div>
-          <Field icon={ICONS.action.edit} placeholder="Name, optional" value={label} onChange={(e) => setLabel(e.target.value)} className="wh-fieldset" />
-          <p id="xpub-hint" className="wh-hint" style={{ margin: '8px 0 12px' }}>
-            Bitcoin addresses and xpub, ypub or zpub keys, Ethereum and Solana addresses.
-          </p>
-          {add.isError && <p className="wh-err" style={{ marginBottom: 10 }}>{errorText(add.error, 'This key or address is not recognised.')}</p>}
-          <Button type="submit" full icon={ICONS.account.hardwareWallet} disabled={add.isPending || !key.trim()}>
-            {add.isPending ? 'Reading the chain' : 'Add this wallet'}
-          </Button>
         </form>
       </Card>
       {found && (
-        <Card kind="list" style={{ borderRadius: 24 }}>
-          {holdings.length === 0 && <p className="wh-caption" style={{ padding: '10px 0' }}>Nothing found on this key yet.</p>}
+        <Card kind="list">
+          <div className="wh-card-head" style={{ padding: '10px 0 4px' }}>
+            <h2 className="wh-card-title sm">Found on this key</h2>
+            <span className="wh-chip gain plain">Added</span>
+          </div>
+          {holdings.length === 0 && <p className="wh-caption" style={{ padding: '10px 0' }}>Nothing on this key yet. It stays on the ledger and reads again later.</p>}
           {holdings.map((h: Holding) => (
-            <Row
-              key={h.symbol}
-              token={<Token name={h.name || h.symbol} symbol={h.symbol} classId={holdingClassId(h)} size={40} />}
-              title={h.name || h.symbol}
-              sub={`${Number(h.quantity.toFixed(4))} ${h.symbol}`}
-              value={money(h.quantity * h.priceUsd, found.currency)}
-              delta="found"
-              deltaTone="muted"
-            />
+            <Row key={h.symbol} token={<Token name={h.name || h.symbol} symbol={h.symbol} classId={holdingClassId(h)} size={36} />} title={h.name || h.symbol} sub={`${Number(h.quantity.toFixed(4))} ${h.symbol}`} value={money(h.quantity * h.priceUsd, found.currency)} />
           ))}
         </Card>
       )}
@@ -94,19 +210,21 @@ function WatchWallet({ found, onFound }: { found: Account | null; onFound: (a: A
   )
 }
 
-/** A balance you keep by hand: a bank account, a pension, a flat, a loan. */
-function BalanceForm({ kind, onDone, onBack }: { kind: 'bank' | 'pension' | 'property' | 'loan'; onDone: () => void; onBack: () => void }) {
+/** A balance you keep by hand: a bank account, a pension, a property, a loan. */
+function BalanceForm({ i, onBack, onDone }: { i: Institution; onBack: () => void; onDone: () => void }) {
   const add = useAddManualAccount()
-  const [label, setLabel] = useState('')
-  const [institution, setInstitution] = useState('')
+  const kind = i.kind === 'bank' ? 'bank' : i.kind === 'pension' ? 'pension' : i.kind === 'property' ? 'property' : 'loan'
+  const named = Boolean(i.domain)
+  const [label, setLabel] = useState(named ? i.name : '')
+  const [institution, setInstitution] = useState(named ? i.name : '')
   const [amount, setAmount] = useState('')
-  const [notes, setNotes] = useState('')
+  const [notes, setNotes] = useState(i.id === 'mortgage' ? 'Mortgage' : '')
   const [currency, setCurrency] = useState('CHF')
   const copy = {
-    bank: { title: 'Bank account', name: 'UBS, everyday account', amount: 'Current balance', icon: ICONS.account.bank },
-    pension: { title: 'Pension', name: 'Pillar 3a', amount: 'Current value', icon: ICONS.assetClass.pension },
-    property: { title: 'Property', name: 'Apartment', amount: 'Estimated value', icon: ICONS.assetClass.property },
-    loan: { title: 'Loan or mortgage', name: 'Mortgage', amount: 'Outstanding balance', icon: ICONS.account.mortgage },
+    bank: { name: named ? `${i.name}, everyday account` : 'Everyday account', amount: 'Current balance', icon: ICONS.account.bank },
+    pension: { name: named ? `${i.name} 3a` : 'Pillar 3a', amount: 'Current value', icon: ICONS.assetClass.pension },
+    property: { name: 'Apartment', amount: 'Estimated value', icon: ICONS.assetClass.property },
+    loan: { name: i.id === 'mortgage' ? 'Mortgage' : 'Car loan', amount: 'Outstanding balance', icon: ICONS.account.mortgage },
   }[kind]
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -127,19 +245,14 @@ function BalanceForm({ kind, onDone, onBack }: { kind: 'bank' | 'pension' | 'pro
     )
   }
   return (
-    <Card kind="bare" style={{ padding: 18 }}>
-      <div className="wh-connect-head" style={{ marginBottom: 12 }}>
-        <Token classId={kind === 'bank' ? 'bank' : kind === 'pension' ? 'pension' : kind === 'property' ? 'property' : 'mortgage'} classOnly />
-        <div>
-          <div className="wh-connect-title">{copy.title}</div>
-          <div className="wh-caption">Kept by hand. Update the figure whenever it changes.</div>
-        </div>
-      </div>
-      <form onSubmit={submit} className="wh-form" aria-label={copy.title}>
+    <Card kind="pad">
+      <FormHead i={i} onBack={onBack} />
+      <p className="wh-connect-p">{i.note ?? METHOD_LABEL.balance.sub}</p>
+      <form onSubmit={submit} className="wh-form" aria-label={i.name}>
         <Field icon={copy.icon} label="Name" required placeholder={copy.name} value={label} onChange={(e) => setLabel(e.target.value)} />
-        <Field icon={ICONS.account.bank} label="Institution" placeholder="Optional" value={institution} onChange={(e) => setInstitution(e.target.value)} />
+        {!named && <Field icon={ICONS.account.bank} label="Institution" placeholder="Optional" value={institution} onChange={(e) => setInstitution(e.target.value)} />}
         <div className="wh-form-row">
-          <Field icon={ICONS.figure.own} label={copy.amount} required inputMode="decimal" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <Field icon={ICONS.figure.own} label={copy.amount} required inputMode="decimal" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
           <Field icon={ICONS.account.exchange} label="Currency" as="select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
             {['CHF', 'EUR', 'USD', 'GBP'].map((c) => (
               <option key={c}>{c}</option>
@@ -149,11 +262,8 @@ function BalanceForm({ kind, onDone, onBack }: { kind: 'bank' | 'pension' | 'pro
         <Field icon={ICONS.action.edit} label="Note" placeholder={kind === 'loan' ? 'Rate and term' : kind === 'property' ? 'Address, or when it was valued' : 'Optional'} value={notes} onChange={(e) => setNotes(e.target.value)} />
         {add.isError && <p className="wh-err">{errorText(add.error, 'Could not save this account.')}</p>}
         <div className="wh-form-actions">
-          <Button type="submit" icon={ICONS.action.add} disabled={!label.trim() || add.isPending}>
-            {add.isPending ? 'Saving' : `Add ${copy.title.toLowerCase()}`}
-          </Button>
-          <Button variant="tertiary" onClick={onBack}>
-            Back
+          <Button type="submit" size="lg" icon={ICONS.action.add} disabled={!label.trim() || add.isPending}>
+            {add.isPending ? 'Saving' : 'Add to the ledger'}
           </Button>
         </div>
       </form>
@@ -162,11 +272,12 @@ function BalanceForm({ kind, onDone, onBack }: { kind: 'bank' | 'pension' | 'pro
 }
 
 /** Positions typed in: ticker, quantity, price. */
-function HoldingsForm({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
+function HoldingsForm({ i, onBack, onDone }: { i: Institution; onBack: () => void; onDone: () => void }) {
   const add = useAddManualAccount()
   const { money } = useFigures()
-  const [label, setLabel] = useState('')
-  const [institution, setInstitution] = useState('')
+  const named = Boolean(i.domain)
+  const [label, setLabel] = useState(named ? i.name : '')
+  const [institution, setInstitution] = useState(named ? i.name : '')
   const [symbol, setSymbol] = useState('')
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
@@ -186,17 +297,14 @@ function HoldingsForm({ onDone, onBack }: { onDone: () => void; onBack: () => vo
     add.mutate({ label: label.trim(), institution: institution.trim() || undefined, type: 'manual', holdings: rows }, { onSuccess: onDone })
   }
   return (
-    <Card kind="bare" style={{ padding: 18 }}>
-      <div className="wh-connect-head" style={{ marginBottom: 12 }}>
-        <Token classId="equities" classOnly />
-        <div>
-          <div className="wh-connect-title">Holdings by hand</div>
-          <div className="wh-caption">Tickers, quantities and prices you enter yourself.</div>
+    <Card kind="pad">
+      <FormHead i={i} onBack={onBack} />
+      <p className="wh-connect-p">{i.note ?? METHOD_LABEL.holdings.sub}</p>
+      <form onSubmit={submit} className="wh-form" aria-label="Positions by hand">
+        <div className="wh-form-row">
+          <Field icon={ICONS.account.broker} label="Account name" required placeholder="Swissquote" value={label} onChange={(e) => setLabel(e.target.value)} />
+          <Field icon={ICONS.account.bank} label="Institution" placeholder="Optional" value={institution} onChange={(e) => setInstitution(e.target.value)} />
         </div>
-      </div>
-      <form onSubmit={submit} className="wh-form" aria-label="Holdings by hand">
-        <Field icon={ICONS.account.broker} label="Account name" required placeholder="Swissquote" value={label} onChange={(e) => setLabel(e.target.value)} />
-        <Field icon={ICONS.account.bank} label="Institution" placeholder="Optional" value={institution} onChange={(e) => setInstitution(e.target.value)} />
         <div className="wh-form-row" style={{ gridTemplateColumns: '1.2fr 1fr 1fr' }}>
           <Field icon={ICONS.assetClass.equities} label="Ticker" placeholder="AAPL" value={symbol} onChange={(e) => setSymbol(e.target.value)} />
           <Field icon={ICONS.evidence.holdings} label="Quantity" inputMode="decimal" placeholder="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
@@ -209,18 +317,15 @@ function HoldingsForm({ onDone, onBack }: { onDone: () => void; onBack: () => vo
         </div>
         {rows.length > 0 && (
           <div>
-            {rows.map((h, i) => (
-              <Row key={`${h.symbol}-${i}`} token={<Token symbol={h.symbol} name={h.symbol} classId={holdingClassId(h)} size={36} />} title={h.symbol} sub={`${h.quantity} at ${h.priceUsd}`} value={money(h.quantity * h.priceUsd)} trailing={<RoundButton icon={ICONS.ui.close} label={`Remove ${h.symbol}`} flat onClick={() => setRows((r) => r.filter((_, j) => j !== i))} />} />
+            {rows.map((h, k) => (
+              <Row key={`${h.symbol}-${k}`} token={<Token symbol={h.symbol} name={h.symbol} classId={holdingClassId(h)} size={32} />} title={h.symbol} sub={`${h.quantity} at ${h.priceUsd}`} value={money(h.quantity * h.priceUsd)} trailing={<RoundButton icon={ICONS.ui.close} label={`Remove ${h.symbol}`} flat onClick={() => setRows((r) => r.filter((_, j) => j !== k))} />} />
             ))}
           </div>
         )}
         {add.isError && <p className="wh-err">{errorText(add.error, 'Could not save this account.')}</p>}
         <div className="wh-form-actions">
-          <Button type="submit" icon={ICONS.action.add} disabled={!label.trim() || add.isPending}>
-            {add.isPending ? 'Saving' : 'Add account'}
-          </Button>
-          <Button variant="tertiary" onClick={onBack}>
-            Back
+          <Button type="submit" size="lg" icon={ICONS.action.add} disabled={!label.trim() || add.isPending}>
+            {add.isPending ? 'Saving' : 'Add to the ledger'}
           </Button>
         </div>
       </form>
@@ -228,65 +333,9 @@ function HoldingsForm({ onDone, onBack }: { onDone: () => void; onBack: () => vo
   )
 }
 
-/** A broker through SnapTrade, read-only. */
-function BrokerForm({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
-  const { data: providers } = useProviders()
-  const snap = providers?.find((p) => p.id === 'snaptrade')
-  const status = useSnaptradeStatus()
-  const connect = useSnaptradeConnect()
-  const importAccts = useSnaptradeImport()
-  return (
-    <Card kind="bare" style={{ padding: 18 }}>
-      <div className="wh-connect-head" style={{ marginBottom: 12 }}>
-        <Token classId="broker" classOnly />
-        <div>
-          <div className="wh-connect-title">Broker</div>
-          <div className="wh-connect-ro">
-            <Icon name={ICONS.status.readOnly} size={16} />
-            Read-only, through SnapTrade
-          </div>
-        </div>
-      </div>
-      {!snap?.configured ? (
-        <>
-          <p className="wh-connect-p">This deployment has no SnapTrade keys yet. Add SNAPTRADE_CLIENT_ID and SNAPTRADE_CONSUMER_KEY to the server and restart it, or keep the broker by hand for now.</p>
-          <div className="wh-form-actions">
-            <Button variant="tertiary" onClick={onBack}>
-              Back
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <p className="wh-connect-p">
-            {typeof status.data?.accountCount === 'number' ? `SnapTrade reports ${status.data.accountCount} ${status.data.accountCount === 1 ? 'account' : 'accounts'} across ${status.data.connectionCount} ${status.data.connectionCount === 1 ? 'connection' : 'connections'}.` : 'Link a broker in the SnapTrade portal, then import the accounts it reports.'}
-          </p>
-          {(status.data?.disabledConnectionCount ?? 0) > 0 && (
-            <Note tone="risk" title="A connection needs sign-in">
-              {status.data!.disabledConnectionCount} {status.data!.disabledConnectionCount === 1 ? 'connection is' : 'connections are'} disabled. Repair it below, then import again.
-            </Note>
-          )}
-          <div className="wh-form-actions" style={{ marginTop: 12 }}>
-            <Button icon={ICONS.action.export} disabled={importAccts.isPending} onClick={() => importAccts.mutate(undefined, { onSuccess: (d) => (d.imported?.length ?? 0) > 0 && onDone() })}>
-              {importAccts.isPending ? 'Importing' : 'Import connected accounts'}
-            </Button>
-            <Button variant="secondary" icon={ICONS.ui.openInNew} disabled={connect.isPending} onClick={() => connect.mutate(undefined, { onSuccess: (d) => d.redirectUrl && window.open(d.redirectUrl, '_blank', 'noopener') })}>
-              Add or repair a broker
-            </Button>
-            <Button variant="tertiary" onClick={onBack}>
-              Back
-            </Button>
-          </div>
-          {(connect.isError || importAccts.isError) && <p className="wh-err" style={{ marginTop: 10 }}>{errorText(connect.error || importAccts.error, 'SnapTrade request failed.')}</p>}
-          {importAccts.data?.message && <p className="wh-caption" style={{ marginTop: 10 }}>{importAccts.data.message}</p>}
-        </>
-      )}
-    </Card>
-  )
-}
+/* ---------------- Connected sources ---------------- */
 
-/** One connected source with its freshness and its actions. */
-function SourceRow({ a }: { a: BookAccount }) {
+function SourceRow({ a, highlight }: { a: BookAccount; highlight: boolean }) {
   const sync = useSyncAccount()
   const rename = useRenameAccount()
   const remove = useDeleteAccount()
@@ -294,6 +343,10 @@ function SourceRow({ a }: { a: BookAccount }) {
   const [renaming, setRenaming] = useState(false)
   const [name, setName] = useState(a.name)
   const [confirm, setConfirm] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (highlight) ref.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [highlight])
   const live = a.account.provider !== 'manual'
   const sub = a.broken ? a.account.lastError || 'Sync failed' : a.sample ? `${a.kind}, sample` : live ? `${a.kind}, synced ${a.freshLabel} ago` : `${a.kind}, ${a.note ?? 'by hand'}`
   if (renaming) {
@@ -306,7 +359,7 @@ function SourceRow({ a }: { a: BookAccount }) {
         }}
       >
         <Field icon={ICONS.action.edit} value={name} onChange={(e) => setName(e.target.value)} aria-label={`Rename ${a.name}`} autoFocus />
-        <Button type="submit" size="sm" icon={ICONS.ui.check} disabled={rename.isPending}>
+        <Button type="submit" size="sm" disabled={rename.isPending}>
           Save
         </Button>
         <Button variant="tertiary" size="sm" onClick={() => setRenaming(false)}>
@@ -322,7 +375,7 @@ function SourceRow({ a }: { a: BookAccount }) {
           <span className="wh-row-title">Disconnect {a.name}?</span>
           <span className="wh-row-sub">Its figures leave the ledger. Nothing is moved.</span>
         </span>
-        <Button size="sm" icon={ICONS.ui.remove} onClick={() => remove.mutate(a.id)} disabled={remove.isPending} style={{ background: 'var(--wh-owed)' }}>
+        <Button size="sm" variant="danger" onClick={() => remove.mutate(a.id)} disabled={remove.isPending}>
           Disconnect
         </Button>
         <Button variant="tertiary" size="sm" onClick={() => setConfirm(false)}>
@@ -332,75 +385,85 @@ function SourceRow({ a }: { a: BookAccount }) {
     )
   }
   return (
-    <Row
-      token={<Token name={a.account.institution || a.name} classId={a.classId} size={40} classOnly={a.classId === 'property' || a.liability} />}
-      title={a.name}
-      sub={sub}
-      value={a.liability ? money(-a.value) : money(a.value)}
-      valueTone={a.liability ? 'owed' : undefined}
-      delta={a.broken ? <span className="wh-owed">needs attention</span> : live && !a.sample ? a.freshLabel : undefined}
-      trailing={
-        a.sample ? undefined : (
-          <Menu
-            label={`Actions for ${a.name}`}
-            items={[
-              ...(live ? [{ key: 'sync', label: sync.isPending ? 'Syncing' : 'Sync now', icon: ICONS.ui.refresh, onSelect: () => sync.mutate(a.id), disabled: sync.isPending }] : []),
-              { key: 'rename', label: 'Rename', icon: ICONS.action.edit, onSelect: () => setRenaming(true) },
-              'rule',
-              { key: 'remove', label: 'Disconnect', icon: ICONS.ui.remove, onSelect: () => setConfirm(true) },
-            ]}
-            trigger={(props) => <RoundButton icon={ICONS.ui.more} label={`Actions for ${a.name}`} flat {...props} />}
-          />
-        )
-      }
-    />
+    <div ref={ref} className={highlight ? 'wh-highlight' : undefined}>
+      <Row
+        token={<Token name={a.account.institution || a.name} classId={a.classId} size={36} classOnly={a.classId === 'property' || a.liability} />}
+        title={a.name}
+        sub={sub}
+        value={a.liability ? money(-a.value) : money(a.value)}
+        valueTone={a.liability ? 'owed' : undefined}
+        delta={a.broken ? <span className="wh-owed">needs attention</span> : live && !a.sample ? a.freshLabel : undefined}
+        trailing={
+          a.sample ? undefined : (
+            <Menu
+              label={`Actions for ${a.name}`}
+              items={[
+                ...(live ? [{ key: 'sync', label: sync.isPending ? 'Syncing' : 'Sync now', icon: ICONS.ui.refresh, onSelect: () => sync.mutate(a.id), disabled: sync.isPending }] : []),
+                { key: 'rename', label: 'Rename', icon: ICONS.action.edit, onSelect: () => setRenaming(true) },
+                'rule',
+                { key: 'remove', label: 'Disconnect', icon: ICONS.ui.remove, onSelect: () => setConfirm(true) },
+              ]}
+              trigger={(props) => <RoundButton icon={ICONS.ui.more} label={`Actions for ${a.name}`} flat {...props} />}
+            />
+          )
+        }
+      />
+    </div>
   )
 }
+
+/* ---------------- The screen ---------------- */
 
 export function Connect() {
   const desktop = useDesktop()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [params, setParams] = useSearchParams()
   const book = useBook()
-  const [kind, setKind] = useState<Kind>('wallet')
-  const [found, setFound] = useState<Account | null>(null)
+  const importAccts = useSnaptradeImport()
+  const [picked, setPicked] = useState<Institution | null>(null)
+  const [returned, setReturned] = useState<{ count: number } | null>(null)
+  const highlightId = location.hash ? location.hash.slice(1) : null
 
   useEffect(() => {
     document.title = 'Connect · Wealth Hub'
   }, [])
 
-  // The sample Ledger shows what a read finds; a real one replaces it the moment it is added.
-  const sampleLedger = book.accounts.find((a) => a.sample && a.classId === 'wallet')?.account ?? null
-  const shownFound = found ?? (book.hasLive ? null : sampleLedger)
+  // Back from the SnapTrade portal: import straight away, once.
+  const imported = useRef(false)
+  useEffect(() => {
+    if (params.get('snaptrade') !== 'done' || imported.current) return
+    imported.current = true
+    importAccts.mutate(undefined, {
+      onSuccess: (d) => setReturned({ count: d.imported?.length ?? 0 }),
+      onSettled: () => setParams({}, { replace: true }),
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params])
 
-  const kinds = (
-    <>
-      <h2 className="wh-h2" style={{ margin: '4px 0 0', color: 'var(--wh-muted)', fontSize: 14 }}>
-        {kind === 'wallet' ? 'Or connect something else' : 'Connect'}
-      </h2>
-      <div className="wh-connect-grid">
-        {[{ id: 'wallet' as Kind, label: 'Ledger wallet', classId: 'wallet' as ClassId }, ...KINDS].map((k) => (
-          <button key={k.id} type="button" className={`wh-connect-kind${kind === k.id ? ' on' : ''}`} onClick={() => setKind(k.id)} aria-pressed={kind === k.id}>
-            <Token classId={k.classId} classOnly size={36} />
-            {k.label}
-          </button>
-        ))}
-      </div>
-    </>
-  )
+  const done = () => navigate(R.overview)
   const form =
-    kind === 'wallet' ? (
-      <WatchWallet found={shownFound} onFound={setFound} />
-    ) : kind === 'holdings' ? (
-      <HoldingsForm onDone={() => navigate('/')} onBack={() => setKind('wallet')} />
-    ) : kind === 'broker' ? (
-      <BrokerForm onDone={() => navigate('/')} onBack={() => setKind('wallet')} />
+    picked &&
+    (picked.method === 'broker' || picked.method === 'exchange' ? (
+      <PortalForm i={picked} onBack={() => setPicked(null)} onDone={() => (picked.method === 'broker' && !picked.brokerSlug ? setPicked({ ...picked, method: 'holdings' }) : done())} />
+    ) : picked.method === 'wallet' ? (
+      <WalletForm i={picked} onBack={() => setPicked(null)} onFound={() => undefined} />
+    ) : picked.method === 'holdings' ? (
+      <HoldingsForm i={picked} onBack={() => setPicked(null)} onDone={done} />
     ) : (
-      <BalanceForm kind={kind} onDone={() => navigate('/')} onBack={() => setKind('wallet')} />
-    )
+      <BalanceForm i={picked} onBack={() => setPicked(null)} onDone={done} />
+    ))
+
+  const returnedNote = (returned || importAccts.isPending) && (
+    <Note tone={importAccts.isPending ? 'info' : 'plain'} icon={importAccts.isPending ? ICONS.status.syncing : ICONS.status.synced} title={importAccts.isPending ? 'Importing your accounts' : returned && returned.count > 0 ? `${returned.count} ${returned.count === 1 ? 'account' : 'accounts'} imported` : 'Nothing new to import'}>
+      {importAccts.isPending ? 'Back from the portal. Reading what was linked.' : returned && returned.count > 0 ? 'They sit on the ledger now and sync on their own.' : 'If you just linked a broker, give it a minute and import again from the broker’s page.'}
+    </Note>
+  )
+
   const sources = (
-    <Card kind="list" style={{ padding: '6px 18px' }}>
+    <Card kind="list">
       <div className="wh-card-head" style={{ padding: '10px 0 4px' }}>
-        <h2 className="wh-card-title sm">Connected</h2>
+        <h2 className="wh-card-title">Connected</h2>
         {book.broken.length ? (
           <StatusPill tone="bad" icon={ICONS.status.needsSignIn}>
             {book.broken.length} {book.broken.length === 1 ? 'needs' : 'need'} attention
@@ -413,35 +476,53 @@ export function Connect() {
       </div>
       {book.accounts.length === 0 && <p className="wh-caption" style={{ padding: '10px 0' }}>Nothing connected yet.</p>}
       {book.accounts.map((a) => (
-        <SourceRow key={a.id} a={a} />
+        <SourceRow key={a.id} a={a} highlight={a.id === highlightId} />
       ))}
-      {book.sampleOn && book.accounts.some((a) => a.sample) && (
-        <p className="wh-caption" style={{ padding: '10px 0' }}>
-          Sample accounts sit beside anything you connect. Turn the sample household off from the account menu to see your own ledger alone.
-        </p>
-      )}
+      {book.sampleOn && book.accounts.some((a) => a.sample) && <p className="wh-caption" style={{ padding: '10px 0' }}>Sample accounts sit beside anything you connect. Turn the sample household off in Settings to see your own ledger alone.</p>}
+    </Card>
+  )
+  const promise = (
+    <Card kind="pad-sm">
+      <div className="wh-promise">
+        <span>
+          <Icon name={ICONS.status.readOnly} size={16} />
+          Read-only, always
+        </span>
+        <span>
+          <Icon name={ICONS.ui.lock} size={16} />
+          No recovery phrases
+        </span>
+        <span>
+          <Icon name={ICONS.action.export} size={16} />
+          Export or disconnect any time
+        </span>
+      </div>
     </Card>
   )
 
   if (!desktop) {
     return (
       <div className="wh-screen">
-        <ScreenHeader title="Connect" lead={<RoundButton icon={ICONS.ui.back} label="Back to overview" onClick={() => navigate('/')} />} />
-        {form}
-        {kinds}
-        {sources}
+        <ScreenHeader title={picked ? 'Connect' : 'Connect'} lead={<RoundButton icon={ICONS.ui.back} label="Back to overview" onClick={() => (picked ? setPicked(null) : navigate(R.overview))} />} />
+        {returnedNote}
+        {form ?? <Picker onPick={setPicked} />}
+        {!picked && sources}
+        {!picked && promise}
       </div>
     )
   }
   return (
     <div className="wh-screen">
-      <ScreenHeader title="Connect" subtitle="Banks, brokers, pensions and hardware wallets, read-only. Property and debts by hand." actions={<Link to="/activity" className="wh-link">Broker activity <Icon name={ICONS.ui.chevronRight} size={18} /></Link>} />
+      <ScreenHeader title="Connect" subtitle="Banks, brokers, pensions and wallets, read-only. Property and debts by hand." />
       <div className="wh-grid">
         <div className="wh-col">
-          {form}
-          {kinds}
+          {returnedNote}
+          {form ?? <Picker onPick={setPicked} />}
         </div>
-        <div className="wh-col">{sources}</div>
+        <div className="wh-col">
+          {sources}
+          {promise}
+        </div>
       </div>
     </div>
   )

@@ -14,14 +14,14 @@ import { ICONS, type IconName } from './icons'
 
 /* ---------------- Buttons ---------------- */
 
-type Variant = 'primary' | 'secondary' | 'tertiary'
+type Variant = 'primary' | 'secondary' | 'tertiary' | 'danger'
 
 interface ButtonBase {
   variant?: Variant
   /** Every button carries an icon. Primary always does. */
   icon?: IconName
   iconFilled?: boolean
-  size?: 'md' | 'sm'
+  size?: 'md' | 'sm' | 'lg'
   full?: boolean
   className?: string
   children: ReactNode
@@ -34,10 +34,10 @@ type ButtonProps = ButtonBase &
     | ({ to?: never; href?: never } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'children'>)
   )
 
-/** Primary is ultramarine, one per screen, always with an icon. Secondary is a white pill. Tertiary is ultramarine text. */
+/** Primary is the accent, one per screen. Secondary is a quiet fill. Tertiary is accent text. */
 export function Button({ variant = 'primary', icon, iconFilled, size = 'md', full, className, children, ...rest }: ButtonProps) {
-  const cls = `wh-btn ${variant}${size === 'sm' ? ' sm' : ''}${full ? ' full' : ''}${className ? ` ${className}` : ''}`
-  const iconSize = size === 'sm' ? 20 : 22
+  const cls = `wh-btn ${variant}${size === 'sm' ? ' sm' : size === 'lg' ? ' lg' : ''}${full ? ' full' : ''}${className ? ` ${className}` : ''}`
+  const iconSize = size === 'sm' ? 15 : size === 'lg' ? 18 : 16
   const body = (
     <>
       {icon && <Icon name={icon} size={iconSize} filled={iconFilled} />}
@@ -78,29 +78,29 @@ interface RoundButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>,
   to?: string
 }
 
-/** A 44 px white circle with one icon. */
+/** A 36 px circle with one icon. */
 export function RoundButton({ icon, label, tint, flat, filled, to, className, type = 'button', ...rest }: RoundButtonProps) {
   const cls = `wh-round${tint ? ' tint' : ''}${flat ? ' flat' : ''}${className ? ` ${className}` : ''}`
   if (to) {
     return (
       <Link to={to} className={cls} aria-label={label} title={label}>
-        <Icon name={icon} size={22} filled={filled} />
+        <Icon name={icon} size={18} filled={filled} />
       </Link>
     )
   }
   return (
     <button type={type} className={cls} aria-label={label} title={label} {...rest}>
-      <Icon name={icon} size={22} filled={filled} />
+      <Icon name={icon} size={18} filled={filled} />
     </button>
   )
 }
 
-/** Ultramarine text with a chevron: "All 8 ›". */
+/** Accent text with a chevron: "All 8 ›". */
 export function TextLink({ to, onClick, children, chevron = true, className }: { to?: string; onClick?: () => void; children: ReactNode; chevron?: boolean; className?: string }) {
   const body = (
     <>
       {children}
-      {chevron && <Icon name={ICONS.ui.chevronRight} size={18} />}
+      {chevron && <Icon name={ICONS.ui.chevronRight} size={15} />}
     </>
   )
   const cls = `wh-link${className ? ` ${className}` : ''}`
@@ -179,7 +179,7 @@ export function ChangeChip({ value, suffix = '%', digits = 1, className }: { val
   const up = value >= 0
   return (
     <span className={`wh-chip ${up ? 'gain' : 'owed'}${className ? ` ${className}` : ''}`}>
-      <Icon name={up ? ICONS.status.up : ICONS.status.down} size={18} />
+      <Icon name={up ? ICONS.status.up : ICONS.status.down} size={14} filled />
       {Math.abs(value).toFixed(digits)}
       {suffix}
     </span>
@@ -203,20 +203,20 @@ export function StatusPill({ tone, icon, children, onClick, className, title }: 
   if (onClick) {
     return (
       <button type="button" className={cls} onClick={onClick} title={title}>
-        <Icon name={icon} size={18} />
+        <Icon name={icon} size={15} />
         {children}
       </button>
     )
   }
   return (
     <span className={cls} title={title}>
-      <Icon name={icon} size={18} />
+      <Icon name={icon} size={15} />
       {children}
     </span>
   )
 }
 
-/** The gold count on a sidebar item or a tab: how many things wait. */
+/** The count on a sidebar item or a tab: how many things wait. */
 export function Count({ n, className }: { n: number; className?: string }) {
   return <span className={`wh-count${className ? ` ${className}` : ''}`}>{n}</span>
 }
@@ -238,7 +238,7 @@ type SelectField = FieldBase & { as: 'select'; children: ReactNode } & Omit<Sele
 type TextareaField = FieldBase & { as: 'textarea' } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'className'>
 export type FieldProps = InputField | SelectField | TextareaField
 
-/** Every field leads with an icon that says what goes in it. */
+/** A field leads with an icon that says what goes in it. */
 export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field(props, ref) {
   const { icon, label, hint, variant = 'md', invalid, className, trailing, ...rest } = props
   const auto = useId()
@@ -268,7 +268,7 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field(pro
         </label>
       )}
       <div className={wrapCls}>
-        <Icon name={icon} size={22} />
+        <Icon name={icon} size={17} />
         {control}
         {trailing}
       </div>
@@ -276,3 +276,10 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field(pro
     </div>
   )
 })
+
+/* ---------------- Switch ---------------- */
+
+/** An on/off control. The label lives in the row beside it. */
+export function Switch({ on, onChange, label, disabled }: { on: boolean; onChange: (next: boolean) => void; label: string; disabled?: boolean }) {
+  return <button type="button" role="switch" aria-checked={on} aria-label={label} className="wh-switch" disabled={disabled} onClick={() => onChange(!on)} />
+}

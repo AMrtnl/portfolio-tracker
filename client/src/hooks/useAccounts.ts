@@ -156,10 +156,11 @@ export function useAddWatchWallet() {
   })
 }
 
+/** Opens the SnapTrade portal, straight to a broker when its slug is known, and back to `customRedirect` afterwards. */
 export function useSnaptradeConnect() {
   return useMutation({
-    mutationFn: async () => {
-      const { data } = await axios.post('/api/accounts/snaptrade/connect')
+    mutationFn: async (opts?: { broker?: string; customRedirect?: string }) => {
+      const { data } = await axios.post('/api/accounts/snaptrade/connect', opts ?? {})
       return data as { redirectUrl?: string; message?: string }
     },
   })

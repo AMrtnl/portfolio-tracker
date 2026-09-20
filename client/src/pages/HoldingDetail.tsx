@@ -15,6 +15,7 @@ import { DetailChart } from '@/wealth/charts'
 import { useMoney } from '@/wealth/format'
 import { Money } from '@/wealth/Money'
 import { LogoAvatar } from '@/wealth/logos'
+import { R } from '@/routes'
 
 const PRICE_RANGES: Array<{ value: PriceHistoryRange; label: string }> = [
   { value: '1m', label: '1M' },
@@ -155,7 +156,7 @@ export function HoldingDetail() {
         <div className="ui-empty-icon">?</div>
         <b>Missing symbol</b>
         <p>Open a holding from your portfolio to see its detail.</p>
-        <Link to="/" className="ui-btn tinted sm">
+        <Link to={R.overview} className="ui-btn tinted sm">
           Back to portfolio
         </Link>
       </div>
@@ -164,9 +165,9 @@ export function HoldingDetail() {
 
   return (
     <article>
-      <Link to="/" className="a-back">
+      <Link to={R.holdings} className="a-back">
         <ArrowLeft size={20} />
-        Wealth
+        Holdings
       </Link>
 
       <section className="a-heroblock">

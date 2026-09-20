@@ -15,11 +15,11 @@ export interface Settings {
 }
 
 const FALLBACK: Settings = {
-  displayCurrency: 'USD',
+  displayCurrency: 'CHF',
   headlineMetric: 'net',
   currencies: ['CHF', 'EUR', 'USD', 'GBP'],
   metrics: ['net', 'financial', 'gross'],
-  rates: { USD: 1 },
+  rates: { CHF: 1 },
   warnings: [],
 }
 

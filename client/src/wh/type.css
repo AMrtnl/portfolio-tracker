@@ -1,32 +1,51 @@
-/* Wealth Hub type. Serif speaks, sans counts. Icons are Material Symbols Rounded. */
-:root { --wh-icons: "Material Symbols Rounded"; }
+/* Wealth Hub type. One face, a short scale, figures that line up. */
 
-/* Instrument Serif: screen titles, the wordmark, big statements. Never bold, never all caps. */
-.wh-serif {
-  font-family: var(--wh-serif); font-weight: 400; font-style: normal;
-  letter-spacing: -.015em; line-height: 1.05; text-transform: none;
-}
-.wh-serif b, .wh-serif strong { font-weight: 400; }
-
-/* DM Sans figures: tabular so columns line up, weight 600, tighter at display sizes. */
-.wh-figure { font-family: var(--wh-sans); font-variant-numeric: tabular-nums; font-weight: 600; }
-.wh-figure.display { letter-spacing: -.04em; }
-
-/* Icon glyphs. Outlined at rest (FILL 0); .fill when active or inside a token. Optical size follows the pixel size. */
-.wh-icon {
-  font-family: var(--wh-icons); font-weight: 400; font-style: normal;
-  font-size: 24px; line-height: 1; width: 1em; height: 1em; flex: 0 0 auto;
-  display: inline-block; overflow: hidden; white-space: nowrap; vertical-align: middle;
-  letter-spacing: normal; text-transform: none; direction: ltr; user-select: none;
-  font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
-  font-variation-settings: 'FILL' var(--wh-fill, 0), 'wght' 400, 'GRAD' 0, 'opsz' var(--wh-opsz, 24);
-}
-.wh-icon.fill { --wh-fill: 1; }
-@media (prefers-reduced-motion: no-preference) {
-  .wh-icon { transition: font-variation-settings .2s ease; }
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--wh-sans);
+  font-size: 15px; line-height: 1.4; letter-spacing: -0.006em;
+  color: var(--wh-ink);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01", "calt";
 }
 
-/* Bridges for the current a-* screens until each is rebuilt: figures count in DM Sans at 600. */
+/* Titles: tight tracking that loosens as the size drops. */
+.wh-title { margin: 0; font-weight: 700; font-size: 28px; line-height: 1.15; letter-spacing: -0.022em; color: var(--wh-ink); }
+.wh-title.phone { font-size: 28px; }
+.wh-title.lg { font-size: 34px; letter-spacing: -0.025em; }
+.wh-subtitle { margin: 4px 0 0; color: var(--wh-muted); font-size: 15px; line-height: 1.45; }
+.wh-h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--wh-ink); }
+.wh-h2.row { display: flex; align-items: center; gap: 8px; }
+.wh-h2.row .wh-icon { color: var(--wh-muted); }
+.wh-eyebrow { color: var(--wh-muted); font-size: 12px; font-weight: 600; letter-spacing: 0.02em; }
+.wh-caption { color: var(--wh-muted); font-size: 12px; line-height: 1.45; margin: 0; }
+.wh-body { color: var(--wh-muted); font-size: 15px; line-height: 1.5; margin: 0; }
+.wh-serif { font-family: var(--wh-sans); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+
+/* Figures: tabular so columns line up, tighter as they grow. */
+.wh-num, .wh-figure { font-variant-numeric: tabular-nums; font-feature-settings: "tnum", "cv11", "ss01"; }
+.wh-figure { font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; color: var(--wh-ink); }
+.wh-figure.xl { font-size: 44px; }
+.wh-figure.lg { font-size: 32px; }
+.wh-figure.md { font-size: 22px; letter-spacing: -0.02em; }
+.wh-figure.sm { font-size: 17px; letter-spacing: -0.015em; font-weight: 600; }
+.wh-figure.display { letter-spacing: -0.035em; }
+@media (max-width: 480px) { .wh-figure.xl { font-size: 38px; } }
+
+/* Tone utilities. Green and red carry meaning only. */
+.wh-gain { color: var(--wh-gain); }
+.wh-owed, .wh-loss { color: var(--wh-loss); }
+.wh-warn { color: var(--wh-warn); }
+.wh-muted { color: var(--wh-muted); }
+.wh-ultra, .wh-accent { color: var(--wh-accent); }
+.wh-stone { color: var(--wh-warn); }
+
+/* Icons: inline SVG, stroke follows the text colour. */
+.wh-icon { display: inline-block; flex: 0 0 auto; vertical-align: middle; width: 1em; height: 1em; }
+.wh-icon svg { display: block; width: 100%; height: 100%; }
+
+/* Bridges for the legacy a-* screens. */
 .a-value, .a-insval, .a-gnum b, .a-anum b, .a-stat b, .a-vital > b, .num, .a-tip span b {
   font-variant-numeric: tabular-nums; font-weight: 600;
 }

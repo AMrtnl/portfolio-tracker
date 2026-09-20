@@ -60,7 +60,7 @@ export const CLASS_STYLE: Record<ClassId, { icon: IconName; tint: Tint; label: s
 export interface TokenProps extends LogoQuery {
   /** The class decides the tint and the badge. */
   classId: ClassId
-  /** Tile size in px. Rows use 46; the anatomy page 84. */
+  /** Tile size in px. Rows use 40. */
   size?: number
   /** Initials to show instead of the computed ones. */
   mono?: string
@@ -80,7 +80,7 @@ export interface TokenProps extends LogoQuery {
  */
 export function Token({
   classId,
-  size = 46,
+  size = 40,
   mono,
   hex,
   remote = true,
@@ -143,7 +143,7 @@ export function Token({
         )}
       </span>
       <span className="wh-token-badge">
-        <span className="wh-token-badge-icon">{cls.icon}</span>
+        <Icon name={cls.icon} filled size={Math.max(14, Math.round(size * 0.24))} />
       </span>
     </span>
   )

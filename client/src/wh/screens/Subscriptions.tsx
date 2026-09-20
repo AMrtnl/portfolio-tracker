@@ -12,6 +12,7 @@ import { useDesktop } from '@/wh/useMediaQuery'
 import { useAddSubscription, useCategories, useDeleteSubscription, type BillingCycle } from '@/hooks/useMoneyLedger'
 import { FloatSheet } from '@/wealth/FloatSheet'
 import { Menu } from '@/wh/Menu'
+import { R } from '@/routes'
 import { ScreenHeader } from './ScreenHeader'
 import '@/wh/screens/screens.css'
 
@@ -161,7 +162,7 @@ export function Subscriptions() {
         <ScreenHeader
           title="Subscriptions"
           stacked
-          lead={<RoundButton icon={ICONS.ui.back} label="Back to cash flow" onClick={() => navigate('/cashflow')} />}
+          lead={<RoundButton icon={ICONS.ui.back} label="Back to cash flow" onClick={() => navigate(R.cashflow)} />}
           actions={
             <>
               <Menu

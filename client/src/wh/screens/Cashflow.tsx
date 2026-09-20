@@ -11,6 +11,7 @@ import { useSubscriptionsView } from '@/wh/model/subscriptions'
 import { useDesktop } from '@/wh/useMediaQuery'
 import { useAddTransaction, useCategories, useImportStatement, type TxKind } from '@/hooks/useMoneyLedger'
 import { FloatSheet } from '@/wealth/FloatSheet'
+import { R } from '@/routes'
 import { ScreenHeader } from './ScreenHeader'
 import '@/wh/screens/screens.css'
 
@@ -212,10 +213,10 @@ export function Cashflow() {
           </div>
         </Card>
         {whereCard}
-        <Link to="/subscriptions" className="wh-row tap" style={{ padding: '14px 18px', borderRadius: 24, background: 'var(--wh-card)', boxShadow: 'var(--wh-shadow)', border: 0 }}>
-          <span className="wh-token class wh-tint-ultra" style={{ ['--wh-token' as string]: '46px' }} aria-hidden="true">
+        <Link to={R.subscriptions} className="wh-row tap" style={{ padding: '12px 16px', borderRadius: 'var(--wh-r-card)', background: 'var(--wh-card)', boxShadow: 'var(--wh-shadow-card)', border: 0 }}>
+          <span className="wh-token class wh-tint-ultra" style={{ ['--wh-token' as string]: '40px' }} aria-hidden="true">
             <span className="wh-token-tile">
-              <Icon name={ICONS.nav.subscriptions} size={25} filled />
+              <Icon name={ICONS.nav.subscriptions} size={20} filled />
             </span>
           </span>
           <span className="wh-row-text">
@@ -226,7 +227,7 @@ export function Cashflow() {
             <span className="wh-row-value">{money(view.subscriptionsMonthly, undefined, { digits: 2 })}</span>
             <span className="wh-row-delta">a month</span>
           </span>
-          <Icon name={ICONS.ui.chevronRight} size={18} className="wh-row-chev" />
+          <Icon name={ICONS.ui.chevronRight} size={16} className="wh-row-chev" />
         </Link>
         <LogSheet open={logOpen} onClose={() => setLogOpen(false)} />
       </div>

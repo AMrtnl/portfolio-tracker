@@ -8,42 +8,30 @@ export interface NavItem {
   icon: IconName
   href: string
   active?: boolean
-  /** Gold count beside the label (sidebar) : things waiting. */
+  /** Count beside the label: things waiting. */
   count?: number
   onSelect?: (e: MouseEvent<HTMLAnchorElement>) => void
 }
 
-/** iPhone: five tabs in a floating white pill; the active tab opens into ultramarine with its name. */
+/** Phone: five tabs in a floating glass bar, icon over label, the active one in the accent. */
 export function TabBar({ items, label = 'Primary', className, fixed = true }: { items: NavItem[]; label?: string; className?: string; fixed?: boolean }) {
   return (
     <nav className={`wh-tabbar${className ? ` ${className}` : ''}`} aria-label={label} style={fixed ? undefined : { position: 'relative', left: 0, right: 0, bottom: 0 }}>
       {items.map((it) => (
-        <a
-          key={it.key}
-          href={it.href}
-          onClick={it.onSelect}
-          className={`wh-tab${it.active ? ' on' : ''}`}
-          aria-current={it.active ? 'page' : undefined}
-          aria-label={it.active ? undefined : it.label}
-        >
-          <Icon name={it.icon} size={it.active ? 23 : 24} filled={it.active} />
-          {it.active && it.label}
+        <a key={it.key} href={it.href} onClick={it.onSelect} className={`wh-tab${it.active ? ' on' : ''}`} aria-current={it.active ? 'page' : undefined}>
+          <Icon name={it.icon} size={22} filled={it.active} />
+          {it.label}
         </a>
       ))}
     </nav>
   )
 }
 
-/** Mac: a sidebar item; the active one is an ultramarine pill. */
+/** Desktop: a sidebar item; the active one sits on a soft accent. */
 export function SidebarItem({ item, trailing }: { item: NavItem; trailing?: ReactNode }) {
   return (
-    <a
-      href={item.href}
-      onClick={item.onSelect}
-      className={`wh-side${item.active ? ' on' : ''}`}
-      aria-current={item.active ? 'page' : undefined}
-    >
-      <Icon name={item.icon} size={22} filled={item.active} />
+    <a href={item.href} onClick={item.onSelect} className={`wh-side${item.active ? ' on' : ''}`} aria-current={item.active ? 'page' : undefined}>
+      <Icon name={item.icon} size={18} filled={item.active} />
       <span className="wh-side-label">{item.label}</span>
       {item.count != null && item.count > 0 && <span className="wh-count">{item.count}</span>}
       {trailing}
@@ -51,19 +39,12 @@ export function SidebarItem({ item, trailing }: { item: NavItem; trailing?: Reac
   )
 }
 
-/** Web: the same sections in a pill under a top bar. */
+/** A pill of sections, for headers that have no sidebar. */
 export function NavPill({ items, label = 'Sections', className }: { items: NavItem[]; label?: string; className?: string }) {
   return (
     <nav className={`wh-navpill${className ? ` ${className}` : ''}`} aria-label={label}>
       {items.map((it) => (
-        <a
-          key={it.key}
-          href={it.href}
-          onClick={it.onSelect}
-          className={`wh-navpill-item${it.active ? ' on' : ''}`}
-          aria-current={it.active ? 'page' : undefined}
-        >
-          <Icon name={it.icon} size={20} filled={it.active} />
+        <a key={it.key} href={it.href} onClick={it.onSelect} className={`wh-navpill-item${it.active ? ' on' : ''}`} aria-current={it.active ? 'page' : undefined}>
           {it.label}
           {it.count != null && it.count > 0 && <span className="wh-count">{it.count}</span>}
         </a>

@@ -17,7 +17,7 @@ export function formatMoney(
   const rounded = Math.abs(n) < 100 ? Math.round(n * 10) / 10 : Math.round(n)
   let formatted: string
   try {
-    formatted = new Intl.NumberFormat('de-CH', {
+    formatted = new Intl.NumberFormat('en-GB', {
       maximumFractionDigits: moneyDigits(rounded),
       minimumFractionDigits: 0,
     }).format(Math.abs(rounded))

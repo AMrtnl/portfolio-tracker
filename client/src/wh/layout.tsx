@@ -12,7 +12,7 @@ interface CardProps extends HTMLAttributes<HTMLElement> {
   children: ReactNode
 }
 
-/** A white card with generous corners. Cards are for things you can act on. */
+/** A card. Cards are for things you can act on. */
 export function Card({ as: Tag = 'section', kind = 'pad', className, children, ...rest }: CardProps) {
   return (
     <Tag className={`wh-card${kind === 'bare' ? '' : ` ${kind}`}${className ? ` ${className}` : ''}`} {...rest}>
@@ -111,14 +111,14 @@ export function Row({ token, title, sub, value, valueTone, delta, deltaTone, rig
 
 /** The chevron that ends a row you can open. */
 export function RowChevron() {
-  return <Icon name={ICONS.ui.chevronRight} size={18} className="wh-row-chev" />
+  return <Icon name={ICONS.ui.chevronRight} size={16} className="wh-row-chev" />
 }
 
 /** A line of evidence: the icon for the kind of fact, the label, the figure. */
 export function EvidenceRow({ icon, label, value, tone, className }: { icon: IconName; label: ReactNode; value: ReactNode; tone?: Tone; className?: string }) {
   return (
     <div className={`wh-ev${className ? ` ${className}` : ''}`}>
-      <Icon name={icon} size={20} />
+      <Icon name={icon} size={18} />
       <span className="wh-ev-label">{label}</span>
       <span className={`wh-ev-value${toneClass(tone)}`}>{value}</span>
     </div>
@@ -136,12 +136,12 @@ interface NoteProps {
   role?: string
 }
 
-/** A risk in red, an insight on stone, both with their icon. Risks read in the same size type as the upside. */
+/** A risk in red, an insight in amber, both with their icon. Risks read in the same size type as the upside. */
 export function Note({ tone, icon, title, children, className, role }: NoteProps) {
   const glyph = icon ?? (tone === 'risk' ? ICONS.evidence.risk : tone === 'insight' ? ICONS.evidence.insight : ICONS.evidence.assumption)
   return (
     <div className={`wh-note ${tone}${className ? ` ${className}` : ''}`} role={role}>
-      <Icon name={glyph} size={22} />
+      <Icon name={glyph} size={18} />
       <div>
         {title && <div className="wh-note-title">{title}</div>}
         <div className="wh-note-body">{children}</div>
@@ -163,12 +163,12 @@ interface GrowCardProps {
   className?: string
 }
 
-/** The one top Grow opportunity: ultramarine, the saving in gold. One per screen. */
+/** The one top Grow opportunity. One per screen. */
 export function GrowCard({ label = 'Top Grow opportunity', title, saving, unit, to, onClick, className }: GrowCardProps) {
   const body = (
     <>
       <span className="wh-grow-tile">
-        <Icon name={ICONS.nav.grow} size={26} filled />
+        <Icon name={ICONS.nav.grow} size={22} filled />
       </span>
       <span className="wh-grow-text">
         <span className="wh-grow-label">{label}</span>
@@ -205,7 +205,7 @@ export function GrowCard({ label = 'Top Grow opportunity', title, saving, unit, 
 /* ---------------- The figure on a plate ---------------- */
 
 interface PlateProps {
-  image: string
+  image?: string
   alt: string
   position?: string
   label: ReactNode
@@ -215,11 +215,10 @@ interface PlateProps {
   className?: string
 }
 
-/** The total sits on a marble plate over the dot screen. The picture and the number are one object. */
-export function Plate({ image, alt, position = '46% 36%', label, figure, children, height = 170, className }: PlateProps) {
+/** A figure on its own card. Kept for callers of the old picture plate; the picture is gone. */
+export function Plate({ alt, label, figure, children, height = 170, className }: PlateProps) {
   return (
-    <div className={`wh-plate${className ? ` ${className}` : ''}`} style={{ minHeight: height, height }}>
-      <img src={image} alt={alt} style={{ objectPosition: position }} />
+    <div className={`wh-plate${className ? ` ${className}` : ''}`} style={{ minHeight: height, height }} aria-label={alt}>
       <div className="wh-plate-panel">
         <div className="wh-plate-label">{label}</div>
         <div className="wh-figure lg">{figure}</div>
@@ -234,7 +233,7 @@ export function Plate({ image, alt, position = '46% 36%', label, figure, childre
 export function Stat({ icon, label, value, tone, className, style }: { icon: IconName; label: ReactNode; value: ReactNode; tone?: Tone; className?: string; style?: CSSProperties }) {
   return (
     <div className={`wh-stat${className ? ` ${className}` : ''}`} style={style}>
-      <Icon name={icon} size={22} />
+      <Icon name={icon} size={18} />
       <div>
         <div className="wh-stat-label">{label}</div>
         <div className={`wh-stat-value${toneClass(tone)}`}>{value}</div>

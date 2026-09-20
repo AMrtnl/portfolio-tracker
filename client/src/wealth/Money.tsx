@@ -29,7 +29,7 @@ export function Money({
     <NumberFlow
       className={className}
       value={Math.round(v * factor) / factor}
-      locales="de-CH"
+      locales="en-GB"
       format={{
         maximumFractionDigits: digits,
         minimumFractionDigits: 0,

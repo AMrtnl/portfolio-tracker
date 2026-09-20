@@ -12,13 +12,13 @@ import {
 } from './math'
 import './charts.css'
 
-/** The five allocation colours from tokens.json, as tokens so they follow the ground (crypto is the ink: night on marble, marble on night). */
+/** The five allocation colours, as tokens so they follow the ground. */
 export const ALLOCATION_COLORS = {
-  property: 'var(--wh-stone)',
-  equitiesAndFunds: 'var(--wh-ultra)',
-  pension: 'var(--wh-olive)',
-  cash: '#9DB6F5',
-  crypto: 'var(--wh-ink)',
+  property: 'var(--wh-c-property)',
+  equitiesAndFunds: 'var(--wh-c-equities)',
+  pension: 'var(--wh-c-pension)',
+  cash: 'var(--wh-c-cash)',
+  crypto: 'var(--wh-c-crypto)',
 } as const
 
 const fmt = (n: number) => new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 }).format(n)
@@ -35,7 +35,7 @@ interface AreaChartProps {
   className?: string
 }
 
-/** Smooth rounded ultramarine line, dot-screen fill that thins downward, a breathing gold point on today, glow on hover. */
+/** A smooth line over a dot-screen fill that thins downward, today marked with a breathing point. */
 export function AreaChart({ values, width = 790, height = 170, label, unit = '', className }: AreaChartProps) {
   const g = useMemo(() => areaGeometry(values, { width, height }), [values, width, height])
   if (!g) return null
@@ -47,13 +47,13 @@ export function AreaChart({ values, width = 790, height = 170, label, unit = '',
   return (
     <svg viewBox={`0 0 ${g.W} ${g.H}`} data-chart="nw" className={`wh-chart${className ? ` ${className}` : ''}`} role="img" aria-label={alt}>
       {g.grid.map((y) => (
-        <line key={y} x1={0} y1={y} x2={g.W} y2={y} stroke="var(--wh-rule)" strokeWidth={1.5} strokeDasharray="2 6" strokeLinecap="round" />
+        <line key={y} x1={0} y1={y} x2={g.W} y2={y} stroke="var(--wh-rule)" strokeWidth={1} strokeDasharray="2 5" strokeLinecap="round" />
       ))}
-      <path data-dots d={g.dots} fill="var(--wh-ultra)" fillOpacity={0.38} shapeRendering="crispEdges" />
-      <path data-aura d={g.line} fill="none" stroke="var(--wh-ultra)" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" />
-      <path data-line d={g.line} fill="none" stroke="var(--wh-ultra)" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round" />
-      <circle data-halo cx={ex} cy={ey} r={7} fill="var(--wh-stone)" />
-      <circle data-today cx={ex} cy={ey} r={7} fill="var(--wh-stone)" stroke="var(--wh-card)" strokeWidth={3} />
+      <path data-dots d={g.dots} fill="var(--wh-accent)" fillOpacity={0.28} shapeRendering="crispEdges" />
+      <path data-aura d={g.line} fill="none" stroke="var(--wh-accent)" strokeWidth={10} strokeLinecap="round" strokeLinejoin="round" />
+      <path data-line d={g.line} fill="none" stroke="var(--wh-accent)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      <circle data-halo cx={ex} cy={ey} r={6} fill="var(--wh-accent)" />
+      <circle data-today cx={ex} cy={ey} r={5.5} fill="var(--wh-accent)" stroke="var(--wh-card)" strokeWidth={2.5} />
     </svg>
   )
 }
@@ -66,7 +66,7 @@ export function Sparkline({ values, width = 64, height = 28, className }: { valu
   if (!g) return <span className="wh-spark" style={{ width, height }} aria-hidden="true" />
   return (
     <svg viewBox={`0 0 ${g.viewW} ${g.viewH}`} width={width} height={height} shapeRendering="crispEdges" className={`wh-spark${className ? ` ${className}` : ''}`} aria-hidden="true">
-      <path d={g.d} fill={g.negative ? 'var(--wh-owed)' : 'var(--wh-ultra)'} />
+      <path d={g.d} fill={g.negative ? 'var(--wh-loss)' : 'var(--wh-accent)'} />
     </svg>
   )
 }
@@ -77,13 +77,13 @@ interface MeterProps {
   pct: number
   scale?: number
   n?: number
-  /** Any CSS colour. Ultramarine by default. */
+  /** Any CSS colour. The accent by default. */
   color?: string
   label?: string
   className?: string
 }
 
-/** Twenty slim upright bars; the partial bar at lower opacity. For every percentage, never a pie. */
+/** Twenty slim upright bars; the partial bar at lower opacity. For every percentage. */
 export function Meter({ pct, scale = 2.2, n = 20, color, label, className }: MeterProps) {
   const bars = useMemo(() => meterBars(pct, { scale, n }), [pct, scale, n])
   return (
@@ -113,7 +113,7 @@ interface TesseraProps {
   className?: string
 }
 
-/** One hundred bevelled tiles filled column by column. Allocation is made of the same stuff as the pictures. */
+/** One hundred tiles filled column by column. */
 export function Tessera({ parts, cols = 20, rows = 5, gap = 3, legend = false, pct = (p) => `${Math.round(p)}%`, className }: TesseraProps) {
   const tiles = useMemo(() => tesseraTiles(parts, { cols, rows }), [parts, cols, rows])
   const alt = parts.map((p) => `${p.label} ${pct(p.percent)}`).join(', ')
@@ -157,7 +157,7 @@ interface CashflowChartProps extends CashflowInput {
   className?: string
 }
 
-/** Rounded paired bars (green in, red out), an ultramarine position line, the forecast at lower strength on a marble band. */
+/** Rounded paired bars (green in, red out), the position line in the accent, the forecast at lower strength on a quiet band. */
 export function CashflowChart({ months, ins, outs, position, forecastFrom, width = 900, height = 240, nowIndex, labels = true, label, className }: CashflowChartProps) {
   const g = useMemo(() => cashflowGeometry({ months, ins, outs, position, forecastFrom }, { width, height }), [months, ins, outs, position, forecastFrom, width, height])
   if (!g) return null
@@ -168,15 +168,15 @@ export function CashflowChart({ months, ins, outs, position, forecastFrom, width
   return (
     <div className={className}>
       <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="wh-cashflow" style={{ height }} role="img" aria-label={alt}>
-        {g.band && <rect x={g.band.x} y={0} width={g.band.width} height={height} fill="var(--wh-panel)" fillOpacity={0.8} />}
+        {g.band && <rect x={g.band.x} y={0} width={g.band.width} height={height} fill="var(--wh-well)" />}
         {g.grid.map((y) => (
-          <line key={y} x1={0} y1={y} x2={width} y2={y} stroke="var(--wh-rule)" strokeWidth={1.5} strokeDasharray="2 6" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          <line key={y} x1={0} y1={y} x2={width} y2={y} stroke="var(--wh-rule)" strokeWidth={1} strokeDasharray="2 5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         ))}
         {g.bars.map((b) => (
-          <rect key={`${b.kind}${b.index}`} x={b.x} y={b.y} width={b.w} height={b.h} rx={5} fill={b.kind === 'in' ? 'var(--wh-gain)' : 'var(--wh-owed)'} fillOpacity={b.opacity} />
+          <rect key={`${b.kind}${b.index}`} x={b.x} y={b.y} width={b.w} height={b.h} rx={4} fill={b.kind === 'in' ? 'var(--wh-gain)' : 'var(--wh-loss)'} fillOpacity={b.opacity} />
         ))}
-        {g.actual && <path d={g.actual} fill="none" stroke="var(--wh-ultra)" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
-        {g.forecast && <path d={g.forecast} fill="none" stroke="var(--wh-ultra)" strokeWidth={2.5} strokeDasharray="5 6" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+        {g.actual && <path d={g.actual} fill="none" stroke="var(--wh-accent)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+        {g.forecast && <path d={g.forecast} fill="none" stroke="var(--wh-accent)" strokeWidth={2} strokeDasharray="4 6" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
       </svg>
       {labels && (
         <div className="wh-cashflow-labels" aria-hidden="true">
@@ -200,16 +200,16 @@ export function CashflowLegend({ forecast = true }: { forecast?: boolean }) {
         Money in
       </span>
       <span>
-        <i style={{ background: 'var(--wh-owed)' }} />
+        <i style={{ background: 'var(--wh-loss)' }} />
         Money out
       </span>
       <span>
-        <i style={{ background: 'var(--wh-ultra)' }} />
+        <i style={{ background: 'var(--wh-accent)' }} />
         Cash position
       </span>
       {forecast && (
         <span>
-          <i style={{ background: 'var(--wh-panel)', boxShadow: 'inset 0 0 0 1px var(--wh-rule)' }} />
+          <i style={{ background: 'var(--wh-well)', boxShadow: 'inset 0 0 0 1px var(--wh-rule)' }} />
           Forecast
         </span>
       )}
@@ -228,7 +228,7 @@ interface CreepBarsProps {
   className?: string
 }
 
-/** Tile stacks that deepen over time, the latest in gold. For a subscription total over twelve months. */
+/** Tile stacks that deepen over time, the latest in ink. For a subscription total over twelve months. */
 export function CreepBars({ values, width = 520, height = 110, floor = null, label, className }: CreepBarsProps) {
   const stacks = useMemo(() => creepGeometry(values, { width, height, floor }), [values, width, height, floor])
   if (!stacks.length) return null
@@ -236,7 +236,7 @@ export function CreepBars({ values, width = 520, height = 110, floor = null, lab
   return (
     <svg viewBox={`0 0 ${width} ${height}`} shapeRendering="crispEdges" className={`wh-chart${className ? ` ${className}` : ''}`} role="img" aria-label={alt}>
       {stacks.map((s) => (
-        <path key={s.index} d={s.d} fill={s.gold ? 'var(--wh-stone)' : 'var(--wh-ultra)'} fillOpacity={s.opacity} />
+        <path key={s.index} d={s.d} fill={s.gold ? 'var(--wh-ink)' : 'var(--wh-accent)'} fillOpacity={s.opacity} />
       ))}
     </svg>
   )
