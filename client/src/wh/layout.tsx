@@ -215,10 +215,11 @@ interface PlateProps {
   className?: string
 }
 
-/** A figure on its own card. Kept for callers of the old picture plate; the picture is gone. */
-export function Plate({ alt, label, figure, children, height = 170, className }: PlateProps) {
+/** The total sits on a marble plate over the picture. The picture and the number are one object. */
+export function Plate({ image, alt, position = '46% 36%', label, figure, children, height = 170, className }: PlateProps) {
   return (
-    <div className={`wh-plate${className ? ` ${className}` : ''}`} style={{ minHeight: height, height }} aria-label={alt}>
+    <div className={`wh-plate${className ? ` ${className}` : ''}`} style={{ minHeight: height, height }}>
+      {image && <img src={image} alt={alt} style={{ objectPosition: position }} />}
       <div className="wh-plate-panel">
         <div className="wh-plate-label">{label}</div>
         <div className="wh-figure lg">{figure}</div>

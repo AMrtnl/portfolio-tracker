@@ -68,6 +68,8 @@ export interface TokenProps extends LogoQuery {
   hex?: string
   /** Let a remote logo service try after the bundled set. */
   remote?: boolean
+  /** A logo the source already supplies (an aggregator's own image). */
+  logoUrl?: string
   /** A class token with no brand at all: tinted tile, filled icon, no badge. */
   classOnly?: boolean
   className?: string
@@ -84,6 +86,7 @@ export function Token({
   mono,
   hex,
   remote = true,
+  logoUrl,
   classOnly = false,
   className,
   name,
@@ -97,11 +100,12 @@ export function Token({
     () => (classOnly ? null : resolveLogo({ name, symbol, domain, isin }, { remote, mono, hex })),
     [classOnly, name, symbol, domain, isin, remote, mono, hex],
   )
-  const logo = resolved?.logo && !(resolved.logo.kind === 'image' && broken === resolved.logo.url) ? resolved.logo : null
+  const supplied = logoUrl && broken !== logoUrl ? ({ kind: 'image', url: logoUrl, hex: resolved?.hex ?? undefined } as const) : null
+  const logo = supplied ?? (resolved?.logo && !(resolved.logo.kind === 'image' && broken === resolved.logo.url) ? resolved.logo : null)
   const tint = `wh-tint-${cls.tint}`
   const style = { '--wh-token': `${size}px` } as CSSProperties
 
-  if (!resolved) {
+  if (!resolved && !supplied) {
     return (
       <span className={`wh-token class ${tint}${className ? ` ${className}` : ''}`} style={style} aria-hidden="true">
         <span className="wh-token-tile">
@@ -111,10 +115,10 @@ export function Token({
     )
   }
 
-  const brandHex = resolved.hex
+  const brandHex = resolved?.hex ?? null
   const dark = brandHex ? luminance(brandHex) < 0.12 : false
   const brandStyle = brandHex ? ({ ...style, '--wh-brand': `#${brandHex}` } as CSSProperties) : style
-  const monoText = resolved.mono
+  const monoText = resolved?.mono ?? '?'
   const monoClass = monoText.length >= 4 ? ' xlong' : monoText.length === 3 ? ' long' : ''
 
   return (

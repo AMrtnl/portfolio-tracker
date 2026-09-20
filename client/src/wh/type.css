@@ -1,37 +1,37 @@
-/* Wealth Hub type. One face, a short scale, figures that line up. */
+/* Wealth Hub type. Serif speaks, sans counts. */
 
 html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--wh-sans);
-  font-size: 15px; line-height: 1.4; letter-spacing: -0.006em;
+  font-size: 15px; line-height: 1.4; letter-spacing: -0.004em;
   color: var(--wh-ink);
   -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-feature-settings: "cv11", "ss01", "calt";
 }
 
-/* Titles: tight tracking that loosens as the size drops. */
-.wh-title { margin: 0; font-weight: 700; font-size: 28px; line-height: 1.15; letter-spacing: -0.022em; color: var(--wh-ink); }
-.wh-title.phone { font-size: 28px; }
-.wh-title.lg { font-size: 34px; letter-spacing: -0.025em; }
-.wh-subtitle { margin: 4px 0 0; color: var(--wh-muted); font-size: 15px; line-height: 1.45; }
-.wh-h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--wh-ink); }
+/* Instrument Serif: screen titles, the wordmark, big statements. Never bold, never all caps. */
+.wh-serif, .wh-title { font-family: var(--wh-serif); font-weight: 400; font-style: normal; letter-spacing: -0.015em; line-height: 1.05; text-transform: none; }
+.wh-serif b, .wh-serif strong, .wh-title b { font-weight: 400; }
+.wh-title { margin: 0; font-size: 40px; color: var(--wh-ink); }
+.wh-title.phone { font-size: 36px; }
+.wh-title.lg { font-size: 48px; }
+.wh-subtitle { margin: 6px 0 0; color: var(--wh-muted); font-size: 15px; line-height: 1.45; }
+.wh-h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; letter-spacing: -0.005em; color: var(--wh-ink); }
 .wh-h2.row { display: flex; align-items: center; gap: 8px; }
-.wh-h2.row .wh-icon { color: var(--wh-muted); }
-.wh-eyebrow { color: var(--wh-muted); font-size: 12px; font-weight: 600; letter-spacing: 0.02em; }
+.wh-h2.row .wh-icon { color: var(--wh-accent); }
+.wh-eyebrow { color: var(--wh-muted); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
 .wh-caption { color: var(--wh-muted); font-size: 12px; line-height: 1.45; margin: 0; }
-.wh-body { color: var(--wh-muted); font-size: 15px; line-height: 1.5; margin: 0; }
-.wh-serif { font-family: var(--wh-sans); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.wh-body { color: var(--wh-muted); font-size: 15px; line-height: 1.55; margin: 0; }
 
-/* Figures: tabular so columns line up, tighter as they grow. */
-.wh-num, .wh-figure { font-variant-numeric: tabular-nums; font-feature-settings: "tnum", "cv11", "ss01"; }
-.wh-figure { font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; color: var(--wh-ink); }
-.wh-figure.xl { font-size: 44px; }
-.wh-figure.lg { font-size: 32px; }
-.wh-figure.md { font-size: 22px; letter-spacing: -0.02em; }
-.wh-figure.sm { font-size: 17px; letter-spacing: -0.015em; font-weight: 600; }
-.wh-figure.display { letter-spacing: -0.035em; }
-@media (max-width: 480px) { .wh-figure.xl { font-size: 38px; } }
+/* DM Sans figures: tabular so columns line up, weight 600, tighter as they grow. */
+.wh-num, .wh-figure { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+.wh-figure { font-family: var(--wh-sans); font-weight: 600; letter-spacing: -0.04em; line-height: 1.05; color: var(--wh-ink); }
+.wh-figure.xl { font-size: 48px; }
+.wh-figure.lg { font-size: 34px; }
+.wh-figure.md { font-size: 24px; letter-spacing: -0.03em; }
+.wh-figure.sm { font-size: 18px; letter-spacing: -0.02em; }
+.wh-figure.display { letter-spacing: -0.04em; }
+@media (max-width: 480px) { .wh-figure.xl { font-size: 40px; } }
 
 /* Tone utilities. Green and red carry meaning only. */
 .wh-gain { color: var(--wh-gain); }
@@ -39,9 +39,9 @@ body {
 .wh-warn { color: var(--wh-warn); }
 .wh-muted { color: var(--wh-muted); }
 .wh-ultra, .wh-accent { color: var(--wh-accent); }
-.wh-stone { color: var(--wh-warn); }
+.wh-stone { color: var(--wh-stone-deep); }
 
-/* Icons: inline SVG, stroke follows the text colour. */
+/* Icons: inline SVG strokes, colour inherits from the text. */
 .wh-icon { display: inline-block; flex: 0 0 auto; vertical-align: middle; width: 1em; height: 1em; }
 .wh-icon svg { display: block; width: 100%; height: 100%; }
 

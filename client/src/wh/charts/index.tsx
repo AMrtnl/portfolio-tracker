@@ -35,7 +35,7 @@ interface AreaChartProps {
   className?: string
 }
 
-/** A smooth line over a dot-screen fill that thins downward, today marked with a breathing point. */
+/** A smooth ultramarine line over a dot-screen fill that thins downward, a breathing gold point on today. */
 export function AreaChart({ values, width = 790, height = 170, label, unit = '', className }: AreaChartProps) {
   const g = useMemo(() => areaGeometry(values, { width, height }), [values, width, height])
   if (!g) return null
@@ -52,8 +52,8 @@ export function AreaChart({ values, width = 790, height = 170, label, unit = '',
       <path data-dots d={g.dots} fill="var(--wh-accent)" fillOpacity={0.28} shapeRendering="crispEdges" />
       <path data-aura d={g.line} fill="none" stroke="var(--wh-accent)" strokeWidth={10} strokeLinecap="round" strokeLinejoin="round" />
       <path data-line d={g.line} fill="none" stroke="var(--wh-accent)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-      <circle data-halo cx={ex} cy={ey} r={6} fill="var(--wh-accent)" />
-      <circle data-today cx={ex} cy={ey} r={5.5} fill="var(--wh-accent)" stroke="var(--wh-card)" strokeWidth={2.5} />
+      <circle data-halo cx={ex} cy={ey} r={6.5} fill="var(--wh-stone)" />
+      <circle data-today cx={ex} cy={ey} r={6} fill="var(--wh-stone)" stroke="var(--wh-card)" strokeWidth={2.5} />
     </svg>
   )
 }
@@ -228,7 +228,7 @@ interface CreepBarsProps {
   className?: string
 }
 
-/** Tile stacks that deepen over time, the latest in ink. For a subscription total over twelve months. */
+/** Tile stacks that deepen over time, the latest in gold. For a subscription total over twelve months. */
 export function CreepBars({ values, width = 520, height = 110, floor = null, label, className }: CreepBarsProps) {
   const stacks = useMemo(() => creepGeometry(values, { width, height, floor }), [values, width, height, floor])
   if (!stacks.length) return null
@@ -236,7 +236,7 @@ export function CreepBars({ values, width = 520, height = 110, floor = null, lab
   return (
     <svg viewBox={`0 0 ${width} ${height}`} shapeRendering="crispEdges" className={`wh-chart${className ? ` ${className}` : ''}`} role="img" aria-label={alt}>
       {stacks.map((s) => (
-        <path key={s.index} d={s.d} fill={s.gold ? 'var(--wh-ink)' : 'var(--wh-accent)'} fillOpacity={s.opacity} />
+        <path key={s.index} d={s.d} fill={s.gold ? 'var(--wh-stone)' : 'var(--wh-accent)'} fillOpacity={s.opacity} />
       ))}
     </svg>
   )

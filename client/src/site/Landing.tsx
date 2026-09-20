@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { Icon } from '@/wh/Icon'
 import { ICONS } from '@/wh/icons'
 import { Token } from '@/wh/Token'
+import { Lockup } from '@/wh/Mark'
+import { DotField } from '@/wh/effects/DotField'
 import { Button } from '@/wh/controls'
 import { useAuth } from '@/auth/AuthContext'
 import { R } from '@/routes'
@@ -49,6 +51,14 @@ export function Landing() {
             )}
           </div>
           <p className="site-fine">Free while in preview. No card, no trading permissions, no recovery phrases. Ever.</p>
+          <DotField className="site-garden" image="/wh/images/garden-dots-marble.png" darkImage="/wh/images/garden-dots-night.png" position={[46, 46]} spacing={5} alt="A classical garden with a temple, a statue and cypresses, drawn in blue dots">
+            <div className="site-garden-lockup" aria-hidden="true">
+              <Lockup size={22} />
+            </div>
+            <div className="site-garden-line" aria-hidden="true">
+              Own the whole picture.
+            </div>
+          </DotField>
           <div className="site-frame" aria-label="The overview, on a sample household">
             <div className="site-frame-bar" aria-hidden="true">
               <i />

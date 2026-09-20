@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Icon } from '@/wh/Icon'
 import { ICONS } from '@/wh/icons'
 import { Lockup } from '@/wh/Mark'
+import { DotField } from '@/wh/effects/DotField'
+import { GridLift } from '@/wh/effects/GridLift'
 import { Token } from '@/wh/Token'
 import { Button, ChangeChip, RoundButton, Segmented, StatusPill, TextLink } from '@/wh/controls'
 import { Card, GrowCard, Stat } from '@/wh/layout'
@@ -92,13 +94,12 @@ function Freshness({ accounts }: { accounts: BookAccount[] }) {
 function Empty() {
   return (
     <Card kind="pad" className="wh-empty">
-      <div className="wh-empty-art" aria-hidden="true">
-        <svg width="220" height="90" viewBox="0 0 220 90" fill="none">
-          <path d="M4 70 C 40 66, 60 40, 90 44 S 140 20, 170 26 S 200 8, 216 10" stroke="var(--wh-accent)" strokeWidth="2.5" strokeLinecap="round" />
-          <circle cx="216" cy="10" r="5" fill="var(--wh-accent)" stroke="var(--wh-well)" strokeWidth="2.5" />
-        </svg>
-      </div>
-      <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Nothing on the ledger yet</h2>
+      <GridLift height={280} className="wh-empty-art">
+        <span className="wh-lift-hint">Move across the grid, or press Enter.</span>
+      </GridLift>
+      <h2 className="wh-serif" style={{ margin: 0, fontSize: 30 }}>
+        Nothing on the ledger yet
+      </h2>
       <p>Connect a bank, a broker, a pension or a hardware wallet, read-only, or add property and debts by hand. Everything you own, minus everything you owe, in one currency.</p>
       <Button icon={ICONS.action.add} to={R.connect}>
         Connect your first account
@@ -124,7 +125,7 @@ export function Overview() {
   if (book.empty && !book.sampleOn) {
     return (
       <div className="wh-screen">
-        <ScreenHeader title="Overview" subtitle="Everything you own, minus everything you owe." phoneLead={<Lockup size={16} />} actions={!desktop ? <PersonMenu /> : undefined} />
+        <ScreenHeader title="Overview" subtitle="Everything you own, minus everything you owe." phoneLead={<Lockup size={22} />} actions={!desktop ? <PersonMenu /> : undefined} />
         <Empty />
       </div>
     )
@@ -150,7 +151,7 @@ export function Overview() {
       <div className="wh-screen">
         <ScreenHeader
           title="Overview"
-          phoneLead={<Lockup size={16} />}
+          phoneLead={<Lockup size={22} />}
           actions={
             <>
               <RoundButton icon={ICONS.action.add} label="Connect an account" to={R.connect} />
@@ -158,8 +159,8 @@ export function Overview() {
             </>
           }
         />
-        <Card kind="bare">
-          <div className="wh-hero">
+        <DotField className="wh-hero-plate" image="/wh/images/garden-dots-marble.png" darkImage="/wh/images/garden-dots-night.png" position={[46, 38]}>
+          <div className="wh-hero-panel">
             <div className="wh-nw-label">Net worth</div>
             <div className="wh-figure">{headline(book.net)}</div>
             <div className="wh-hero-change">
@@ -167,10 +168,10 @@ export function Overview() {
               {changeLine}
             </div>
           </div>
-          <div style={{ padding: '0 12px 12px' }}>
-            {series.thin ? <p className="wh-caption" style={{ padding: '0 6px 8px' }}>{series.note ?? 'History starts with the first snapshot.'}</p> : <AreaChart values={series.values} width={315} height={90} unit={unit} />}
-            <div style={{ marginTop: 10 }}>{rangeControl}</div>
-          </div>
+        </DotField>
+        <Card kind="bare" style={{ padding: 14 }}>
+          {series.thin ? <p className="wh-caption" style={{ padding: '0 6px 8px' }}>{series.note ?? 'History starts with the first snapshot.'}</p> : <AreaChart values={series.values} width={315} height={90} unit={unit} />}
+          <div style={{ marginTop: 12 }}>{rangeControl}</div>
         </Card>
         <div className="wh-statcards">
           <div className="wh-statcard">
@@ -277,6 +278,9 @@ export function Overview() {
           </Card>
         </div>
         <div className="wh-col">
+          <DotField className="wh-picture" image="/wh/images/garden-dots-marble.png" darkImage="/wh/images/garden-dots-night.png" position={[60, 40]} spacing={5}>
+            <div className="wh-picture-line">Own the whole picture.</div>
+          </DotField>
           {growCard}
           {parts.length > 0 && (
             <Card kind="bare" style={{ padding: 18 }}>

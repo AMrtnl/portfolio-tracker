@@ -1,14 +1,19 @@
-/* The mark. Bare, it takes the accent; on a tile, the tile takes the accent and the glyph goes white. */
-.wh-mark { display: inline-block; flex: 0 0 auto; position: relative; line-height: 0; vertical-align: middle; color: var(--wh-accent); }
-.wh-mark svg { display: block; overflow: visible; }
-.wh-mark-ring { stroke: currentColor; }
-.wh-mark-dot { fill: currentColor; }
-.wh-mark.tile .wh-mark-tile { fill: var(--wh-accent); }
-.wh-mark.tile .wh-mark-ring { stroke: #fff; }
-.wh-mark.tile .wh-mark-dot { fill: #fff; }
-/* Inverse: a mark on a filled accent surface. */
-.wh-mark.inverse { color: #fff; }
+/* The engraved temple. It sits directly on the ground: no tile, no outline, no container. */
+.wh-mark { display: inline-block; flex: 0 0 auto; position: relative; line-height: 0; vertical-align: middle; }
+.wh-mark img { display: block; width: 100%; height: 100%; }
+/* Two cuts, one shown: the surface's ground sets --wh-l / --wh-d (wh/tokens.css). */
+.wh-mark .wh-mark-l { display: var(--wh-l, block); }
+.wh-mark .wh-mark-d { display: var(--wh-d, none); }
 
-/* Mark beside the wordmark. */
-.wh-lockup { display: inline-flex; align-items: center; gap: 0.5em; color: var(--wh-ink); text-decoration: none; white-space: nowrap; }
-.wh-wordmark { font-family: var(--wh-sans); font-weight: 600; font-size: 1em; line-height: 1; letter-spacing: -0.02em; }
+/* Mark beside the wordmark. The mark's height equals the wordmark's font size. */
+.wh-lockup { display: inline-flex; align-items: center; gap: 0.3em; color: var(--wh-ink); text-decoration: none; white-space: nowrap; }
+.wh-wordmark { font-family: var(--wh-serif); font-weight: 400; font-style: normal; font-size: 1em; line-height: 1; letter-spacing: -0.015em; text-transform: none; }
+
+/* Living mark: the temple engraved live, lines that swing on hover. */
+.wh-living { position: relative; display: inline-block; color: var(--wh-accent); cursor: pointer; border-radius: 12px; outline-offset: 6px; }
+.wh-living:focus-visible { outline: 2px solid var(--wh-accent); }
+.wh-living > svg { position: absolute; inset: 0; display: block; opacity: 0; }
+.wh-living > .wh-living-static { display: block; }
+.wh-living.live > svg { opacity: 1; }
+.wh-living.live > .wh-living-static { visibility: hidden; }
+[data-ground="dark"] .wh-living { color: #EEF1FF; }

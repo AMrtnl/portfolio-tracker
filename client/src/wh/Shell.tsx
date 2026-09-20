@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { Lockup } from '@/wh/Mark'
+import { DotField } from '@/wh/effects/DotField'
 import { ICONS } from '@/wh/icons'
 import { Icon } from '@/wh/Icon'
 import { SidebarItem, TabBar, type NavItem } from '@/wh/nav'
@@ -27,6 +28,7 @@ import { Analysis } from '@/pages/Analysis'
 import { Brokerage } from '@/pages/Brokerage'
 import { Goals } from '@/pages/Goals'
 import { HoldingDetail } from '@/pages/HoldingDetail'
+import { PlanChip } from '@/wh/screens/Billing'
 import { R } from '@/routes'
 import '@/wh/shell.css'
 
@@ -124,6 +126,7 @@ export function AppShell() {
     <div className="wh-menu-head">
       <b>{user.name}</b>
       <span>{user.email}</span>
+      <PlanChip />
     </div>
   ) : null
 
@@ -138,7 +141,7 @@ export function AppShell() {
       {desktop && !onboarding && (
         <aside className="wh-sidebar">
           <a href={R.overview} onClick={go(R.overview)} className="wh-sidebar-brand" aria-label="Wealth Hub, overview">
-            <Lockup size={15} />
+            <Lockup size={21} />
           </a>
           <nav className="wh-sidebar-group" aria-label="Sections">
             {main.map((it) => (
@@ -152,11 +155,13 @@ export function AppShell() {
             ))}
           </nav>
           <div className="wh-sidebar-foot">
-            <button type="button" className={`wh-sidebar-status ${statusTone}`} onClick={() => setSyncOpen(true)} title="Open connections">
-              <i className="wh-dot" aria-hidden="true" />
-              <span>{statusText}</span>
-              {attention.length > 0 && <span className="wh-count">{attention.length}</span>}
-            </button>
+            <DotField className="wh-sidebar-picture" image="/wh/images/garden-dots-marble.png" darkImage="/wh/images/garden-dots-night.png" position={[46, 42]} spacing={5}>
+              <button type="button" className={`wh-sidebar-status ${statusTone}`} onClick={() => setSyncOpen(true)} title="Open connections">
+                <i className="wh-dot" aria-hidden="true" />
+                <span>{statusText}</span>
+                {attention.length > 0 && <span className="wh-count" title="Needs attention">{attention.length}</span>}
+              </button>
+            </DotField>
             <Menu
               label="Account"
               align="left"
@@ -264,6 +269,7 @@ export function PersonMenu() {
           <div className="wh-menu-head">
             <b>{user.name}</b>
             <span>{user.email}</span>
+            <PlanChip />
           </div>
         ) : null
       }

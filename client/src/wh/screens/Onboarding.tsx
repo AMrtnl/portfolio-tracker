@@ -67,7 +67,7 @@ export function Onboarding() {
 
   return (
     <div className="wh-onboard">
-      <Lockup size={16} />
+      <Lockup size={22} />
       <div className="wh-onboard-steps" aria-hidden="true">
         {[0, 1, 2].map((i) => (
           <i key={i} className={i <= step ? 'on' : undefined} />

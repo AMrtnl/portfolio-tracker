@@ -4,8 +4,9 @@
   transition: filter 0.3s ease, opacity 0.3s ease, fill-opacity 0.3s ease;
 }
 [data-chart] [data-aura] { opacity: 0; filter: blur(8px); }
-[data-chart]:hover [data-aura] { opacity: 0.35; }
-[data-chart]:hover [data-dots] { fill-opacity: 0.5; }
+[data-chart]:hover [data-aura] { opacity: 0.4; }
+[data-chart]:hover [data-dots] { fill-opacity: 0.55; }
+[data-chart]:hover [data-today] { filter: drop-shadow(0 0 7px rgba(226, 178, 60, 0.95)); }
 [data-halo] { transform-box: fill-box; transform-origin: center; animation: wh-pulse 2.8s ease-out infinite; }
 @keyframes wh-pulse {
   0% { transform: scale(1); opacity: 0.35; }
@@ -27,12 +28,12 @@
 
 /* Meter: twenty slim upright bars, the partial one at lower opacity. */
 .wh-meter { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 2px; }
-.wh-meter > span { flex: 1 1 0; min-width: 0; max-width: 5px; height: 12px; border-radius: 2px; background: var(--wh-panel); }
+.wh-meter > span { flex: 1 1 0; min-width: 0; max-width: 5px; height: 14px; border-radius: 2px; background: var(--wh-rule); }
 .wh-meter > span.on { background: var(--wh-meter, var(--wh-accent)); }
 
 /* Tesserae: one hundred tiles filled column by column. */
 .wh-tessera { display: grid; grid-auto-flow: column; gap: 3px; }
-.wh-tessera > span { border-radius: 2.5px; }
+.wh-tessera > span { border-radius: 3px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 0 rgba(0, 0, 0, 0.18); }
 .wh-tessera-legend { display: grid; gap: 8px 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); font-size: 12px; margin-top: 14px; }
 .wh-tessera-legend.stack { grid-template-columns: 1fr; gap: 6px; }
 @media (max-width: 480px) { .wh-tessera-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

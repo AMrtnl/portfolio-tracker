@@ -13,6 +13,7 @@ import { useDemo } from '@/wealth/DemoContext'
 import { useSettings, useUpdateSettings, type DisplayCurrency, type HeadlineMetric } from '@/hooks/useSettings'
 import { R } from '@/routes'
 import { ScreenHeader } from './ScreenHeader'
+import { PlanCard } from './Billing'
 import '@/wh/screens/screens.css'
 
 const CURRENCY_NAMES: Record<DisplayCurrency, string> = { CHF: 'Swiss franc', EUR: 'Euro', USD: 'US dollar', GBP: 'Pound sterling' }
@@ -201,6 +202,11 @@ export function Settings() {
           <Card kind="pad">
             <Profile />
           </Card>
+        </section>
+
+        <section className="wh-settings-group">
+          <h2>Plan</h2>
+          <PlanCard />
         </section>
 
         <section className="wh-settings-group">

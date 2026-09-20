@@ -13,7 +13,7 @@ export function SiteHeader() {
     <header className="site-header">
       <div className="site-wrap">
         <Link to={R.home} className="site-brand" aria-label="Wealth Hub, home">
-          <Lockup size={15} />
+          <Lockup size={21} />
         </Link>
         <nav className="site-nav" aria-label="Site">
           <NavLink to={R.home} end className={({ isActive }) => (isActive ? 'on' : undefined)}>
@@ -53,7 +53,7 @@ export function SiteFooter() {
       <div className="site-wrap">
         <div className="site-footer-grid">
           <div>
-            <Lockup size={14} />
+            <Lockup size={20} />
             <p style={{ margin: '12px 0 0', maxWidth: '32ch', lineHeight: 1.5 }}>Every account, every asset, one clear picture. Read-only, in your currency.</p>
           </div>
           <div>

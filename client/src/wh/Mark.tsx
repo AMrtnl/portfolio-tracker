@@ -1,13 +1,24 @@
 import type { CSSProperties } from 'react'
 import './mark.css'
 
+/** Height is always width × 0.8. */
+export const MARK_ASPECT = 0.8
+
+export type MarkCut = 'l' | 'm' | 's' | 'xs'
+
+/** The weight follows the width: 62 lines from 260 px, 46 down to 110, 24 down to 48, 15 heavy lines below. */
+export function cutFor(width: number): MarkCut {
+  if (width >= 260) return 'l'
+  if (width >= 110) return 'm'
+  if (width >= 48) return 's'
+  return 'xs'
+}
+
 interface MarkProps {
-  /** Pixel size. The mark is square. */
-  size?: number
-  /** Kept for callers that still size the mark by width. */
+  /** Width in px. The only thing a caller decides. */
   width?: number
-  /** On a tile: the glyph in white on the accent, as an app icon. Bare: the glyph in the accent on the ground. */
-  tile?: boolean
+  /** Alias for width, for callers that think in one dimension. */
+  size?: number
   /** Hide from readers when the wordmark or a label beside it already says "Wealth Hub". */
   decorative?: boolean
   className?: string
@@ -15,25 +26,28 @@ interface MarkProps {
 }
 
 /**
- * The Wealth Hub mark: an open ring with its point, the hub everything
- * connects to. One shape at every size; the tile variant is the app icon.
+ * The Wealth Hub mark: the temple, engraved. One component, one prop, no
+ * variant. It picks its weight from its width and its cut from the ground it
+ * sits on: both cuts render, and the surface's --wh-l / --wh-d switches show
+ * exactly one. On a light ground the engraved lines are the shadows, in
+ * ultramarine. On a dark ground the lines are the light, in marble. The roof
+ * is gold in both. It sits directly on the ground: no tile, no outline.
  */
-export function Mark({ size, width, tile = false, decorative = false, className, style }: MarkProps) {
-  const px = size ?? width ?? 24
-  const label = decorative ? undefined : 'Wealth Hub'
+export function Mark({ width, size, decorative = false, className, style }: MarkProps) {
+  const w = width ?? size ?? 28
+  const cut = cutFor(w)
+  const height = Math.round(w * MARK_ASPECT * 100) / 100
+  const imgProps = { alt: '', width: w, height, decoding: 'async' as const, draggable: false }
   return (
     <span
-      className={`wh-mark${tile ? ' tile' : ''}${className ? ` ${className}` : ''}`}
+      className={`wh-mark${className ? ` ${className}` : ''}`}
       role={decorative ? undefined : 'img'}
-      aria-label={label}
+      aria-label={decorative ? undefined : 'Wealth Hub'}
       aria-hidden={decorative || undefined}
-      style={{ width: px, height: px, ...style }}
+      style={{ width: w, height, ...style }}
     >
-      <svg viewBox="0 0 48 48" width={px} height={px} aria-hidden="true" focusable="false">
-        {tile && <rect x="0" y="0" width="48" height="48" rx="11" className="wh-mark-tile" />}
-        <circle cx="24" cy="24" r="13.5" fill="none" strokeWidth="5" strokeLinecap="round" pathLength="100" strokeDasharray="78 22" transform="rotate(-54 24 24)" className="wh-mark-ring" />
-        <circle cx="35.2" cy="14.8" r="3.6" className="wh-mark-dot" />
-      </svg>
+      <img className="wh-mark-l" src={`/wh/logo/wh-l3-${cut}-light.svg`} {...imgProps} />
+      <img className="wh-mark-d" src={`/wh/logo/wh-l3-${cut}-dark.svg`} {...imgProps} />
     </span>
   )
 }
@@ -41,19 +55,15 @@ export function Mark({ size, width, tile = false, decorative = false, className,
 interface LockupProps {
   /** Wordmark font size in px. The mark's height matches it. */
   size?: number
-  tile?: boolean
   className?: string
 }
 
-/** Mark beside the wordmark: "Wealth Hub", set in the text face, tight. */
-export function Lockup({ size = 18, tile = true, className }: LockupProps) {
+/** Mark beside the wordmark: "Wealth Hub" in Instrument Serif, sentence case. */
+export function Lockup({ size = 22, className }: LockupProps) {
   return (
     <span className={`wh-lockup${className ? ` ${className}` : ''}`} style={{ fontSize: size }}>
-      <Mark size={Math.round(size * 1.35)} tile={tile} decorative />
+      <Mark width={Math.round(size / MARK_ASPECT)} decorative />
       <span className="wh-wordmark">Wealth Hub</span>
     </span>
   )
 }
-
-/** Kept for callers that computed heights from the old aspect. */
-export const MARK_ASPECT = 1

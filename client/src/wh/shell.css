@@ -1,4 +1,4 @@
-/* Wealth Hub shell. Desktop: a sidebar and the screen. Phone: the screen carries its own header, a glass tab bar floats below. */
+/* Wealth Hub shell. Desktop: a sidebar on marble and the screen. Phone: the screen carries its own header, a capsule tab bar floats below. */
 html { background: var(--wh-bg); }
 body { margin: 0; background: var(--wh-bg); color: var(--wh-ink); }
 
@@ -6,68 +6,72 @@ body { margin: 0; background: var(--wh-bg); color: var(--wh-ink); }
 
 /* ---- Sidebar ---- */
 .wh-sidebar {
-  position: sticky; top: 0; align-self: flex-start; flex: 0 0 236px; box-sizing: border-box;
-  height: 100vh; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 6px;
-  border-right: 1px solid var(--wh-rule);
+  position: sticky; top: 0; align-self: flex-start; flex: 0 0 248px; box-sizing: border-box;
+  height: 100vh; padding: 18px 14px 14px; display: flex; flex-direction: column; gap: 6px;
+  background: var(--wh-panel);
 }
-.wh-sidebar-brand { display: flex; align-items: center; height: 36px; padding: 0 8px; margin-bottom: 10px; text-decoration: none; color: inherit; border-radius: 9px; }
+[data-ground="dark"] .wh-sidebar { border-right: 1px solid var(--wh-rule); }
+.wh-sidebar-brand { display: flex; align-items: center; height: 40px; padding: 0 12px; margin-bottom: 10px; text-decoration: none; color: inherit; border-radius: 999px; }
 .wh-sidebar-brand:hover { background: var(--wh-fill); }
-.wh-sidebar-group { display: flex; flex-direction: column; gap: 1px; }
-.wh-sidebar-label { padding: 14px 10px 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.03em; color: var(--wh-faint); text-transform: uppercase; }
-.wh-sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--wh-rule); }
+.wh-sidebar-group { display: flex; flex-direction: column; gap: 2px; }
+.wh-sidebar-label { padding: 16px 14px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: var(--wh-muted); text-transform: uppercase; }
+.wh-sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+/* The garden at the foot, with the sync status on a plate. */
+.wh-sidebar-picture { position: relative; height: 128px; border-radius: 22px; overflow: hidden; box-shadow: var(--wh-shadow-card); }
 .wh-sidebar-status {
-  display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; padding: 8px 10px; border: 0; border-radius: 9px;
-  background: none; color: var(--wh-muted); font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+  position: absolute; left: 8px; right: 8px; bottom: 8px;
+  display: flex; align-items: center; gap: 8px; box-sizing: border-box; padding: 8px 12px; border: 0; border-radius: 999px;
+  background: var(--wh-bg); color: var(--wh-ink); font: inherit; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer;
 }
-.wh-sidebar-status:hover { background: var(--wh-fill); color: var(--wh-ink); }
-.wh-sidebar-status .wh-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--wh-gain); flex: 0 0 auto; }
-.wh-sidebar-status.warn .wh-dot { background: var(--wh-warn); }
+.wh-sidebar-status:hover { background: var(--wh-card); }
+.wh-sidebar-status .wh-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--wh-gain); flex: 0 0 auto; }
+.wh-sidebar-status.warn .wh-dot { background: var(--wh-stone); }
 .wh-sidebar-status.bad .wh-dot { background: var(--wh-loss); }
 .wh-sidebar-status span { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wh-sidebar-person {
-  display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; padding: 6px 8px; border: 0; border-radius: 10px;
+  display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; padding: 6px 8px 6px 6px; border: 0; border-radius: 999px;
   background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
 }
 .wh-sidebar-person:hover { background: var(--wh-fill); }
 .wh-sidebar-person-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.wh-sidebar-person-text b { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wh-sidebar-person-text b { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wh-sidebar-person-text span { font-size: 12px; color: var(--wh-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wh-sidebar-person > .wh-icon { color: var(--wh-faint); }
 
 /* ---- Menus ---- */
 .wh-menuwrap { position: relative; }
 .wh-menu {
-  position: absolute; top: calc(100% + 6px); z-index: 50; min-width: 232px; box-sizing: border-box;
-  padding: 6px; border-radius: 12px; background: var(--wh-card); box-shadow: var(--wh-shadow-float);
-  display: flex; flex-direction: column; gap: 1px;
+  position: absolute; top: calc(100% + 8px); z-index: 50; min-width: 240px; box-sizing: border-box;
+  padding: 8px; border-radius: 20px; background: var(--wh-card); box-shadow: var(--wh-shadow-float);
+  display: flex; flex-direction: column; gap: 2px;
 }
 .wh-menu.right { right: 0; } .wh-menu.left { left: 0; }
-.wh-menu.up { top: auto; bottom: calc(100% + 6px); }
+.wh-menu.up { top: auto; bottom: calc(100% + 8px); }
 .wh-menu-item {
-  display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; min-height: 34px; padding: 6px 10px;
-  border: 0; border-radius: 8px; background: none; color: var(--wh-ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; min-height: 40px; padding: 7px 12px;
+  border: 0; border-radius: 999px; background: none; color: var(--wh-ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer;
 }
 .wh-menu-item > .wh-icon { color: var(--wh-muted); }
-.wh-menu-item:hover, .wh-menu-item:focus-visible { background: var(--wh-accent); color: var(--wh-on-accent); outline: none; }
-.wh-menu-item:hover > .wh-icon, .wh-menu-item:focus-visible > .wh-icon, .wh-menu-item:hover .wh-menu-sub, .wh-menu-item:focus-visible .wh-menu-sub { color: inherit; }
+.wh-menu-item:hover, .wh-menu-item:focus-visible { background: var(--wh-panel); outline: none; }
 .wh-menu-item.on { font-weight: 600; }
 .wh-menu-item:disabled { opacity: 0.5; cursor: default; }
 .wh-menu-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .wh-menu-sub { color: var(--wh-muted); font-size: 12px; }
-.wh-menu-rule { border: 0; border-top: 1px solid var(--wh-rule); margin: 5px 6px; }
-.wh-menu-head { padding: 8px 10px 6px; display: flex; flex-direction: column; gap: 2px; }
+.wh-menu-rule { border: 0; border-top: 1px solid var(--wh-rule); margin: 6px 8px; }
+.wh-menu-head { padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 2px; }
 .wh-menu-head b { font-size: 14px; font-weight: 600; }
 .wh-menu-head span { font-size: 12px; color: var(--wh-muted); }
+.wh-menu-head .wh-chip { align-self: flex-start; margin-top: 6px; }
 
 /* ---- Main ---- */
 .wh-main-col { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.wh-main { flex: 1 1 auto; width: 100%; max-width: 1240px; margin: 0 auto; padding: 28px 36px 48px; box-sizing: border-box; min-width: 0; }
+.wh-main { flex: 1 1 auto; width: 100%; max-width: 1280px; margin: 0 auto; padding: 28px 40px 48px; box-sizing: border-box; min-width: 0; }
 .wh-main:focus { outline: none; }
 
 /* ---- Phone ---- */
 @media (max-width: 959px) {
   .wh-root { flex-direction: column; }
-  .wh-main { padding: max(18px, env(safe-area-inset-top, 0px)) 16px 120px; max-width: none; }
+  .wh-main { padding: max(18px, env(safe-area-inset-top, 0px)) 18px 124px; max-width: none; }
   .wh-sidebar { display: none; }
 }
 @media (min-width: 960px) { .wh-tabbar { display: none; } }

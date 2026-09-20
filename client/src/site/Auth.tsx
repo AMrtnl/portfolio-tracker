@@ -2,37 +2,23 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { Icon } from '@/wh/Icon'
 import { ICONS } from '@/wh/icons'
-import { Lockup, Mark } from '@/wh/Mark'
+import { Lockup } from '@/wh/Mark'
+import { LivingMark } from '@/wh/LivingMark'
+import { DotField } from '@/wh/effects/DotField'
 import { Button, Field } from '@/wh/controls'
 import { useAuth, errorText } from '@/auth/AuthContext'
 import { R, safeNext } from '@/routes'
 import './site.css'
 
+/** The garden, drawn as a screen of dots that answers the pointer, with the line on a plate. */
 function Side() {
   return (
     <aside className="auth-side" aria-hidden="true">
-      <div className="auth-side-art">
-        <svg viewBox="0 0 48 48" fill="none">
-          <circle cx="24" cy="24" r="13.5" stroke="currentColor" strokeWidth="5" strokeLinecap="round" pathLength="100" strokeDasharray="78 22" transform="rotate(-54 24 24)" />
-          <circle cx="35.2" cy="14.8" r="3.6" fill="currentColor" />
-        </svg>
+      <DotField image="/wh/images/garden-dots-marble.png" darkImage="/wh/images/garden-dots-night.png" position={[46, 50]} />
+      <div className="auth-side-lockup">
+        <Lockup size={22} />
       </div>
-      <h2>Every account. One clear picture.</h2>
-      <p>Banks, brokers, pensions, property and crypto in one ledger, read-only, in your currency.</p>
-      <div className="auth-side-strip">
-        <span>
-          <Icon name={ICONS.status.readOnly} size={15} />
-          Read-only
-        </span>
-        <span>
-          <Icon name={ICONS.action.export} size={15} />
-          Export any time
-        </span>
-        <span>
-          <Icon name={ICONS.action.education} size={15} />
-          Analysis, not advice
-        </span>
-      </div>
+      <div className="auth-side-line">Own the whole picture.</div>
     </aside>
   )
 }
@@ -49,6 +35,33 @@ function Frame({ children }: { children: React.ReactNode }) {
       </div>
       <Side />
     </div>
+  )
+}
+
+function Strip() {
+  return (
+    <div className="auth-strip">
+      <span>
+        <Icon name={ICONS.status.readOnly} size={16} />
+        Read-only
+      </span>
+      <span>
+        <Icon name={ICONS.action.export} size={16} />
+        Export any time
+      </span>
+      <span>
+        <Icon name={ICONS.action.education} size={16} />
+        Analysis, not advice
+      </span>
+    </div>
+  )
+}
+
+function Reveal({ show, onToggle }: { show: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" className="wh-round flat" style={{ width: 32, height: 32 }} onClick={onToggle} aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show}>
+      <Icon name={show ? ICONS.ui.hide : ICONS.ui.show} size={18} />
+    </button>
   )
 }
 
@@ -83,28 +96,14 @@ export function SignIn() {
 
   return (
     <Frame>
-      <Mark size={40} tile decorative />
+      <LivingMark width={96} decorative />
       <div>
         <h1>Welcome back</h1>
         <p className="site-p">Sign in to your ledger. Nothing on this side can move your money.</p>
       </div>
       <form onSubmit={submit} className="wh-form" aria-label="Sign in" style={{ gap: 14 }}>
         <Field icon={ICONS.action.email} label="Email" type="email" autoComplete="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} variant="lg" />
-        <Field
-          icon={ICONS.ui.lock}
-          label="Password"
-          type={show ? 'text' : 'password'}
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          variant="lg"
-          trailing={
-            <button type="button" className="wh-round flat" style={{ width: 30, height: 30 }} onClick={() => setShow((v) => !v)} aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show}>
-              <Icon name={show ? ICONS.ui.hide : ICONS.ui.show} size={17} />
-            </button>
-          }
-        />
+        <Field icon={ICONS.ui.lock} label="Password" type={show ? 'text' : 'password'} autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} variant="lg" trailing={<Reveal show={show} onToggle={() => setShow((v) => !v)} />} />
         {err && (
           <p className="wh-err" role="alert">
             {err}
@@ -117,6 +116,7 @@ export function SignIn() {
       <p className="auth-foot">
         New here? <Link to={R.signup}>Create an account</Link>
       </p>
+      <Strip />
     </Frame>
   )
 }
@@ -156,7 +156,7 @@ export function SignUp() {
 
   return (
     <Frame>
-      <Mark size={40} tile decorative />
+      <LivingMark width={96} decorative />
       <div>
         <h1>Create your account</h1>
         <p className="site-p">Two minutes, no card. Start with a sample household, then connect your own.</p>
@@ -169,23 +169,7 @@ export function SignUp() {
         <form onSubmit={submit} className="wh-form" aria-label="Create an account" style={{ gap: 14 }}>
           <Field icon={ICONS.ui.person} label="Name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} variant="lg" maxLength={80} placeholder="Optional" />
           <Field icon={ICONS.action.email} label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} variant="lg" />
-          <Field
-            icon={ICONS.ui.lock}
-            label="Password"
-            type={show ? 'text' : 'password'}
-            autoComplete="new-password"
-            required
-            minLength={10}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            variant="lg"
-            hint="At least 10 characters. A sentence works well."
-            trailing={
-              <button type="button" className="wh-round flat" style={{ width: 30, height: 30 }} onClick={() => setShow((v) => !v)} aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show}>
-                <Icon name={show ? ICONS.ui.hide : ICONS.ui.show} size={17} />
-              </button>
-            }
-          />
+          <Field icon={ICONS.ui.lock} label="Password" type={show ? 'text' : 'password'} autoComplete="new-password" required minLength={10} value={password} onChange={(e) => setPassword(e.target.value)} variant="lg" hint="At least 10 characters. A sentence works well." trailing={<Reveal show={show} onToggle={() => setShow((v) => !v)} />} />
           {invited && <Field icon={ICONS.action.passkey} label="Invite code" required value={invite} onChange={(e) => setInvite(e.target.value)} variant="lg" hint="This deployment is invite-only. The person who runs it has the code." autoComplete="off" />}
           {err && (
             <p className="wh-err" role="alert">
@@ -203,7 +187,7 @@ export function SignUp() {
       <p className="auth-foot">
         Already have an account? <Link to={R.login}>Sign in</Link>
       </p>
-      <Lockup size={13} className="wh-muted" />
+      <Strip />
     </Frame>
   )
 }

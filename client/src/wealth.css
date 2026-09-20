@@ -3,23 +3,23 @@
 /* ---- Legacy aliases: the a-* system reads these; every one resolves to a --wh-* token from wh/tokens.css.
    Alpha scales are built from one ink triple per ground so they flip with the surface. ---- */
 :root, [data-ground="light"] {
-  --ink-rgb: 29, 29, 31;
-  --fill-k: .45;
-  --accent-rgb: 0, 113, 227;
-  --bg-rgb: 245, 245, 247;
+  --ink-rgb: 12, 18, 48;
+  --fill-k: .55;
+  --accent-rgb: 31, 63, 208;
+  --bg-rgb: 251, 246, 234;
   --knob: #fff;
   --on-accent: #fff;
-  --scrim: rgba(0, 0, 0, .32);
-  --shadow: rgba(0, 0, 0, .14);
+  --scrim: rgba(12, 18, 48, .38);
+  --shadow: rgba(12, 18, 48, .18);
 }
 [data-ground="dark"] {
-  --ink-rgb: 245, 245, 247;
-  --fill-k: .9;
-  --accent-rgb: 41, 151, 255;
-  --bg-rgb: 11, 12, 16;
+  --ink-rgb: 238, 241, 255;
+  --fill-k: 1;
+  --accent-rgb: 74, 108, 240;
+  --bg-rgb: 8, 12, 34;
   --knob: #fff;
   --on-accent: #fff;
-  --scrim: rgba(0, 0, 0, .6);
+  --scrim: rgba(2, 4, 16, .6);
   --shadow: rgba(0, 0, 0, .55);
 }
 :root, [data-ground="light"], [data-ground="dark"] {

@@ -20,7 +20,7 @@ export type BookClass =
   | 'bonds'
   | 'crypto'
   | 'other'
-export type ProviderId = 'hyperliquid' | 'snaptrade' | 'manual' | 'watch'
+export type ProviderId = 'hyperliquid' | 'snaptrade' | 'gocardless' | 'manual' | 'watch'
 export type WatchChain = 'btc' | 'eth' | 'sol'
 export type AccountStatus =
   | 'connected'
