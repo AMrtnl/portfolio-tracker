@@ -75,7 +75,7 @@ export function AppShell() {
   const grow = useGrow()
   const attention = useAttention()
   const { hidden, toggle: togglePrivacy } = usePrivacy()
-  const { enabled: sampleOn, toggle: toggleSample } = useDemo()
+  const { enabled: sampleOn, chosen: sampleChosen, toggle: toggleSample } = useDemo()
   const { data: settings } = useSettings()
   const setSettings = useUpdateSettings().mutate
   const [syncOpen, setSyncOpen] = useState(false)
@@ -130,7 +130,7 @@ export function AppShell() {
   const display = settings?.displayCurrency ?? 'CHF'
   const personItems: Array<MenuItem | 'rule'> = [
     { key: 'privacy', label: hidden ? 'Show balances' : 'Hide balances', icon: hidden ? ICONS.ui.show : ICONS.ui.hide, onSelect: togglePrivacy },
-    { key: 'sample', label: 'Sample household', sub: sampleOn ? 'On, beside anything you connect' : 'Off', icon: ICONS.action.education, on: sampleOn, onSelect: toggleSample },
+    { key: 'sample', label: 'Sample household', sub: sampleOn ? (sampleChosen ? 'On, beside anything you connect' : 'On until you connect something') : 'Off', icon: ICONS.action.education, on: sampleOn, onSelect: toggleSample },
     { key: 'attention', label: 'Needs attention', sub: attention.length ? `${attention.length} ${attention.length === 1 ? 'thing' : 'things'}` : 'Nothing right now', icon: ICONS.ui.notifications, onSelect: () => setInboxOpen(true) },
     'rule',
     ...currencies.map((c) => ({ key: `cur-${c}`, label: `Display in ${c}`, icon: ICONS.account.exchange, on: c === display, onSelect: () => setSettings({ displayCurrency: c }) })),

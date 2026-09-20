@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useDemo } from '@/wealth/DemoContext'
 import { mergeAccounts } from '@/wealth/demo'
+import { ACCOUNTS_KEY, fetchAccounts } from './accountsQuery'
 
 export type AccountType =
   | 'crypto_wallet'
@@ -82,17 +83,7 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
 
 export function useAccounts() {
   const { enabled } = useDemo()
-  const query = useQuery<Account[]>({
-    queryKey: ['accounts'],
-    queryFn: async () => {
-      const { data } = await axios.get('/api/accounts')
-      return (data.accounts as Account[]).map((a) => ({
-        ...a,
-        // Compat for older UI that read .address
-        address: a.externalId || a.maskedIdentifier || '',
-      }))
-    },
-  })
+  const query = useQuery<Account[]>({ queryKey: ACCOUNTS_KEY, queryFn: fetchAccounts })
   return {
     ...query,
     data: mergeAccounts(query.data, enabled),

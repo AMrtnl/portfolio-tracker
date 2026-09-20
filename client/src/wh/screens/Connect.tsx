@@ -417,7 +417,7 @@ export function Connect() {
       ))}
       {book.sampleOn && book.accounts.some((a) => a.sample) && (
         <p className="wh-caption" style={{ padding: '10px 0' }}>
-          Sample accounts sit beside anything you connect. Turn the sample household off from the account menu to see your own ledger alone.
+          These are the sample household. They step aside the moment you connect something of your own, or sooner from the account menu.
         </p>
       )}
     </Card>
