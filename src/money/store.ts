@@ -9,11 +9,6 @@ import type {
   TxKind,
 } from './types';
 
-const DATA_DIR = process.env.DATA_DIR
-  ? path.resolve(process.env.DATA_DIR)
-  : path.resolve(__dirname, '..', '..', 'data');
-const DATA_FILE = path.join(DATA_DIR, 'money.json');
-
 export interface TransactionInput {
   date: string;
   kind: TxKind;
@@ -32,15 +27,18 @@ function isIsoDate(value: string): boolean {
 
 export class MoneyStore {
   private data: MoneyFile;
+  private readonly file: string;
 
-  constructor() {
+  /** `dir` is the owning user's data directory; the ledger never leaves it. */
+  constructor(readonly dir: string) {
+    this.file = path.join(dir, 'money.json');
     this.data = this.load();
   }
 
   private load(): MoneyFile {
     try {
-      if (fs.existsSync(DATA_FILE)) {
-        const parsed = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) as MoneyFile;
+      if (fs.existsSync(this.file)) {
+        const parsed = JSON.parse(fs.readFileSync(this.file, 'utf8')) as MoneyFile;
         if (parsed?.version === 1 && Array.isArray(parsed.transactions)) {
           return {
             version: 1,
@@ -60,8 +58,8 @@ export class MoneyStore {
   }
 
   private save(): void {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(this.data, null, 2), 'utf8');
+    if (!fs.existsSync(this.dir)) fs.mkdirSync(this.dir, { recursive: true });
+    fs.writeFileSync(this.file, JSON.stringify(this.data, null, 2), 'utf8');
   }
 
   listTransactions(): MoneyTransaction[] {
@@ -206,5 +204,3 @@ export class MoneyStore {
     return false;
   }
 }
-
-export const moneyStore = new MoneyStore();

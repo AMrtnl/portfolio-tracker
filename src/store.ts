@@ -158,24 +158,23 @@ function toPublic(acct: StoredAccountV2, live?: boolean): PublicAccount {
 
 // ----- Store class -----
 
-// DATA_DIR lets a host mount a persistent volume; containers otherwise lose
-// accounts.json on every redeploy.
-const DATA_DIR = process.env.DATA_DIR
-  ? path.resolve(process.env.DATA_DIR)
-  : path.resolve(__dirname, '..', 'data');
-const DATA_FILE = path.join(DATA_DIR, 'accounts.json');
-
 export class Store {
   private data: StoreDataV2;
+  private readonly file: string;
 
-  constructor() {
+  /**
+   * `dir` is the owning user's data directory. Binding the instance to it is
+   * what keeps one user's accounts unreachable from another user's request.
+   */
+  constructor(readonly dir: string) {
+    this.file = path.join(dir, 'accounts.json');
     this.data = this.load();
   }
 
   private load(): StoreDataV2 {
     try {
-      if (fs.existsSync(DATA_FILE)) {
-        const raw = fs.readFileSync(DATA_FILE, 'utf8');
+      if (fs.existsSync(this.file)) {
+        const raw = fs.readFileSync(this.file, 'utf8');
         const parsed = JSON.parse(raw) as StoreData;
         if (parsed.version === 2 && Array.isArray(parsed.accounts)) {
           return parsed;
@@ -194,10 +193,10 @@ export class Store {
   }
 
   private write(data: StoreDataV2): void {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(this.dir)) {
+      fs.mkdirSync(this.dir, { recursive: true });
     }
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+    fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf8');
   }
 
   private save(): void {

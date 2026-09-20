@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { FxConverter, baseCurrency } from './fx';
-import { resetSettingsCache } from '../settings';
+import { SettingsStore } from '../settings';
 
 describe('baseCurrency', () => {
   const original = { ...process.env };
@@ -12,29 +12,34 @@ describe('baseCurrency', () => {
   // empty scratch data dir rather than whatever the developer has saved.
   beforeEach(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meridian-fx-'));
-    process.env.DATA_DIR = dir;
-    resetSettingsCache();
   });
 
   afterEach(() => {
     process.env = { ...original };
-    resetSettingsCache();
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
+  const settings = () => new SettingsStore(dir).get();
+
   it('defaults to CHF, the household currency', () => {
     delete process.env.BASE_CURRENCY;
-    expect(baseCurrency()).toBe('CHF');
+    expect(baseCurrency(settings())).toBe('CHF');
   });
 
   it('honours a configured fiat currency', () => {
     process.env.BASE_CURRENCY = 'chf';
-    expect(baseCurrency()).toBe('CHF');
+    expect(baseCurrency(settings())).toBe('CHF');
   });
 
   it('ignores a nonsense configuration rather than breaking totals', () => {
     process.env.BASE_CURRENCY = 'DOGE';
-    expect(baseCurrency()).toBe('CHF');
+    expect(baseCurrency(settings())).toBe('CHF');
+  });
+
+  it("follows the given user's saved display currency", () => {
+    new SettingsStore(dir).update({ displayCurrency: 'EUR' });
+    expect(baseCurrency(settings())).toBe('EUR');
+    expect(baseCurrency({ displayCurrency: 'GBP', headlineMetric: 'net' })).toBe('GBP');
   });
 });
 

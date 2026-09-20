@@ -3,7 +3,7 @@ import path from 'path';
 
 /**
  * User preferences that shape every figure the API returns. Kept in a tiny
- * JSON file next to the other stores so a redeploy keeps them.
+ * JSON file inside the user's data directory so a redeploy keeps them.
  */
 
 export const DISPLAY_CURRENCIES = ['CHF', 'EUR', 'USD', 'GBP'] as const;
@@ -19,17 +19,6 @@ export interface Settings {
   headlineMetric: HeadlineMetric;
 }
 
-/** Resolved per call so tests can point DATA_DIR at a scratch directory. */
-function dataDir(): string {
-  return process.env.DATA_DIR
-    ? path.resolve(process.env.DATA_DIR)
-    : path.resolve(__dirname, '..', 'data');
-}
-
-function settingsFile(): string {
-  return path.join(dataDir(), 'settings.json');
-}
-
 function isCurrency(v: unknown): v is DisplayCurrency {
   return typeof v === 'string' && (DISPLAY_CURRENCIES as readonly string[]).includes(v);
 }
@@ -40,63 +29,73 @@ function isMetric(v: unknown): v is HeadlineMetric {
 
 function defaults(): Settings {
   const env = (process.env.BASE_CURRENCY || '').toUpperCase();
-  // One ledger in one currency: the household's, which is CHF unless BASE_CURRENCY says otherwise.
+  // One ledger in one currency: CHF unless BASE_CURRENCY says otherwise.
   return {
     displayCurrency: isCurrency(env) ? env : 'CHF',
     headlineMetric: 'net',
   };
 }
 
-/** undefined = not read yet, null = no file on disk. */
-let saved: Partial<Settings> | null | undefined;
+export class SettingsStore {
+  /** undefined = not read yet, null = no file on disk. */
+  private saved: Partial<Settings> | null | undefined;
 
-function readFile(): Partial<Settings> | null {
-  try {
-    const file = settingsFile();
-    if (!fs.existsSync(file)) return null;
-    return JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<Settings>;
-  } catch (err) {
-    console.warn('⚠️  Could not read settings, using defaults:', err);
-    return null;
+  constructor(readonly dir: string) {}
+
+  private file(): string {
+    return path.join(this.dir, 'settings.json');
   }
-}
 
-/**
- * Saved settings win; anything unset falls back to the environment at call
- * time, so BASE_CURRENCY keeps working as the deploy-level default.
- */
-export function getSettings(): Settings {
-  if (saved === undefined) saved = readFile();
-  const base = defaults();
-  if (saved) {
-    if (isCurrency(saved.displayCurrency)) base.displayCurrency = saved.displayCurrency;
-    if (isMetric(saved.headlineMetric)) base.headlineMetric = saved.headlineMetric;
-  }
-  return base;
-}
-
-export function updateSettings(patch: Partial<Settings>): Settings {
-  const next = { ...getSettings() };
-  if (patch.displayCurrency !== undefined) {
-    if (!isCurrency(patch.displayCurrency)) {
-      throw new Error(`displayCurrency must be one of ${DISPLAY_CURRENCIES.join(', ')}`);
+  private read(): Partial<Settings> | null {
+    try {
+      const file = this.file();
+      if (!fs.existsSync(file)) return null;
+      return JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<Settings>;
+    } catch (err) {
+      console.warn('⚠️  Could not read settings, using defaults:', err);
+      return null;
     }
-    next.displayCurrency = patch.displayCurrency;
   }
-  if (patch.headlineMetric !== undefined) {
-    if (!isMetric(patch.headlineMetric)) {
-      throw new Error(`headlineMetric must be one of ${HEADLINE_METRICS.join(', ')}`);
+
+  /**
+   * Saved settings win; anything unset falls back to the environment at call
+   * time, so BASE_CURRENCY keeps working as the deploy-level default.
+   */
+  get(): Settings {
+    if (this.saved === undefined) this.saved = this.read();
+    const base = defaults();
+    if (this.saved) {
+      if (isCurrency(this.saved.displayCurrency)) base.displayCurrency = this.saved.displayCurrency;
+      if (isMetric(this.saved.headlineMetric)) base.headlineMetric = this.saved.headlineMetric;
     }
-    next.headlineMetric = patch.headlineMetric;
+    return base;
   }
-  const dir = dataDir();
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(settingsFile(), JSON.stringify(next, null, 2), 'utf8');
-  saved = next;
-  return next;
+
+  update(patch: Partial<Settings>): Settings {
+    const next = { ...this.get() };
+    if (patch.displayCurrency !== undefined) {
+      if (!isCurrency(patch.displayCurrency)) {
+        throw new Error(`displayCurrency must be one of ${DISPLAY_CURRENCIES.join(', ')}`);
+      }
+      next.displayCurrency = patch.displayCurrency;
+    }
+    if (patch.headlineMetric !== undefined) {
+      if (!isMetric(patch.headlineMetric)) {
+        throw new Error(`headlineMetric must be one of ${HEADLINE_METRICS.join(', ')}`);
+      }
+      next.headlineMetric = patch.headlineMetric;
+    }
+    if (!fs.existsSync(this.dir)) fs.mkdirSync(this.dir, { recursive: true });
+    fs.writeFileSync(this.file(), JSON.stringify(next, null, 2), 'utf8');
+    this.saved = next;
+    return next;
+  }
 }
 
-/** Test seam. */
-export function resetSettingsCache(): void {
-  saved = undefined;
+export function getSettings(store: SettingsStore): Settings {
+  return store.get();
+}
+
+export function updateSettings(store: SettingsStore, patch: Partial<Settings>): Settings {
+  return store.update(patch);
 }

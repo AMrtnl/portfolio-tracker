@@ -1,5 +1,6 @@
 export { createMoneyRouter } from './routes';
-export { moneyStore } from './store';
+export { MoneyStore } from './store';
+export type { TransactionInput } from './store';
 export {
   SPEND_CATEGORIES,
   INCOME_CATEGORIES,

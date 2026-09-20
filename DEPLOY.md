@@ -1,8 +1,8 @@
-# Deploying Meridian to Railway
+# Deploying Wealth Hub to Railway
 
-Meridian is a single-user, read-only view of personal finances. It runs as **one
-Railway service**: the Express API also serves the built Vite client, so there
-is no separate frontend host and no cross-origin traffic.
+Wealth Hub is a multi-user, read-only view of personal finances. It runs as
+**one Railway service**: the Express API also serves the built Vite client, so
+there is no separate frontend host and no cross-origin traffic.
 
 - **Project:** `meridian-portfolio`
 - **Service:** `meridian`
@@ -12,20 +12,30 @@ is no separate frontend host and no cross-origin traffic.
 
 ---
 
-## 1. Set your password (do this first)
+## 1. Create your account (do this first)
 
-The deployment ships with a **random `APP_PASSWORD` that nobody knows**, so the
-app is closed until you replace it. Nothing can be read until you do.
+Access is per user: everyone signs up with an email and password at `/signup`
+and gets their own data directory. There is no shared password any more.
 
 1. Open the Railway dashboard → project `meridian-portfolio` → service
    `meridian` → **Variables**.
-2. Replace `APP_PASSWORD` with a long random password of your own
-   (`openssl rand -base64 24` produces a good one). Never paste it into a chat
-   or a commit.
-3. Railway redeploys automatically. Visit the URL and sign in at `/login`.
+2. Set `SESSION_SECRET` to a long random value (`openssl rand -base64 32`).
+   Without it — or `STORE_SECRET` as a fallback — a production server serves
+   `503` for everything behind the gate.
+3. Decide who may sign up (section 3). If `APP_PASSWORD` is still set from the
+   single-password days, sign-ups are already invite-only and that password is
+   the invite code, so nothing else is needed.
+4. Railway redeploys automatically. Visit the URL and sign up at `/signup`.
 
-Rotating `APP_PASSWORD` immediately invalidates every existing session cookie,
-because the cookie signing key is derived from the password.
+**The first account inherits the existing data.** When the very first user
+signs up and the old single-user files (`accounts.json`, `settings.json`,
+`money.json`, `goals.json`, `history.json`) still sit at the root of
+`DATA_DIR`, the server moves them into that user's directory and boots any
+saved Hyperliquid wallets on the spot. The move is logged as
+`Adopted legacy data into …`. So the owner should be the first to sign up.
+
+Rotating `SESSION_SECRET` signs everyone out at once. Changing a password
+signs out that user's other devices (see section 3).
 
 ## 2. Variables you must fill in yourself
 
@@ -34,13 +44,15 @@ purpose — none of them should ever travel through a chat log.
 
 | Variable | Status | Notes |
 | --- | --- | --- |
-| `APP_PASSWORD` | **set to a random placeholder — replace it** | Gates the whole app. |
-| `STORE_SECRET` | set to a fresh random value | Encrypts recovery phrases at rest. See the warning below before changing it. |
+| `SESSION_SECRET` | **required in production** | Signs every session cookie. Rotating it signs everyone out. |
+| `STORE_SECRET` | set to a fresh random value | Encrypts recovery phrases at rest; also the fallback signing key. See the warning below before changing it. |
 | `NODE_ENV` | set to `production` | Also switches the access gate to fail-closed. |
-| `DATA_DIR` | set to `/app/data` | Matches the mounted volume. |
+| `DATA_DIR` | set to `/app/data` | Matches the mounted volume. Holds `users.json` and `users/<id>/`. |
+| `SIGNUP_MODE` | optional | `open`, `invite` or `closed`. Defaults to `invite` when an invite code exists, else `open`. |
+| `INVITE_CODE` | optional | The code required in `invite` mode. Wins over `APP_PASSWORD`. |
+| `APP_PASSWORD` | legacy, optional | Still works as the invite code, so an existing deployment stays invite-only. |
 | `SNAPTRADE_CLIENT_ID` | **not set — add when you want brokerage sync** | Absent means SnapTrade is reported as "needs API keys"; the rest of the app works. |
 | `SNAPTRADE_CONSUMER_KEY` | **not set — add when you want brokerage sync** | Never exposed to the browser. |
-| `SESSION_SECRET` | optional | Mixed into the cookie signing key alongside `APP_PASSWORD`. |
 
 > **`STORE_SECRET` warning.** It is the AES-GCM key for any Hyperliquid recovery
 > phrase saved through the UI. Changing it makes previously saved phrases
@@ -53,58 +65,72 @@ purpose — none of them should ever travel through a chat log.
 ## 3. Access control
 
 A public URL that serves portfolio data unauthenticated is not acceptable, so
-the gate is server-side and fails closed.
+the gate is server-side, per user, and fails closed.
 
-**How it works** (`src/auth.ts`, wired up in `src/server.ts`):
+**How it works** (`src/auth.ts` and `src/users/`, wired up in `src/server.ts`):
 
-- `POST /api/auth/login` takes `{ password }` and compares it to `APP_PASSWORD`
-  using a constant-time compare over SHA-256 digests, so neither the password
-  nor its length leaks through response timing.
-- On success it sets `meridian_session`: **HttpOnly**, **Secure**,
-  `SameSite=Lax`, `Path=/`, 7-day `Max-Age`. The value is a stateless HMAC over
-  an expiry claim, keyed by `HMAC(SESSION_SECRET || STORE_SECRET :: APP_PASSWORD)`.
-  Stateless means sessions survive a restart without a session store, and
-  rotating the password revokes every cookie at once.
+- **Accounts** live in `DATA_DIR/users.json`: email, scrypt password hash with
+  a per-user salt, and a `sessionVersion`. Each user's stores live under
+  `DATA_DIR/users/<id>/`, and every request resolves its own user's stores
+  from the cookie, so one user's request can never read another's files.
+- **Sign-up policy** is `SIGNUP_MODE`: `open` (anyone), `invite` (needs
+  `INVITE_CODE`, or `APP_PASSWORD` as the legacy code) or `closed`. It defaults
+  to `invite` whenever a code is configured, so a previously password-gated
+  deployment does not open to the public by accident.
+- `POST /api/auth/login` takes `{ email, password }` and answers the same
+  `401` whether the email exists or not; the invite code is compared in
+  constant time.
+- On success it sets `wh_session`: **HttpOnly**, **Secure**, `SameSite=Lax`,
+  `Path=/`, 30-day `Max-Age`. The value is `{ uid, sv, exp }` signed with
+  HMAC-SHA256 under a key derived from `SESSION_SECRET` (or `STORE_SECRET`).
+  Stateless means sessions survive a restart without a session store; `sv`
+  must still equal the user's `sessionVersion`, which a password change bumps,
+  so changing a password revokes every other cookie for that user.
 - **Every `/api/*` route is closed** by `app.use('/api', requireApiAuth)`. The
-  only public endpoints are `GET /api/health` and the three `/api/auth/*`
-  routes. Unknown `/api/*` paths 401 before they 404, so the gate doesn't leak
-  which routes exist.
-- **The app shell is closed too.** `GET /`, `GET /index.html` and every
-  client-side route redirect to `/login` without a valid cookie. Hashed
-  `/assets/*` bundles are served unauthenticated on purpose: they are the same
-  static JS/CSS for every user and contain no account data.
-- **Login is rate limited** in-process: 10 failures per IP and 60 globally per
-  15-minute window, then `429` with a `Retry-After` header. `app.set('trust
-  proxy', 1)` makes `req.ip` reflect the real client behind Railway's proxy.
-  A failed attempt never sets a cookie.
+  only public endpoints are `GET /api/health`, `GET /api/auth/session`,
+  `POST /api/auth/signup`, `POST /api/auth/login` and `POST /api/auth/logout`.
+  Unknown `/api/*` paths 401 before they 404, so the gate doesn't leak which
+  routes exist.
+- **The app is closed; the site is not.** `GET /app` and `GET /app/*` redirect
+  to `/login?next=…` without a valid cookie. Every other page (`/`, `/login`,
+  `/signup`, `/pricing`, …) is the same static shell, served publicly — the
+  SPA renders the marketing site and the auth pages and fetches nothing
+  personal until a session exists. Hashed `/assets/*` bundles contain no
+  account data.
+- **Login and sign-up failures are rate limited** in-process: 10 per IP and 60
+  globally per 15-minute window, then `429` with a `Retry-After` header.
+  `app.set('trust proxy', 1)` makes `req.ip` reflect the real client behind
+  Railway's proxy. A failed attempt never sets a cookie.
 - **CORS is off in production.** Dev uses the Vite proxy (same-origin) and prod
   serves the client itself, so a wildcard `Access-Control-Allow-Origin` would
   only weaken the cookie gate.
-- **Fail-closed:** with `NODE_ENV=production` and no `APP_PASSWORD`, the server
-  serves `503` instead of data and logs `Access gate: MISCONFIGURED`. A missing
-  password can never silently open the app.
-- The client installs an axios interceptor (`client/src/lib/authGuard.ts`) that
-  bounces to `/login` on a `401`, so an expired session doesn't turn into a wall
-  of error panels.
+- **Fail-closed:** with `NODE_ENV=production` and neither `SESSION_SECRET` nor
+  `STORE_SECRET`, the server serves `503` instead of data and logs
+  `Access gate: MISCONFIGURED`. A missing secret can never silently open the app.
+- **Users own their data.** `GET /api/export` downloads everything as JSON and
+  `DELETE /api/auth/me` (with the password) removes the account, its directory
+  and its live wallet adapters.
 
-Locally the gate stays **off** when `APP_PASSWORD` is unset and `NODE_ENV` is
-not `production`, so `npm run server` keeps working as before. Set
-`APP_PASSWORD` in `.env` to exercise it locally.
+Locally, with `NODE_ENV` unset and no `SESSION_SECRET`, sessions are signed
+with a fixed dev secret and a warning is printed, so `npm run server` keeps
+working. Set `SESSION_SECRET` in `.env` to exercise the real thing.
 
 This is deliberately not "a secret URL". The URL is guessable and indexable;
-the password is what protects the data. `/login` sends `noindex, nofollow`.
+the account password is what protects the data.
 
 ## 4. Persistence
 
-`data/accounts.json` holds the account list plus encrypted recovery phrases.
-Railway containers are ephemeral, so a **volume** is attached:
+`data/users.json` holds the user list; `data/users/<id>/accounts.json` holds
+each user's account list plus encrypted recovery phrases, next to their
+settings, ledger, goals and value history. Railway containers are ephemeral,
+so a **volume** is attached:
 
 - Volume `meridian-volume`, mount path `/app/data`
-- `DATA_DIR=/app/data` points the store at it (`src/store.ts` honours
+- `DATA_DIR=/app/data` points every store at it (`src/dataDir.ts` honours
   `DATA_DIR`, falling back to `<repo>/data` for local runs)
 
-Without the volume, every redeploy would silently wipe your connected accounts.
-The volume also means the file lives on Railway's disk, which is why the
+Without the volume, every redeploy would silently wipe every account.
+The volume also means the files live on Railway's disk, which is why the
 encryption key (`STORE_SECRET`) matters.
 
 Local `data/` is gitignored and was **not** uploaded — the deployment starts with

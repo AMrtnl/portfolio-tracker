@@ -40,43 +40,6 @@ interface GoalsFile {
 
 const MAX_NAME = 80;
 
-function dataDir(): string {
-  return process.env.DATA_DIR
-    ? path.resolve(process.env.DATA_DIR)
-    : path.resolve(__dirname, '..', '..', 'data');
-}
-
-function goalsFile(): string {
-  return path.join(dataDir(), 'goals.json');
-}
-
-let cache: GoalsFile | undefined;
-
-function load(): GoalsFile {
-  if (cache) return cache;
-  try {
-    const file = goalsFile();
-    if (fs.existsSync(file)) {
-      const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<GoalsFile>;
-      if (parsed?.version === 1 && Array.isArray(parsed.goals)) {
-        cache = { version: 1, goals: parsed.goals };
-        return cache;
-      }
-    }
-  } catch (err) {
-    console.warn('⚠️  Could not read goals, starting fresh:', err);
-  }
-  cache = { version: 1, goals: [] };
-  return cache;
-}
-
-function save(data: GoalsFile): void {
-  const dir = dataDir();
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(goalsFile(), JSON.stringify(data, null, 2), 'utf8');
-  cache = data;
-}
-
 function isIsoDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value));
 }
@@ -134,42 +97,88 @@ function cleanGoal(input: GoalInput, base?: Goal): GoalFields {
   return { name, targetAmount, targetDate, accountIds, monthlyContribution, expectedReturn };
 }
 
-export function listGoals(): Goal[] {
-  return [...load().goals];
+export class GoalsStore {
+  private cache: GoalsFile | undefined;
+
+  /** `dir` is the owning user's data directory. */
+  constructor(readonly dir: string) {}
+
+  private file(): string {
+    return path.join(this.dir, 'goals.json');
+  }
+
+  private load(): GoalsFile {
+    if (this.cache) return this.cache;
+    try {
+      const file = this.file();
+      if (fs.existsSync(file)) {
+        const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<GoalsFile>;
+        if (parsed?.version === 1 && Array.isArray(parsed.goals)) {
+          this.cache = { version: 1, goals: parsed.goals };
+          return this.cache;
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️  Could not read goals, starting fresh:', err);
+    }
+    this.cache = { version: 1, goals: [] };
+    return this.cache;
+  }
+
+  private save(data: GoalsFile): void {
+    if (!fs.existsSync(this.dir)) fs.mkdirSync(this.dir, { recursive: true });
+    fs.writeFileSync(this.file(), JSON.stringify(data, null, 2), 'utf8');
+    this.cache = data;
+  }
+
+  list(): Goal[] {
+    return [...this.load().goals];
+  }
+
+  add(input: GoalInput): Goal {
+    const now = new Date().toISOString();
+    const goal: Goal = { id: crypto.randomUUID(), ...cleanGoal(input), createdAt: now, updatedAt: now };
+    const data = this.load();
+    this.save({ ...data, goals: [...data.goals, goal] });
+    return goal;
+  }
+
+  update(id: string, input: GoalInput): Goal | null {
+    const data = this.load();
+    const index = data.goals.findIndex((g) => g.id === id);
+    if (index < 0) return null;
+    const next: Goal = {
+      ...data.goals[index],
+      ...cleanGoal(input, data.goals[index]),
+      updatedAt: new Date().toISOString(),
+    };
+    const goals = [...data.goals];
+    goals[index] = next;
+    this.save({ ...data, goals });
+    return next;
+  }
+
+  remove(id: string): boolean {
+    const data = this.load();
+    const goals = data.goals.filter((g) => g.id !== id);
+    if (goals.length === data.goals.length) return false;
+    this.save({ ...data, goals });
+    return true;
+  }
 }
 
-export function addGoal(input: GoalInput): Goal {
-  const now = new Date().toISOString();
-  const goal: Goal = { id: crypto.randomUUID(), ...cleanGoal(input), createdAt: now, updatedAt: now };
-  const data = load();
-  save({ ...data, goals: [...data.goals, goal] });
-  return goal;
+export function listGoals(store: GoalsStore): Goal[] {
+  return store.list();
 }
 
-export function updateGoal(id: string, input: GoalInput): Goal | null {
-  const data = load();
-  const index = data.goals.findIndex((g) => g.id === id);
-  if (index < 0) return null;
-  const next: Goal = {
-    ...data.goals[index],
-    ...cleanGoal(input, data.goals[index]),
-    updatedAt: new Date().toISOString(),
-  };
-  const goals = [...data.goals];
-  goals[index] = next;
-  save({ ...data, goals });
-  return next;
+export function addGoal(store: GoalsStore, input: GoalInput): Goal {
+  return store.add(input);
 }
 
-export function removeGoal(id: string): boolean {
-  const data = load();
-  const goals = data.goals.filter((g) => g.id !== id);
-  if (goals.length === data.goals.length) return false;
-  save({ ...data, goals });
-  return true;
+export function updateGoal(store: GoalsStore, id: string, input: GoalInput): Goal | null {
+  return store.update(id, input);
 }
 
-/** Test seam. */
-export function resetGoalsCache(): void {
-  cache = undefined;
+export function removeGoal(store: GoalsStore, id: string): boolean {
+  return store.remove(id);
 }

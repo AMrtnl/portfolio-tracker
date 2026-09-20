@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
+import { tenantFor } from '../users/tenant';
 import {
   INCOME_CATEGORIES,
   SPEND_CATEGORIES,
   SUB_CATEGORIES,
   spendCat,
 } from './categories';
-import { moneyStore } from './store';
 import { detectRecurring, suggestCategory } from './detect';
 import { parseStatement } from './import';
 import type { BillingCycle, TxKind } from './types';
@@ -29,6 +29,7 @@ function monthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+/** Every handler resolves the caller's own ledger from the request. */
 export function createMoneyRouter(): Router {
   const router = Router();
 
@@ -43,7 +44,7 @@ export function createMoneyRouter(): Router {
   router.get('/transactions', (req: Request, res: Response) => {
     const from = typeof req.query.from === 'string' ? req.query.from : undefined;
     const to = typeof req.query.to === 'string' ? req.query.to : undefined;
-    let rows = moneyStore.listTransactions();
+    let rows = tenantFor(req).money.listTransactions();
     if (from) rows = rows.filter((t) => t.date >= from);
     if (to) rows = rows.filter((t) => t.date <= to);
     res.json({ transactions: rows });
@@ -67,7 +68,7 @@ export function createMoneyRouter(): Router {
     const kind: TxKind = body.kind || 'spend';
     const wantsGuess = !body.category || body.category === 'auto';
     try {
-      const row = moneyStore.addTransaction({
+      const row = tenantFor(req).money.addTransaction({
         date: body.date || new Date().toISOString().slice(0, 10),
         kind,
         amount: Number(body.amount),
@@ -98,6 +99,7 @@ export function createMoneyRouter(): Router {
     if (text.length > 2_000_000) {
       return res.status(413).json({ error: 'That file is too large — split it by month.' });
     }
+    const money = tenantFor(req).money;
     const parsed = parseStatement(text);
     // A row is a duplicate only while the ledger still holds an unmatched
     // copy of it, so two real parking charges on the same day both survive
@@ -105,7 +107,7 @@ export function createMoneyRouter(): Router {
     const sigOf = (t: { date: string; kind: string; amount: number; note?: string }) =>
       `${t.date}|${t.kind}|${t.amount}|${(t.note || '').toLowerCase()}`;
     const spare = new Map<string, number>();
-    for (const t of moneyStore.listTransactions()) {
+    for (const t of money.listTransactions()) {
       const sig = sigOf(t);
       spare.set(sig, (spare.get(sig) || 0) + 1);
     }
@@ -122,7 +124,7 @@ export function createMoneyRouter(): Router {
       }
     }
     try {
-      moneyStore.addTransactions(
+      money.addTransactions(
         fresh.map((row) => ({
           date: row.date,
           kind: row.kind,
@@ -146,7 +148,7 @@ export function createMoneyRouter(): Router {
   });
 
   router.delete('/transactions/:id', (req: Request, res: Response) => {
-    const ok = moneyStore.removeTransaction(req.params.id);
+    const ok = tenantFor(req).money.removeTransaction(req.params.id);
     if (!ok) return res.status(404).json({ error: 'Transaction not found' });
     res.json({ success: true });
   });
@@ -181,7 +183,7 @@ export function createMoneyRouter(): Router {
     const spendByCat = new Map<string, number>();
     const windowByCat = new Map<string, number>();
 
-    for (const t of moneyStore.listTransactions()) {
+    for (const t of tenantFor(req).money.listTransactions()) {
       const key = t.date.slice(0, 7);
       const bucket = byKey.get(key);
       if (!bucket) continue;
@@ -217,8 +219,8 @@ export function createMoneyRouter(): Router {
     });
   });
 
-  router.get('/budgets', (_req: Request, res: Response) => {
-    res.json({ budgets: moneyStore.getBudgets() });
+  router.get('/budgets', (req: Request, res: Response) => {
+    res.json({ budgets: tenantFor(req).money.getBudgets() });
   });
 
   /** PUT { budgets: { [categoryId]: monthlyAmount | null } } — null clears. */
@@ -228,26 +230,24 @@ export function createMoneyRouter(): Router {
       return res.status(400).json({ error: 'budgets must be an object of category → amount' });
     }
     try {
-      res.json({ budgets: moneyStore.setBudgets(body.budgets) });
+      res.json({ budgets: tenantFor(req).money.setBudgets(body.budgets) });
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
-  router.get('/subscriptions', (_req: Request, res: Response) => {
+  router.get('/subscriptions', (req: Request, res: Response) => {
     res.json({
-      subscriptions: moneyStore.listSubscriptions(),
+      subscriptions: tenantFor(req).money.listSubscriptions(),
       categories: SUB_CATEGORIES,
     });
   });
 
   /** Recurring charges spotted in the ledger that are not tracked yet. */
-  router.get('/subscriptions/suggestions', (_req: Request, res: Response) => {
+  router.get('/subscriptions/suggestions', (req: Request, res: Response) => {
+    const money = tenantFor(req).money;
     res.json({
-      suggestions: detectRecurring(
-        moneyStore.listTransactions(),
-        moneyStore.listSubscriptions(),
-      ),
+      suggestions: detectRecurring(money.listTransactions(), money.listSubscriptions()),
       retrievedAt: new Date().toISOString(),
     });
   });
@@ -263,7 +263,7 @@ export function createMoneyRouter(): Router {
       cat?: string;
     };
     try {
-      const row = moneyStore.addSubscription({
+      const row = tenantFor(req).money.addSubscription({
         name: body.name || '',
         plan: body.plan,
         amount: Number(body.amount),
@@ -281,7 +281,7 @@ export function createMoneyRouter(): Router {
   });
 
   router.delete('/subscriptions/:id', (req: Request, res: Response) => {
-    const ok = moneyStore.removeSubscription(req.params.id);
+    const ok = tenantFor(req).money.removeSubscription(req.params.id);
     if (!ok) return res.status(404).json({ error: 'Subscription not found' });
     res.json({ success: true });
   });

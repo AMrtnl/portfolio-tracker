@@ -9,7 +9,7 @@
  */
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import type { Store } from '../store';
+import { tenantFor } from '../users/tenant';
 import {
   FxConverter,
   baseCurrency,
@@ -92,15 +92,17 @@ function holdingWeight(position: EnrichedPosition, total: number): number | null
   return round(percentOf(position.marketValueBase, total) ?? 0, 4);
 }
 
-export function createAnalyticsRouter(store: Store): Router {
+/** Every handler resolves the caller's own tenant from the request, so one router serves all users. */
+export function createAnalyticsRouter(): Router {
   const router = Router();
 
   // ---- overview ----
 
-  router.get('/overview', async (_req: Request, res: Response) => {
+  router.get('/overview', async (req: Request, res: Response) => {
     try {
-      const snapshot = await getPortfolioSnapshot(store);
-      recordSnapshotHistory(snapshot);
+      const tenant = tenantFor(req);
+      const snapshot = await getPortfolioSnapshot(tenant);
+      recordSnapshotHistory(tenant.history, snapshot);
       const totals = computeOverview(snapshot.positions);
       const warnings = dedupe([...snapshot.warnings, ...currencyWarnings(snapshot)]);
 
@@ -163,7 +165,7 @@ export function createAnalyticsRouter(store: Store): Router {
     const by = requested as AllocationDimension;
 
     try {
-      const snapshot = await getPortfolioSnapshot(store);
+      const snapshot = await getPortfolioSnapshot(tenantFor(req));
       const allocation = buildAllocation(snapshot.positions, by);
       const warnings = dedupe([...snapshot.warnings, ...currencyWarnings(snapshot)]);
       if (allocation.unclassifiedPercent > 0) {
@@ -194,9 +196,9 @@ export function createAnalyticsRouter(store: Store): Router {
 
   // ---- concentration ----
 
-  router.get('/concentration', async (_req: Request, res: Response) => {
+  router.get('/concentration', async (req: Request, res: Response) => {
     try {
-      const snapshot = await getPortfolioSnapshot(store);
+      const snapshot = await getPortfolioSnapshot(tenantFor(req));
       const concentration = computeConcentration(snapshot.positions);
       res.json({
         top: concentration.top,
@@ -223,9 +225,9 @@ export function createAnalyticsRouter(store: Store): Router {
 
   // ---- holdings ----
 
-  router.get('/holdings', async (_req: Request, res: Response) => {
+  router.get('/holdings', async (req: Request, res: Response) => {
     try {
-      const snapshot = await getPortfolioSnapshot(store);
+      const snapshot = await getPortfolioSnapshot(tenantFor(req));
       const total = snapshot.positions.reduce(
         (sum, position) => sum + (position.marketValueBase ?? 0),
         0,
@@ -280,12 +282,13 @@ export function createAnalyticsRouter(store: Store): Router {
   router.get('/income', async (req: Request, res: Response) => {
     const months = parseMonths(req.query.months);
     try {
+      const tenant = tenantFor(req);
       const now = new Date();
-      const lookup = await getActivities(store, months, now);
+      const lookup = await getActivities(tenant, months, now);
       const currencies = Array.from(
         new Set(lookup.activities.map((activity) => activity.currency)),
       );
-      const base = baseCurrency();
+      const base = baseCurrency(tenant.settings.get());
       const fx = await FxConverter.load(base, currencies);
       const income = aggregateIncome(lookup.activities, months, now, (amount, currency) =>
         fx.convert(amount, currency),
@@ -329,12 +332,13 @@ export function createAnalyticsRouter(store: Store): Router {
   router.get('/flows', async (req: Request, res: Response) => {
     const months = parseMonths(req.query.months);
     try {
+      const tenant = tenantFor(req);
       const now = new Date();
-      const lookup = await getActivities(store, months, now);
+      const lookup = await getActivities(tenant, months, now);
       const currencies = Array.from(
         new Set(lookup.activities.map((activity) => activity.currency)),
       );
-      const base = baseCurrency();
+      const base = baseCurrency(tenant.settings.get());
       const fx = await FxConverter.load(base, currencies);
       const flows = aggregateFlows(lookup.activities, months, now, (amount, currency) =>
         fx.convert(amount, currency),
@@ -377,11 +381,12 @@ export function createAnalyticsRouter(store: Store): Router {
   router.get('/history', async (req: Request, res: Response) => {
     const range = parseRange(req.query.range, '1y');
     try {
+      const tenant = tenantFor(req);
       // Computing the portfolio is what records today's point, so do it first.
-      const snapshot = await getPortfolioSnapshot(store).catch(() => null);
-      if (snapshot) recordSnapshotHistory(snapshot);
+      const snapshot = await getPortfolioSnapshot(tenant).catch(() => null);
+      if (snapshot) recordSnapshotHistory(tenant.history, snapshot);
 
-      const series = selectRange(loadHistory(), range, new Date());
+      const series = selectRange(loadHistory(tenant.history), range, new Date());
       const warnings: string[] = [];
       if (series.points.length < 2) {
         warnings.push(
@@ -394,7 +399,7 @@ export function createAnalyticsRouter(store: Store): Router {
         firstRecordedAt: series.firstRecordedAt,
         isPartial: series.isPartial,
         note: series.note,
-        currency: snapshot?.currency ?? baseCurrency(),
+        currency: snapshot?.currency ?? baseCurrency(tenant.settings.get()),
         warnings: dedupe(warnings),
         retrievedAt: nowIso(),
       });
@@ -419,10 +424,11 @@ export function createAnalyticsRouter(store: Store): Router {
         ? normalizeTicker(req.query.symbol)
         : 'SPY';
     try {
-      const snapshot = await getPortfolioSnapshot(store).catch(() => null);
-      if (snapshot) recordSnapshotHistory(snapshot);
+      const tenant = tenantFor(req);
+      const snapshot = await getPortfolioSnapshot(tenant).catch(() => null);
+      if (snapshot) recordSnapshotHistory(tenant.history, snapshot);
 
-      const series = selectRange(loadHistory(), range, new Date());
+      const series = selectRange(loadHistory(tenant.history), range, new Date());
       const warnings: string[] = [];
       const portfolioIndexed = indexToHundred(series.points);
 
@@ -483,7 +489,7 @@ export function createAnalyticsRouter(store: Store): Router {
   return router;
 }
 
-export function createMarketRouter(store: Store): Router {
+export function createMarketRouter(): Router {
   const router = Router();
 
   // ---- movers (the user's own holdings) ----
@@ -491,7 +497,7 @@ export function createMarketRouter(store: Store): Router {
   router.get('/movers', async (req: Request, res: Response) => {
     const limit = parseLimit(req.query.limit, 5, 25);
     try {
-      const snapshot = await getPortfolioSnapshot(store);
+      const snapshot = await getPortfolioSnapshot(tenantFor(req));
       const merged = new Map<
         string,
         { symbol: string; name: string | null; dayChangePercent: number; marketValue: number }
@@ -567,7 +573,7 @@ export function createMarketRouter(store: Store): Router {
         const mapped = mapSymbol(requested);
         ranked = [mapped.yahooSymbol || requested];
       } else {
-        const snapshot = await getPortfolioSnapshot(store);
+        const snapshot = await getPortfolioSnapshot(tenantFor(req));
         const byValue = new Map<string, number>();
         for (const position of snapshot.positions) {
           if (!position.yahooSymbol || position.isCash) continue;

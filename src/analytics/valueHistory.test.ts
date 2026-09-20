@@ -2,6 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import {
+  HistoryStore,
   loadHistory,
   recordDailySnapshot,
   selectRange,
@@ -126,16 +127,14 @@ describe('selectRange', () => {
 
 describe('recordDailySnapshot — disk round trip', () => {
   let tempDir: string;
-  const originalDataDir = process.env.DATA_DIR;
+  let history: HistoryStore;
 
   beforeEach(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meridian-history-'));
-    process.env.DATA_DIR = tempDir;
+    history = new HistoryStore(tempDir);
   });
 
   afterEach(() => {
-    if (originalDataDir === undefined) delete process.env.DATA_DIR;
-    else process.env.DATA_DIR = originalDataDir;
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
@@ -146,33 +145,34 @@ describe('recordDailySnapshot — disk round trip', () => {
       byAccount: { 'acct-1': 3300.12 },
       currency: 'USD',
     };
-    expect(recordDailySnapshot(snapshot)).toBe(true);
-    expect(recordDailySnapshot({ ...snapshot, totalValue: 9999 })).toBe(false);
+    expect(recordDailySnapshot(history, snapshot)).toBe(true);
+    expect(recordDailySnapshot(history, { ...snapshot, totalValue: 9999 })).toBe(false);
 
-    const stored = loadHistory();
+    const stored = loadHistory(history);
     expect(stored.days).toHaveLength(1);
     expect(stored.days[0].totalValue).toBe(3300.12);
+    expect(fs.existsSync(path.join(tempDir, 'history.json'))).toBe(true);
   });
 
   it('accumulates distinct days', () => {
-    recordDailySnapshot({
+    recordDailySnapshot(history, {
       date: '2026-08-06',
       totalValue: 100,
       byAccount: {},
       currency: 'USD',
     });
-    recordDailySnapshot({
+    recordDailySnapshot(history, {
       date: '2026-08-07',
       totalValue: 110,
       byAccount: {},
       currency: 'USD',
     });
-    expect(loadHistory().days.map((d) => d.totalValue)).toEqual([100, 110]);
+    expect(loadHistory(history).days.map((d) => d.totalValue)).toEqual([100, 110]);
   });
 
   it('starts fresh instead of throwing on a corrupt file', () => {
     fs.writeFileSync(path.join(tempDir, 'history.json'), '{ not json', 'utf8');
-    expect(loadHistory().days).toEqual([]);
+    expect(loadHistory(history).days).toEqual([]);
   });
 
   it('drops malformed rows on read', () => {
@@ -188,8 +188,23 @@ describe('recordDailySnapshot — disk round trip', () => {
       }),
       'utf8',
     );
-    const stored = loadHistory();
+    const stored = loadHistory(history);
     expect(stored.days).toHaveLength(1);
     expect(stored.days[0].byAccount).toEqual({});
+  });
+
+  it('keeps two directories apart', () => {
+    const other = fs.mkdtempSync(path.join(os.tmpdir(), 'meridian-history-other-'));
+    try {
+      recordDailySnapshot(history, {
+        date: '2026-08-06',
+        totalValue: 100,
+        byAccount: {},
+        currency: 'USD',
+      });
+      expect(loadHistory(new HistoryStore(other)).days).toEqual([]);
+    } finally {
+      fs.rmSync(other, { recursive: true, force: true });
+    }
   });
 });

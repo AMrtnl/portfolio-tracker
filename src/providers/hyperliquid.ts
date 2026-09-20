@@ -1,9 +1,14 @@
 import { HyperliquidAdapter } from '../defi/hyperliquid';
+import type { Store } from '../store';
 import { WalletCore } from '../wallet-core';
 import { ProviderInfo, PublicAccount } from '../types/accounts';
 import { FinanceProvider, SyncResult } from './types';
 
-/** In-memory live adapters keyed by Meridian account id. */
+/**
+ * In-memory live adapters keyed by account id. Ids are UUIDs, so one
+ * process-wide map is safe across users; a user's adapters are removed with
+ * their accounts.
+ */
 const liveAdapters = new Map<string, HyperliquidAdapter>();
 
 export function getLiveAdapter(accountId: string): HyperliquidAdapter | undefined {
@@ -32,6 +37,33 @@ export function bootHyperliquidAccount(
     console.error(`❌ Failed to boot Hyperliquid account ${accountId}:`, err);
     return { address: '', ok: false };
   }
+}
+
+/**
+ * Boots a live adapter for every Hyperliquid wallet in `store`. Runs at start
+ * for each user and again when legacy data is adopted by the first sign-up.
+ */
+export function rehydrateHyperliquidAccounts(store: Store): { booted: number; failed: number } {
+  let booted = 0;
+  let failed = 0;
+  for (const acct of store.getAllRaw()) {
+    if (acct.provider !== 'hyperliquid') continue;
+    const mnemonic = store.getMnemonic(acct.id);
+    if (!mnemonic) {
+      console.log(`  ❌ Could not decrypt wallet "${acct.label}"`);
+      failed++;
+      continue;
+    }
+    const { ok } = bootHyperliquidAccount(acct.id, mnemonic);
+    console.log(
+      ok
+        ? `  ✅ Loaded crypto "${acct.label}" (${acct.externalId})`
+        : `  ❌ Could not load crypto "${acct.label}"`,
+    );
+    if (ok) booted++;
+    else failed++;
+  }
+  return { booted, failed };
 }
 
 export class HyperliquidProvider implements FinanceProvider {

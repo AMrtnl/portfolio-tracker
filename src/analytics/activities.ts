@@ -5,7 +5,7 @@
  * contribute nothing, which the endpoints surface as a coverage warning rather
  * than as a zero.
  */
-import type { Store } from '../store';
+import type { Tenant } from '../users/tenant';
 import { errorMessage, fetchSnapActivities, isSnaptradeConfigured } from '../snaptrade';
 import { normalizeTicker } from '../market';
 import type { NormalizedActivity } from './types';
@@ -24,7 +24,8 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 /** SnapTrade caps a single activities page; this is its documented maximum. */
 const PAGE_LIMIT = 1000;
 
-let cached: { key: string; data: ActivityLookup; expiresAt: number } | null = null;
+/** Keyed by user and window, so one user's brokerage history never answers another's request. */
+const cached = new Map<string, { data: ActivityLookup; expiresAt: number }>();
 
 function startDateForMonths(months: number, now: Date): string {
   const start = new Date(
@@ -33,16 +34,24 @@ function startDateForMonths(months: number, now: Date): string {
   return start.toISOString().slice(0, 10);
 }
 
+function pruneExpired(): void {
+  const now = Date.now();
+  for (const [key, entry] of cached) {
+    if (entry.expiresAt <= now) cached.delete(key);
+  }
+}
+
 export async function getActivities(
-  store: Store,
+  tenant: Tenant,
   months: number,
   now: Date = new Date(),
 ): Promise<ActivityLookup> {
   const startDate = startDateForMonths(months, now);
   const endDate = now.toISOString().slice(0, 10);
-  const key = `${startDate}:${endDate}`;
-  if (cached && cached.key === key && cached.expiresAt > Date.now()) {
-    return cached.data;
+  const key = `${tenant.userId}:${startDate}:${endDate}`;
+  const hit = cached.get(key);
+  if (hit && hit.expiresAt > Date.now()) {
+    return hit.data;
   }
 
   const warnings: string[] = [];
@@ -50,7 +59,7 @@ export async function getActivities(
   const activities: NormalizedActivity[] = [];
   let coveredAccounts = 0;
 
-  const accounts = store.getAccounts();
+  const accounts = tenant.store.getAccounts();
   const snaptradeAccounts = accounts.filter(
     (account) => account.provider === 'snaptrade' && account.externalId,
   );
@@ -121,10 +130,11 @@ export async function getActivities(
     warnings,
     retrievedAt: new Date().toISOString(),
   };
-  cached = { key, data, expiresAt: Date.now() + CACHE_TTL_MS };
+  pruneExpired();
+  cached.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
   return data;
 }
 
 export function invalidateActivityCache(): void {
-  cached = null;
+  cached.clear();
 }

@@ -2,7 +2,7 @@
  * Daily portfolio-value history.
  *
  * The app had no history at all, which blocks every chart. This records one
- * point per UTC day to `DATA_DIR/history.json` as the portfolio is computed.
+ * point per UTC day to `<user dir>/history.json` as the portfolio is computed.
  * History therefore starts on the day this ships and grows forward — nothing
  * here ever backfills a synthetic value, and every response says how far back
  * the real data goes.
@@ -27,57 +27,8 @@ export interface HistoryFile {
 
 const EMPTY: HistoryFile = { version: 1, days: [] };
 
-function dataDir(): string {
-  return process.env.DATA_DIR
-    ? path.resolve(process.env.DATA_DIR)
-    : path.resolve(__dirname, '..', '..', 'data');
-}
-
-function historyFile(): string {
-  return path.join(dataDir(), 'history.json');
-}
-
 export function utcDate(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);
-}
-
-export function loadHistory(): HistoryFile {
-  try {
-    const file = historyFile();
-    if (!fs.existsSync(file)) return { ...EMPTY, days: [] };
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<HistoryFile>;
-    const days = Array.isArray(parsed.days) ? parsed.days : [];
-    return {
-      version: 1,
-      days: days
-        .filter(
-          (day): day is DailySnapshot =>
-            Boolean(day) &&
-            typeof day.date === 'string' &&
-            typeof day.totalValue === 'number' &&
-            Number.isFinite(day.totalValue),
-        )
-        .map((day) => ({
-          date: day.date,
-          totalValue: day.totalValue,
-          byAccount: day.byAccount && typeof day.byAccount === 'object' ? day.byAccount : {},
-          currency: typeof day.currency === 'string' ? day.currency : 'USD',
-        }))
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    };
-  } catch (err) {
-    console.warn(
-      '⚠️  Could not read history.json, starting fresh:',
-      err instanceof Error ? err.message : err,
-    );
-    return { ...EMPTY, days: [] };
-  }
-}
-
-function writeHistory(file: HistoryFile): void {
-  const dir = dataDir();
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(historyFile(), JSON.stringify(file, null, 2), 'utf8');
 }
 
 /**
@@ -95,22 +46,81 @@ export function upsertDay(
   return { file: { version: 1, days }, changed: true };
 }
 
-/** Writes today's value if today has no entry yet. */
-export function recordDailySnapshot(snapshot: DailySnapshot): boolean {
-  try {
-    const current = loadHistory();
-    const { file, changed } = upsertDay(current, snapshot);
-    if (!changed) return false;
-    writeHistory(file);
-    console.log(`📈 Recorded portfolio value snapshot for ${snapshot.date}`);
-    return true;
-  } catch (err) {
-    console.warn(
-      '⚠️  Could not persist portfolio history:',
-      err instanceof Error ? err.message : err,
-    );
-    return false;
+export class HistoryStore {
+  /** `dir` is the owning user's data directory. */
+  constructor(readonly dir: string) {}
+
+  private file(): string {
+    return path.join(this.dir, 'history.json');
   }
+
+  load(): HistoryFile {
+    try {
+      const file = this.file();
+      if (!fs.existsSync(file)) return { ...EMPTY, days: [] };
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<HistoryFile>;
+      const days = Array.isArray(parsed.days) ? parsed.days : [];
+      return {
+        version: 1,
+        days: days
+          .filter(
+            (day): day is DailySnapshot =>
+              Boolean(day) &&
+              typeof day.date === 'string' &&
+              typeof day.totalValue === 'number' &&
+              Number.isFinite(day.totalValue),
+          )
+          .map((day) => ({
+            date: day.date,
+            totalValue: day.totalValue,
+            byAccount: day.byAccount && typeof day.byAccount === 'object' ? day.byAccount : {},
+            currency: typeof day.currency === 'string' ? day.currency : 'USD',
+          }))
+          .sort((a, b) => a.date.localeCompare(b.date)),
+      };
+    } catch (err) {
+      console.warn(
+        '⚠️  Could not read history.json, starting fresh:',
+        err instanceof Error ? err.message : err,
+      );
+      return { ...EMPTY, days: [] };
+    }
+  }
+
+  private write(file: HistoryFile): void {
+    if (!fs.existsSync(this.dir)) fs.mkdirSync(this.dir, { recursive: true });
+    fs.writeFileSync(this.file(), JSON.stringify(file, null, 2), 'utf8');
+  }
+
+  /** Writes the snapshot's value if its day has no entry yet. */
+  record(snapshot: DailySnapshot): boolean {
+    try {
+      const { file, changed } = upsertDay(this.load(), snapshot);
+      if (!changed) return false;
+      this.write(file);
+      console.log(`📈 Recorded portfolio value snapshot for ${snapshot.date}`);
+      return true;
+    } catch (err) {
+      console.warn(
+        '⚠️  Could not persist portfolio history:',
+        err instanceof Error ? err.message : err,
+      );
+      return false;
+    }
+  }
+
+  /** Test seam — resets the on-disk file. */
+  reset(): void {
+    this.write({ version: 1, days: [] });
+  }
+}
+
+export function loadHistory(store: HistoryStore): HistoryFile {
+  return store.load();
+}
+
+export function recordDailySnapshot(store: HistoryStore, snapshot: DailySnapshot): boolean {
+  return store.record(snapshot);
 }
 
 export interface HistorySeries {
@@ -148,9 +158,4 @@ export function selectRange(
     : `Daily closes recorded since ${firstRecordedAt}.`;
 
   return { points, firstRecordedAt, isPartial, note };
-}
-
-/** Test seam — resets the on-disk file. */
-export function resetHistoryForTests(): void {
-  writeHistory({ version: 1, days: [] });
 }

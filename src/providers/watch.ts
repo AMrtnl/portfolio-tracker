@@ -1,4 +1,3 @@
-import type { Store } from '../store';
 import { getQuotes } from '../market/quotes';
 import { isStablecoin } from '../market/symbols';
 import { Holding, ProviderInfo, PublicAccount } from '../types/accounts';
@@ -10,7 +9,7 @@ import {
   type WatchBalance,
   type WatchKey,
 } from '../wallets';
-import { FinanceProvider, SyncResult } from './types';
+import { FinanceProvider, SyncContext, SyncResult } from './types';
 
 /** Chain reads are slow and rate-limited; the dashboard re-renders often. */
 const CACHE_TTL = 5 * 60 * 1000;
@@ -21,13 +20,8 @@ function message(err: unknown): string {
 
 export class WatchProvider implements FinanceProvider {
   id = 'watch' as const;
-  private store: Store | null = null;
+  /** Keyed by account id, which is a UUID, so users cannot collide here. */
   private cache = new Map<string, { at: number; balances: WatchBalance[] }>();
-
-  /** Lets a successful read persist as the account's holdings snapshot. */
-  attachStore(store: Store): void {
-    this.store = store;
-  }
 
   info(): ProviderInfo {
     return {
@@ -51,7 +45,8 @@ export class WatchProvider implements FinanceProvider {
     this.cache.delete(accountId);
   }
 
-  async sync(account: PublicAccount): Promise<SyncResult> {
+  /** `ctx.store` lets a successful read persist as the account's holdings snapshot. */
+  async sync(account: PublicAccount, ctx?: SyncContext): Promise<SyncResult> {
     const key = detectWatchKey(account.externalId || '');
     if (!key) {
       return {
@@ -84,7 +79,7 @@ export class WatchProvider implements FinanceProvider {
     const holdings = await priceHoldings(raw, account.holdings ?? []);
     // Only a fresh chain read is worth a disk write; cached reads happen on
     // every dashboard refresh.
-    if (fresh) this.store?.updateAccount(account.id, { holdings });
+    if (fresh) ctx?.store?.updateAccount(account.id, { holdings });
     return result(holdings, account, key);
   }
 

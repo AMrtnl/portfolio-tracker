@@ -53,9 +53,8 @@ describe('WatchProvider.sync', () => {
     mockQuotes.mockResolvedValue(quotesFor({ 'BTC-USD': 60_000 }));
     const store = { updateAccount: jest.fn() };
     const provider = new WatchProvider();
-    provider.attachStore(store as never);
 
-    const result = await provider.sync(account);
+    const result = await provider.sync(account, { store: store as never });
 
     expect(result.error).toBeUndefined();
     expect(result.totalValueUsd).toBeCloseTo(30_100);

@@ -1,21 +1,9 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-
-type StoreModule = typeof import('./store');
-
-function loadWithDataDir(dir: string): StoreModule {
-  process.env.DATA_DIR = dir;
-  let mod: StoreModule | undefined;
-  jest.isolateModules(() => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    mod = require('./store') as StoreModule;
-  });
-  return mod!;
-}
+import { MoneyStore } from './store';
 
 describe('budget targets', () => {
-  const originalEnv = { ...process.env };
   let dir: string;
 
   beforeEach(() => {
@@ -23,12 +11,11 @@ describe('budget targets', () => {
   });
 
   afterEach(() => {
-    process.env = { ...originalEnv };
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
   it('sets, clears, and persists monthly targets per category', () => {
-    const store = new (loadWithDataDir(dir).MoneyStore)();
+    const store = new MoneyStore(dir);
     expect(store.getBudgets()).toEqual({});
     expect(store.setBudgets({ groceries: 600, leisure: '250' as never })).toEqual({
       groceries: 600,
@@ -39,14 +26,25 @@ describe('budget targets', () => {
       transport: 120,
     });
 
-    const reloaded = new (loadWithDataDir(dir).MoneyStore)();
+    const reloaded = new MoneyStore(dir);
     expect(reloaded.getBudgets()).toEqual({ groceries: 600, transport: 120 });
+    expect(fs.existsSync(path.join(dir, 'money.json'))).toBe(true);
   });
 
   it('rejects negative or non-numeric targets without saving', () => {
-    const store = new (loadWithDataDir(dir).MoneyStore)();
+    const store = new MoneyStore(dir);
     expect(() => store.setBudgets({ groceries: -1 })).toThrow(/groceries/);
     expect(() => store.setBudgets({ groceries: 'lots' as never })).toThrow(/groceries/);
     expect(store.getBudgets()).toEqual({});
+  });
+
+  it('keeps two directories apart', () => {
+    const other = fs.mkdtempSync(path.join(os.tmpdir(), 'meridian-budgets-other-'));
+    try {
+      new MoneyStore(dir).setBudgets({ groceries: 600 });
+      expect(new MoneyStore(other).getBudgets()).toEqual({});
+    } finally {
+      fs.rmSync(other, { recursive: true, force: true });
+    }
   });
 });

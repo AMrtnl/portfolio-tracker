@@ -1,18 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-
-type SettingsModule = typeof import('./settings');
-
-function loadWithDataDir(dir: string): SettingsModule {
-  process.env.DATA_DIR = dir;
-  let mod: SettingsModule | undefined;
-  jest.isolateModules(() => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    mod = require('./settings') as SettingsModule;
-  });
-  return mod!;
-}
+import { SettingsStore, getSettings, updateSettings } from './settings';
 
 describe('settings', () => {
   const originalEnv = { ...process.env };
@@ -29,25 +18,40 @@ describe('settings', () => {
 
   it('defaults from BASE_CURRENCY until something is saved', () => {
     process.env.BASE_CURRENCY = 'chf';
-    const { getSettings } = loadWithDataDir(dir);
-    expect(getSettings()).toEqual({ displayCurrency: 'CHF', headlineMetric: 'net' });
+    const store = new SettingsStore(dir);
+    expect(getSettings(store)).toEqual({ displayCurrency: 'CHF', headlineMetric: 'net' });
     process.env.BASE_CURRENCY = 'eur';
-    expect(getSettings().displayCurrency).toBe('EUR');
+    expect(getSettings(store).displayCurrency).toBe('EUR');
   });
 
-  it('persists updates and reads them back after a fresh load', () => {
-    const first = loadWithDataDir(dir);
-    first.updateSettings({ displayCurrency: 'GBP', headlineMetric: 'financial' });
-    const second = loadWithDataDir(dir);
-    expect(second.getSettings()).toEqual({ displayCurrency: 'GBP', headlineMetric: 'financial' });
+  it('persists updates and reads them back from a fresh instance', () => {
+    updateSettings(new SettingsStore(dir), { displayCurrency: 'GBP', headlineMetric: 'financial' });
+    expect(getSettings(new SettingsStore(dir))).toEqual({
+      displayCurrency: 'GBP',
+      headlineMetric: 'financial',
+    });
     expect(fs.existsSync(path.join(dir, 'settings.json'))).toBe(true);
   });
 
   it('rejects values outside the allowed sets without touching the file', () => {
-    const { updateSettings, getSettings } = loadWithDataDir(dir);
-    expect(() => updateSettings({ displayCurrency: 'DOGE' as never })).toThrow(/displayCurrency/);
-    expect(() => updateSettings({ headlineMetric: 'vibes' as never })).toThrow(/headlineMetric/);
-    expect(getSettings().displayCurrency).toBe('CHF');
+    const store = new SettingsStore(dir);
+    expect(() => updateSettings(store, { displayCurrency: 'DOGE' as never })).toThrow(
+      /displayCurrency/,
+    );
+    expect(() => updateSettings(store, { headlineMetric: 'vibes' as never })).toThrow(
+      /headlineMetric/,
+    );
+    expect(getSettings(store).displayCurrency).toBe('CHF');
     expect(fs.existsSync(path.join(dir, 'settings.json'))).toBe(false);
+  });
+
+  it('keeps two directories apart', () => {
+    const other = fs.mkdtempSync(path.join(os.tmpdir(), 'meridian-settings-other-'));
+    try {
+      updateSettings(new SettingsStore(dir), { displayCurrency: 'USD' });
+      expect(getSettings(new SettingsStore(other)).displayCurrency).toBe('CHF');
+    } finally {
+      fs.rmSync(other, { recursive: true, force: true });
+    }
   });
 });

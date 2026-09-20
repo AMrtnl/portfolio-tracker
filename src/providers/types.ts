@@ -1,3 +1,4 @@
+import type { Store } from '../store';
 import { Balance, Position } from '../types/common';
 import { ProviderId, ProviderInfo, PublicAccount } from '../types/accounts';
 
@@ -20,6 +21,16 @@ export interface ConnectResult {
 }
 
 /**
+ * Per-call context a provider may need beyond the account itself. Providers
+ * are process-wide singletons, so the store that owns the account has to
+ * travel with the request rather than be attached once.
+ */
+export interface SyncContext {
+  /** The store `account` belongs to, for providers that persist what they read. */
+  store?: Store;
+}
+
+/**
  * Finance data provider. Implementations must never expose secrets to the client.
  */
 export interface FinanceProvider {
@@ -34,5 +45,5 @@ export interface FinanceProvider {
   startConnect?(opts?: Record<string, unknown>): Promise<ConnectResult>;
 
   /** Sync balances/positions for one linked account. */
-  sync(account: PublicAccount): Promise<SyncResult>;
+  sync(account: PublicAccount, ctx?: SyncContext): Promise<SyncResult>;
 }

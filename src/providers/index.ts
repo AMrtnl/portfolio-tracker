@@ -26,10 +26,11 @@ export function listProviders(): ProviderInfo[] {
 }
 
 export { hyperliquid, manual, snaptrade, watch };
-export type { FinanceProvider, SyncResult, ConnectResult } from './types';
+export type { FinanceProvider, SyncContext, SyncResult, ConnectResult } from './types';
 export {
   bootHyperliquidAccount,
   getLiveAdapter,
   hasLiveAdapter,
+  rehydrateHyperliquidAccounts,
   removeLiveAdapter,
 } from './hyperliquid';

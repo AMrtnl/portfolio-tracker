@@ -10,6 +10,7 @@
 import type { BookClass, PublicAccount } from '../types/accounts';
 import { isLiabilityAccount } from '../types/accounts';
 import type { Store } from '../store';
+import type { Tenant } from '../users/tenant';
 import {
   FxConverter,
   assetClassFromQuoteType,
@@ -42,7 +43,8 @@ interface RawPosition {
 
 const SNAPSHOT_TTL_MS = 60_000;
 
-let cached: { data: PortfolioSnapshotData; expiresAt: number } | null = null;
+/** One cached snapshot per user; a user's writes only ever evict their own. */
+const cached = new Map<string, { data: PortfolioSnapshotData; expiresAt: number }>();
 
 function accountRef(account: PublicAccount): AccountRef {
   return {
@@ -110,12 +112,13 @@ async function collectSnaptrade(
 
 async function collectViaProvider(
   account: PublicAccount,
+  store: Store,
   warnings: string[],
 ): Promise<RawPosition[]> {
   const ref = accountRef(account);
   try {
     const provider = getProvider(account.provider);
-    const result = await provider.sync(account);
+    const result = await provider.sync(account, { store });
     if (result.error) warnings.push(`${account.label}: ${result.error}`);
     return result.balances
       .filter((balance) => parseFloat(balance.usdValue || '0') !== 0)
@@ -168,18 +171,20 @@ function classify(
 }
 
 /**
- * Reads every account, enriches it with market data and FX, and returns the
- * shared snapshot. Cached for a minute so a dashboard fanning out to eight
- * analytics endpoints syncs the brokers once.
+ * Reads every account of one user, enriches it with market data and FX, and
+ * returns the shared snapshot. Cached for a minute so a dashboard fanning out
+ * to eight analytics endpoints syncs the brokers once.
  */
 export async function getPortfolioSnapshot(
-  store: Store,
+  tenant: Tenant,
   options: { force?: boolean } = {},
 ): Promise<PortfolioSnapshotData> {
-  if (!options.force && cached && cached.expiresAt > Date.now()) {
-    return cached.data;
+  const hit = cached.get(tenant.userId);
+  if (!options.force && hit && hit.expiresAt > Date.now()) {
+    return hit.data;
   }
 
+  const { store } = tenant;
   const warnings: string[] = [];
   const liveIds = new Set(
     store
@@ -201,7 +206,7 @@ export async function getPortfolioSnapshot(
         }
         return collectSnaptrade(account, warnings);
       }
-      return collectViaProvider(account, warnings);
+      return collectViaProvider(account, store, warnings);
     }),
   );
   const rawPositions = collected.flat();
@@ -239,7 +244,7 @@ export async function getPortfolioSnapshot(
 
   // --- currency ---
 
-  const base = baseCurrency();
+  const base = baseCurrency(tenant.settings.get());
   const currencies = new Set<string>([base]);
   for (const raw of rawPositions) currencies.add(raw.currency);
   const fx = await FxConverter.load(base, Array.from(currencies));
@@ -352,10 +357,11 @@ export async function getPortfolioSnapshot(
     retrievedAt: new Date().toISOString(),
   };
 
-  cached = { data, expiresAt: Date.now() + SNAPSHOT_TTL_MS };
+  cached.set(tenant.userId, { data, expiresAt: Date.now() + SNAPSHOT_TTL_MS });
   return data;
 }
 
-export function invalidatePortfolioSnapshot(): void {
-  cached = null;
+/** Drops one user's cached snapshot after anything that changes their accounts or settings. */
+export function invalidatePortfolioSnapshot(userId: string): void {
+  cached.delete(userId);
 }

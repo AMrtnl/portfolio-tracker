@@ -3,25 +3,17 @@ import path from 'path';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import {
-  authMode,
-  authStatusHandler,
-  isAuthenticated,
-  loginHandler,
-  loginPageHtml,
-  logoutHandler,
-  requireApiAuth,
-  requirePageAuth,
-} from './auth';
+import { createAuth, currentUser, describeSignupMode } from './auth';
 import { WalletCore } from './wallet-core';
 import { PortfolioSummary, PortfolioSource } from './types/common';
 import { Holding, isLiabilityAccount } from './types/accounts';
-import { Store } from './store';
+import type { Store } from './store';
 import {
   bootHyperliquidAccount,
   getProvider,
   hasLiveAdapter,
   listProviders,
+  rehydrateHyperliquidAccounts,
   removeLiveAdapter,
   snaptrade,
   watch,
@@ -46,7 +38,13 @@ import {
 import { createMoneyRouter } from './money';
 import { createGoalsRouter } from './goals';
 import { FxConverter } from './market/fx';
-import { DISPLAY_CURRENCIES, HEADLINE_METRICS, getSettings, updateSettings } from './settings';
+import { DISPLAY_CURRENCIES, HEADLINE_METRICS } from './settings';
+import { rootDataDir } from './dataDir';
+import { hasLegacyData } from './users/legacy';
+import { isSessionConfigured } from './users/session';
+import { getTenant, tenantFor } from './users/tenant';
+import type { Tenant } from './users/tenant';
+import { UserStore, toPublicUser } from './users/users';
 
 dotenv.config();
 
@@ -79,21 +77,23 @@ if (!IS_PRODUCTION) {
 // reject a yearly export before the handler could explain why.
 app.use(express.json({ limit: '2mb' }));
 
-const store = new Store();
-watch.attachStore(store);
+// One user list for the process: auth, the scheduler and sign-up all share it,
+// so a user created after boot is visible everywhere without a restart.
+const users = new UserStore(rootDataDir());
+const auth = createAuth(users);
 
 /** Records a sync's outcome on the account so the UI can show freshness and errors. */
-function finishSync(id: string, result: SyncResult): void {
+function finishSync(tenant: Tenant, id: string, result: SyncResult): void {
   const failed = Boolean(result.error && result.balances.length === 0);
-  store.updateAccount(id, {
+  tenant.store.updateAccount(id, {
     status: failed ? 'error' : 'connected',
     lastSyncedAt: new Date().toISOString(),
     lastError: result.error ?? null,
   });
-  invalidatePortfolioSnapshot();
+  invalidatePortfolioSnapshot(tenant.userId);
 }
 
-function liveIds(): Set<string> {
+function liveIds(store: Store): Set<string> {
   const ids = new Set<string>();
   for (const a of store.getAllRaw()) {
     if (a.provider === 'hyperliquid' && hasLiveAdapter(a.id)) ids.add(a.id);
@@ -101,31 +101,28 @@ function liveIds(): Set<string> {
   return ids;
 }
 
-function rehydrateAccounts() {
-  const accounts = store.getAllRaw();
-  if (accounts.length === 0) {
-    console.log('ℹ️  No saved accounts. Add one via Accounts in the UI.');
+/** Boots every user's Hyperliquid wallets so the first request after a restart is live. */
+function rehydrateAllUsers() {
+  const list = users.list();
+  if (list.length === 0) {
+    console.log('ℹ️  No users yet. Create the first account at /signup.');
+    if (hasLegacyData(rootDataDir())) {
+      console.log('📦 Legacy single-user data found in DATA_DIR; the first sign-up will adopt it.');
+    }
     return;
   }
   let booted = 0;
-  for (const acct of accounts) {
-    if (acct.provider !== 'hyperliquid') continue;
-    const mnemonic = store.getMnemonic(acct.id);
-    if (!mnemonic) {
-      console.log(`  ❌ Could not decrypt wallet "${acct.label}"`);
-      continue;
-    }
-    const { ok } = bootHyperliquidAccount(acct.id, mnemonic);
-    console.log(
-      ok
-        ? `  ✅ Loaded crypto "${acct.label}" (${acct.externalId})`
-        : `  ❌ Could not load crypto "${acct.label}"`,
-    );
-    if (ok) booted++;
+  let other = 0;
+  for (const user of list) {
+    const { store } = getTenant(user.id);
+    const accounts = store.getAllRaw();
+    if (accounts.length === 0) continue;
+    console.log(`👤 ${user.email}`);
+    booted += rehydrateHyperliquidAccounts(store).booted;
+    other += accounts.filter((a) => a.provider !== 'hyperliquid').length;
   }
-  const other = accounts.filter((a) => a.provider !== 'hyperliquid').length;
   console.log(
-    `📂 ${booted} crypto wallet(s) live · ${other} other account(s) on disk.\n`,
+    `📂 ${list.length} user(s) · ${booted} crypto wallet(s) live · ${other} other account(s) on disk.\n`,
   );
 }
 
@@ -135,22 +132,38 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// ---- auth (public) ----
+// ---- auth (public): session, signup, login, logout ----
 
-app.get('/api/auth/session', authStatusHandler);
-app.post('/api/auth/login', loginHandler);
-app.post('/api/auth/logout', logoutHandler);
-
-app.get('/login', (req: Request, res: Response) => {
-  if (isAuthenticated(req)) return res.redirect(302, '/');
-  res.type('html').send(loginPageHtml());
-});
+app.use('/api/auth', auth.publicRoutes);
 
 // Everything below this line requires a valid session.
-app.use('/api', requireApiAuth);
+app.use('/api', auth.requireApiAuth);
+
+// ---- account (gated): me, password, delete ----
+
+app.use('/api/auth', auth.accountRoutes);
 
 app.get('/api/providers', (_req: Request, res: Response) => {
   res.json({ providers: listProviders() });
+});
+
+// ---- export ----
+
+/** Everything the user owns, as one JSON download. Never includes secrets. */
+app.get('/api/export', (req: Request, res: Response) => {
+  const tenant = tenantFor(req);
+  res.setHeader('Content-Disposition', 'attachment; filename="wealth-hub-export.json"');
+  res.json({
+    exportedAt: new Date().toISOString(),
+    user: toPublicUser(currentUser(req)),
+    accounts: tenant.store.getAccounts(liveIds(tenant.store)),
+    settings: tenant.settings.get(),
+    transactions: tenant.money.listTransactions(),
+    subscriptions: tenant.money.listSubscriptions(),
+    budgets: tenant.money.getBudgets(),
+    goals: tenant.goals.list(),
+    history: tenant.history.load().days,
+  });
 });
 
 // ---- preferences ----
@@ -160,8 +173,8 @@ app.get('/api/providers', (_req: Request, res: Response) => {
  * (stored in USD) in the display currency. `rates[X]` is how many units of
  * the display currency one unit of X buys; a missing key means no rate.
  */
-app.get('/api/settings', async (_req: Request, res: Response) => {
-  const settings = getSettings();
+app.get('/api/settings', async (req: Request, res: Response) => {
+  const settings = tenantFor(req).settings.get();
   const fx = await FxConverter.load(settings.displayCurrency, [...DISPLAY_CURRENCIES]);
   res.json({
     ...settings,
@@ -173,9 +186,10 @@ app.get('/api/settings', async (_req: Request, res: Response) => {
 });
 
 app.put('/api/settings', (req: Request, res: Response) => {
+  const tenant = tenantFor(req);
   try {
-    const next = updateSettings(req.body || {});
-    invalidatePortfolioSnapshot();
+    const next = tenant.settings.update(req.body || {});
+    invalidatePortfolioSnapshot(tenant.userId);
     res.json(next);
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : 'Invalid settings' });
@@ -184,12 +198,14 @@ app.put('/api/settings', (req: Request, res: Response) => {
 
 // ---- accounts ----
 
-app.get('/api/accounts', (_req: Request, res: Response) => {
-  res.json({ accounts: store.getAccounts(liveIds()) });
+app.get('/api/accounts', (req: Request, res: Response) => {
+  const { store } = tenantFor(req);
+  res.json({ accounts: store.getAccounts(liveIds(store)) });
 });
 
 /** Legacy + crypto: POST { label, mnemonic } */
 app.post('/api/accounts', (req: Request, res: Response) => {
+  const tenant = tenantFor(req);
   const { label, mnemonic } = req.body as { label?: string; mnemonic?: string };
   if (!mnemonic || typeof mnemonic !== 'string') {
     return res.status(400).json({
@@ -203,15 +219,15 @@ app.post('/api/accounts', (req: Request, res: Response) => {
     const wc = new WalletCore();
     wc.setMnemonic(trimmed);
     const address = wc.getAddress(0, 1337);
-    const id = store.addCryptoWallet(accountLabel, trimmed, address);
+    const id = tenant.store.addCryptoWallet(accountLabel, trimmed, address);
     const { ok } = bootHyperliquidAccount(id, trimmed);
     if (!ok) {
-      store.removeAccount(id);
+      tenant.store.removeAccount(id);
       return res.status(400).json({ error: 'Failed to initialize wallet' });
     }
-    invalidatePortfolioSnapshot();
+    invalidatePortfolioSnapshot(tenant.userId);
     console.log(`✅ Crypto account added: "${accountLabel}" → ${address}`);
-    res.json(store.getAccount(id, true));
+    res.json(tenant.store.getAccount(id, true));
   } catch (err) {
     console.error('❌ Invalid mnemonic:', err);
     res.status(400).json({ error: 'Invalid mnemonic phrase' });
@@ -219,6 +235,7 @@ app.post('/api/accounts', (req: Request, res: Response) => {
 });
 
 app.post('/api/accounts/manual', (req: Request, res: Response) => {
+  const tenant = tenantFor(req);
   const body = req.body as {
     label?: string;
     institution?: string;
@@ -241,7 +258,7 @@ app.post('/api/accounts/manual', (req: Request, res: Response) => {
     }
   }
 
-  const id = store.addManualAccount(label, {
+  const id = tenant.store.addManualAccount(label, {
     institution: body.institution?.trim(),
     currency: body.currency,
     holdings,
@@ -251,9 +268,9 @@ app.post('/api/accounts/manual', (req: Request, res: Response) => {
     notes: body.notes,
     balance: body.balance,
   });
-  invalidatePortfolioSnapshot();
+  invalidatePortfolioSnapshot(tenant.userId);
   console.log(`✅ Manual account added: "${label}" (${holdings.length} holdings)`);
-  res.json(store.getAccount(id));
+  res.json(tenant.store.getAccount(id));
 });
 
 /**
@@ -263,6 +280,8 @@ app.post('/api/accounts/manual', (req: Request, res: Response) => {
  * figure; a slow chain finishes in the background.
  */
 app.post('/api/accounts/watch', async (req: Request, res: Response) => {
+  const tenant = tenantFor(req);
+  const { store } = tenant;
   const body = req.body as { label?: string; key?: string; institution?: string };
   const key = detectWatchKey(String(body.key || ''));
   if (!key) {
@@ -293,13 +312,13 @@ app.post('/api/accounts/watch', async (req: Request, res: Response) => {
     notes: describeWatchKey(key),
   });
 
-  const syncing = watch.sync(store.getAccount(id)!).then(
+  const syncing = watch.sync(store.getAccount(id)!, { store }).then(
     (result) => {
-      finishSync(id, result);
+      finishSync(tenant, id, result);
       return result;
     },
     (err: unknown) => {
-      finishSync(id, {
+      finishSync(tenant, id, {
         balances: [],
         positions: [],
         totalValueUsd: 0,
@@ -313,7 +332,7 @@ app.post('/api/accounts/watch', async (req: Request, res: Response) => {
   });
   await Promise.race([syncing, timer]);
 
-  invalidatePortfolioSnapshot();
+  invalidatePortfolioSnapshot(tenant.userId);
   console.log(`✅ Watch-only wallet added: "${label}" (${describeWatchKey(key)})`);
   res.json(store.getAccount(id));
 });
@@ -487,8 +506,9 @@ app.post('/api/accounts/snaptrade/connect', async (req: Request, res: Response) 
 });
 
 /** Import brokerage accounts already linked under the Personal API key. */
-app.post('/api/accounts/snaptrade/import', async (_req: Request, res: Response) => {
+app.post('/api/accounts/snaptrade/import', async (req: Request, res: Response) => {
   if (!snaptrade.isConfigured()) return snaptradeUnavailable(res);
+  const tenant = tenantFor(req);
   try {
     const remote = await snaptrade.listRemoteAccounts();
     if (remote.length === 0) {
@@ -499,9 +519,10 @@ app.post('/api/accounts/snaptrade/import', async (_req: Request, res: Response) 
       });
     }
     const imported = remote.map((r) => {
-      const id = store.upsertSnaptradeAccount(r);
-      return store.getAccount(id);
+      const id = tenant.store.upsertSnaptradeAccount(r);
+      return tenant.store.getAccount(id);
     });
+    invalidatePortfolioSnapshot(tenant.userId);
     console.log(`✅ Imported ${imported.length} SnapTrade account(s)`);
     res.json({ imported, message: `Imported ${imported.length} account(s).` });
   } catch (err) {
@@ -513,6 +534,7 @@ app.post('/api/accounts/snaptrade/import', async (_req: Request, res: Response) 
 });
 
 app.patch('/api/accounts/:id', (req: Request, res: Response) => {
+  const tenant = tenantFor(req);
   const { id } = req.params;
   const body = req.body as {
     label?: string;
@@ -524,17 +546,19 @@ app.patch('/api/accounts/:id', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'holdings must be an array' });
   }
 
-  const ok = store.updateAccount(id, {
+  const ok = tenant.store.updateAccount(id, {
     label: body.label,
     institution: body.institution,
     holdings: body.holdings,
   });
   if (!ok) return res.status(404).json({ error: 'Account not found' });
-  invalidatePortfolioSnapshot();
-  res.json(store.getAccount(id, hasLiveAdapter(id)));
+  invalidatePortfolioSnapshot(tenant.userId);
+  res.json(tenant.store.getAccount(id, hasLiveAdapter(id)));
 });
 
 app.post('/api/accounts/:id/sync', async (req: Request, res: Response) => {
+  const tenant = tenantFor(req);
+  const { store } = tenant;
   const { id } = req.params;
   const account = store.getAccount(id, hasLiveAdapter(id));
   if (!account) return res.status(404).json({ error: 'Account not found' });
@@ -542,8 +566,8 @@ app.post('/api/accounts/:id/sync', async (req: Request, res: Response) => {
   // An explicit sync should hit the chain, not the provider's read cache.
   if (account.provider === 'watch') watch.forget(id);
   const provider = getProvider(account.provider);
-  const result = await provider.sync(account);
-  finishSync(id, result);
+  const result = await provider.sync(account, { store });
+  finishSync(tenant, id, result);
 
   res.json({
     account: store.getAccount(id, hasLiveAdapter(id)),
@@ -555,19 +579,22 @@ app.post('/api/accounts/:id/sync', async (req: Request, res: Response) => {
 });
 
 app.delete('/api/accounts/:id', (req: Request, res: Response) => {
+  const tenant = tenantFor(req);
   const { id } = req.params;
-  const ok = store.removeAccount(id);
+  const ok = tenant.store.removeAccount(id);
   if (!ok) return res.status(404).json({ error: 'Account not found' });
   removeLiveAdapter(id);
-  invalidatePortfolioSnapshot();
+  watch.forget(id);
+  invalidatePortfolioSnapshot(tenant.userId);
   console.log(`🗑️  Account ${id} removed.`);
   res.json({ success: true });
 });
 
 // ---- wallet status (compat) ----
 
-app.get('/api/wallet/status', (_req: Request, res: Response) => {
-  const accounts = store.getAccounts(liveIds());
+app.get('/api/wallet/status', (req: Request, res: Response) => {
+  const { store } = tenantFor(req);
+  const accounts = store.getAccounts(liveIds(store));
   res.json({
     initialized: accounts.length > 0,
     accountCount: accounts.length,
@@ -576,9 +603,11 @@ app.get('/api/wallet/status', (_req: Request, res: Response) => {
 
 // ---- portfolio aggregate ----
 
-app.get('/api/portfolio', async (_req: Request, res: Response) => {
+app.get('/api/portfolio', async (req: Request, res: Response) => {
+  const tenant = tenantFor(req);
+  const { store } = tenant;
   try {
-    const accounts = store.getAccounts(liveIds());
+    const accounts = store.getAccounts(liveIds(store));
     if (accounts.length === 0) {
       return res.status(503).json({
         error: 'No accounts configured. Connect a wallet, broker, or manual account.',
@@ -599,10 +628,10 @@ app.get('/api/portfolio', async (_req: Request, res: Response) => {
       accounts
         .filter((acct) => !isLiabilityAccount(acct))
         .map(async (acct) => {
-        const provider = getProvider(acct.provider);
-        const result = await provider.sync(acct);
-        return { acct, result };
-      }),
+          const provider = getProvider(acct.provider);
+          const result = await provider.sync(acct, { store });
+          return { acct, result };
+        }),
     );
 
     for (const item of settled) {
@@ -680,8 +709,8 @@ app.get('/api/portfolio', async (_req: Request, res: Response) => {
 
 // ---- analytics + market data (read-only) ----
 
-app.use('/api/analytics', createAnalyticsRouter(store));
-app.use('/api/market', createMarketRouter(store));
+app.use('/api/analytics', createAnalyticsRouter());
+app.use('/api/market', createMarketRouter());
 app.use('/api/money', createMoneyRouter());
 app.use('/api/goals', createGoalsRouter());
 
@@ -695,29 +724,42 @@ const INDEX_HTML = path.join(CLIENT_DIST, 'index.html');
 
 if (fs.existsSync(INDEX_HTML)) {
   const sendShell = (_req: Request, res: Response) => res.sendFile(INDEX_HTML);
-  // `index: false` only stops express.static from resolving "/" to index.html —
-  // the explicit path still slips through, so gate it before static runs.
-  app.get('/index.html', requirePageAuth, sendShell);
-  // Hashed bundles hold no portfolio data; the shell itself stays gated.
+  // The shell is the same file for every page, so gating it only makes sense
+  // for the app itself: the SPA renders the marketing site, /login and
+  // /signup publicly and fetches nothing personal until a session exists.
+  app.get(['/app', '/app/*'], auth.requireAppPage, sendShell);
+  // Hashed bundles and the shell hold no portfolio data.
   app.use(express.static(CLIENT_DIST, { index: false }));
-  app.get('*', requirePageAuth, sendShell);
+  app.get('*', sendShell);
 }
 
 // ---- Start ----
 
-rehydrateAccounts();
-startHistoryScheduler(store);
+rehydrateAllUsers();
+startHistoryScheduler(users);
 
 app.listen(PORT, HOST, () => {
   const providers = listProviders();
-  console.log('🚀 Meridian API Server');
+  console.log('🚀 Wealth Hub API Server');
   console.log(`📡 http://localhost:${PORT}`);
   console.log('🔗 Endpoints:');
   console.log('   GET    /api/health');
+  console.log('   GET    /api/auth/session');
+  console.log('   POST   /api/auth/signup              { email, password, name?, inviteCode? }');
+  console.log('   POST   /api/auth/login               { email, password }');
+  console.log('   POST   /api/auth/logout');
+  console.log('   GET    /api/auth/me');
+  console.log('   PATCH  /api/auth/me                  { name?, onboarded? }');
+  console.log('   POST   /api/auth/password            { currentPassword, newPassword }');
+  console.log('   DELETE /api/auth/me                  { password }');
+  console.log('   GET    /api/export');
   console.log('   GET    /api/providers');
+  console.log('   GET    /api/settings');
+  console.log('   PUT    /api/settings');
   console.log('   GET    /api/accounts');
   console.log('   POST   /api/accounts                 { label, mnemonic }');
   console.log('   POST   /api/accounts/manual          { label, holdings? }');
+  console.log('   POST   /api/accounts/watch           { label?, key }');
   console.log('   POST   /api/accounts/snaptrade/connect');
   console.log('   POST   /api/accounts/snaptrade/import');
   console.log('   GET    /api/snaptrade/status');
@@ -742,6 +784,7 @@ app.listen(PORT, HOST, () => {
   console.log('   GET    /api/market/news?limit=20&symbol=');
   console.log('   GET    /api/market/history/:symbol?range=1m|3m|6m|1y|5y');
   console.log('   GET    /api/market/quote/:symbol');
+  console.log('   GET    /api/money/*  ·  /api/goals/*');
   console.log('');
   for (const p of providers) {
     console.log(
@@ -749,14 +792,12 @@ app.listen(PORT, HOST, () => {
     );
   }
   console.log('');
-  const mode = authMode();
-  if (mode === 'enforced') {
-    console.log('🔒 Access gate: ON — password required at /login');
-  } else if (mode === 'disabled') {
-    console.log('🔓 Access gate: OFF (no APP_PASSWORD, non-production)');
+  if (isSessionConfigured()) {
+    console.log('🔒 Access gate: ON — accounts at /login');
+    console.log(`✍️  Sign-ups: ${describeSignupMode()}`);
   } else {
     console.log(
-      '🚨 Access gate: MISCONFIGURED — NODE_ENV=production with no APP_PASSWORD. Serving 503 until it is set.',
+      '🚨 Access gate: MISCONFIGURED — NODE_ENV=production with neither SESSION_SECRET nor STORE_SECRET. Serving 503 until one is set.',
     );
   }
   console.log('');

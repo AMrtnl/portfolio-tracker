@@ -1,17 +1,23 @@
 /**
- * Keeps the daily value history growing even when nobody opens the dashboard.
+ * Keeps every user's daily value history growing even when nobody opens the
+ * dashboard.
  *
  * Without this, a day the user never visits would simply have no data point
  * and the chart would show a gap we refuse to interpolate.
  */
-import type { Store } from '../store';
+import { getTenant } from '../users/tenant';
+import type { UserStore } from '../users/users';
 import { round0 } from './calc';
 import { getPortfolioSnapshot } from './portfolio';
 import type { PortfolioSnapshotData } from './types';
-import { recordDailySnapshot, utcDate } from './valueHistory';
+import type { HistoryStore } from './valueHistory';
+import { utcDate } from './valueHistory';
 
-/** Writes today's point if it is not already recorded. */
-export function recordSnapshotHistory(snapshot: PortfolioSnapshotData): boolean {
+/** Writes today's point into `history` if it is not already recorded. */
+export function recordSnapshotHistory(
+  history: HistoryStore,
+  snapshot: PortfolioSnapshotData,
+): boolean {
   const byAccount: Record<string, number> = {};
   let totalValue = 0;
   for (const position of snapshot.positions) {
@@ -24,7 +30,7 @@ export function recordSnapshotHistory(snapshot: PortfolioSnapshotData): boolean 
   // crash to $0 in the chart.
   if (!(totalValue > 0)) return false;
 
-  return recordDailySnapshot({
+  return history.record({
     date: utcDate(),
     totalValue: round0(totalValue),
     byAccount: Object.fromEntries(
@@ -40,16 +46,24 @@ const BOOT_DELAY_MS = 60_000;
 
 let timers: NodeJS.Timeout[] = [];
 
-export function startHistoryScheduler(store: Store): void {
+/**
+ * Walks every user in turn. Sequential on purpose: the market-data sources
+ * are rate limited and shared, so fanning out per user would hurt everyone.
+ */
+export function startHistoryScheduler(users: UserStore): void {
   const run = async () => {
-    try {
-      const snapshot = await getPortfolioSnapshot(store, { force: true });
-      recordSnapshotHistory(snapshot);
-    } catch (err) {
-      console.warn(
-        '⚠️  Scheduled portfolio snapshot failed:',
-        err instanceof Error ? err.message : err,
-      );
+    for (const user of users.list()) {
+      const tenant = getTenant(user.id);
+      if (tenant.store.getAllRaw().length === 0) continue;
+      try {
+        const snapshot = await getPortfolioSnapshot(tenant, { force: true });
+        recordSnapshotHistory(tenant.history, snapshot);
+      } catch (err) {
+        console.warn(
+          `⚠️  Scheduled portfolio snapshot failed for ${user.email}:`,
+          err instanceof Error ? err.message : err,
+        );
+      }
     }
   };
 

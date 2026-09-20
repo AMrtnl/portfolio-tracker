@@ -8,6 +8,7 @@ export {
   stopHistoryScheduler,
 } from './scheduler';
 export {
+  HistoryStore,
   loadHistory,
   recordDailySnapshot,
   selectRange,
