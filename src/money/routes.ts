@@ -7,7 +7,7 @@ import {
   spendCat,
 } from './categories';
 import { detectRecurring, suggestCategory } from './detect';
-import { parseStatement } from './import';
+import { parseStatement, splitNewRows } from './import';
 import type { BillingCycle, TxKind } from './types';
 
 const MONTH_LABELS = [
@@ -101,28 +101,7 @@ export function createMoneyRouter(): Router {
     }
     const money = tenantFor(req).money;
     const parsed = parseStatement(text);
-    // A row is a duplicate only while the ledger still holds an unmatched
-    // copy of it, so two real parking charges on the same day both survive
-    // but re-importing last month's file adds nothing.
-    const sigOf = (t: { date: string; kind: string; amount: number; note?: string }) =>
-      `${t.date}|${t.kind}|${t.amount}|${(t.note || '').toLowerCase()}`;
-    const spare = new Map<string, number>();
-    for (const t of money.listTransactions()) {
-      const sig = sigOf(t);
-      spare.set(sig, (spare.get(sig) || 0) + 1);
-    }
-    const fresh: typeof parsed.rows = [];
-    let skipped = 0;
-    for (const row of parsed.rows) {
-      const sig = sigOf(row);
-      const left = spare.get(sig) || 0;
-      if (left > 0) {
-        spare.set(sig, left - 1);
-        skipped++;
-      } else {
-        fresh.push(row);
-      }
-    }
+    const { fresh, skipped } = splitNewRows(parsed.rows, money.listTransactions());
     try {
       money.addTransactions(
         fresh.map((row) => ({

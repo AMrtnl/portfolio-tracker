@@ -4,6 +4,7 @@ import type {
   AccountPosition,
   AccountUniversalActivity,
   Balance,
+  Brokerage,
   BrokerageAuthorization,
   Position,
 } from 'snaptrade-typescript-sdk';
@@ -11,6 +12,7 @@ import type {
   SnapAccountVM,
   SnapActivityVM,
   SnapBalanceVM,
+  SnapBrokerageVM,
   SnapConnectionVM,
   SnapOrderVM,
   SnapPositionVM,
@@ -219,6 +221,34 @@ export function normalizeConnections(
       dataFreshnessMode: c.data_freshness_mode,
       createdDate: c.created_date,
     }));
+}
+
+function hostnameOf(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    return new URL(url).hostname.replace(/^www\./, '') || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function normalizeBrokerages(rows: Brokerage[] | unknown): SnapBrokerageVM[] {
+  const list = Array.isArray(rows) ? rows : [];
+  const out: SnapBrokerageVM[] = [];
+  for (const row of list) {
+    const slug = row?.slug;
+    const name = row?.display_name || row?.name;
+    if (!slug || !name) continue;
+    out.push({
+      slug: String(slug),
+      name: String(name),
+      logo: row.aws_s3_square_logo_url || row.aws_s3_logo_url || undefined,
+      domain: hostnameOf(row.url),
+      enabled: row.enabled !== false,
+      maintenance: Boolean(row.maintenance_mode),
+    });
+  }
+  return out;
 }
 
 export function errorMessage(err: unknown): string {

@@ -10,6 +10,8 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { effectivePlan } from '../billing/plans';
+import type { PlanId, PlanSource } from '../billing/plans';
 
 export interface User {
   id: string;
@@ -21,6 +23,13 @@ export interface User {
   sessionVersion: number;
   createdAt: string;
   onboardedAt?: string;
+  /** What the user pays for; entitlements may still be wider in preview mode. */
+  plan: PlanId;
+  planSource: PlanSource;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  /** ISO date of the next renewal, null when nothing renews. */
+  planRenewsAt?: string | null;
 }
 
 /** What the API returns about a user — never the hash or the salt. */
@@ -30,6 +39,17 @@ export interface PublicUser {
   name: string;
   createdAt: string;
   onboardedAt: string | null;
+  /** The plan in force, i.e. `plus` from `preview` while preview mode is on. */
+  plan: PlanId;
+  planSource: PlanSource;
+}
+
+export interface PlanUpdate {
+  plan: PlanId;
+  source: PlanSource;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string | null;
+  renewsAt?: string | null;
 }
 
 interface UsersFile {
@@ -53,12 +73,24 @@ export function defaultNameFor(email: string): string {
 }
 
 export function toPublicUser(user: User): PublicUser {
+  const plan = effectivePlan(user);
   return {
     id: user.id,
     email: user.email,
     name: user.name,
     createdAt: user.createdAt,
     onboardedAt: user.onboardedAt ?? null,
+    plan: plan.plan,
+    planSource: plan.source,
+  };
+}
+
+/** Files written before billing existed have no plan fields; everyone starts on Free. */
+function withPlanDefaults(user: Partial<User> & Pick<User, 'id' | 'email'>): User {
+  return {
+    ...(user as User),
+    plan: user.plan === 'plus' || user.plan === 'family' ? user.plan : 'free',
+    planSource: user.planSource === 'stripe' || user.planSource === 'preview' ? user.planSource : 'manual',
   };
 }
 
@@ -84,7 +116,7 @@ export class UserStore {
     try {
       const parsed = JSON.parse(fs.readFileSync(this.file, 'utf8')) as Partial<UsersFile>;
       if (parsed?.version === 1 && Array.isArray(parsed.users)) {
-        return { version: 1, users: parsed.users };
+        return { version: 1, users: parsed.users.map(withPlanDefaults) };
       }
       throw new Error('unexpected file shape');
     } catch (err) {
@@ -125,6 +157,11 @@ export class UserStore {
     return this.data.users.find((u) => u.id === id) ?? null;
   }
 
+  findByStripeCustomer(customerId: string): User | null {
+    if (!customerId) return null;
+    return this.data.users.find((u) => u.stripeCustomerId === customerId) ?? null;
+  }
+
   create(input: { email: string; password: string; name?: string }): User {
     const email = normalizeEmail(input.email);
     if (this.findByEmail(email)) {
@@ -139,8 +176,29 @@ export class UserStore {
       salt,
       sessionVersion: 1,
       createdAt: new Date().toISOString(),
+      plan: 'free',
+      planSource: 'manual',
     };
     this.data.users.push(user);
+    this.save();
+    return user;
+  }
+
+  /**
+   * Records what the user is entitled to and where that came from. The Stripe
+   * ids are kept across a downgrade so the portal and a later webhook can
+   * still find the customer.
+   */
+  setPlan(id: string, update: PlanUpdate): User | null {
+    const user = this.findById(id);
+    if (!user) return null;
+    user.plan = update.plan;
+    user.planSource = update.source;
+    if (update.stripeCustomerId !== undefined) user.stripeCustomerId = update.stripeCustomerId;
+    if (update.stripeSubscriptionId !== undefined) {
+      user.stripeSubscriptionId = update.stripeSubscriptionId ?? undefined;
+    }
+    if (update.renewsAt !== undefined) user.planRenewsAt = update.renewsAt;
     this.save();
     return user;
   }

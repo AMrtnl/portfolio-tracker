@@ -21,7 +21,7 @@ export type BookClass =
   | 'crypto'
   | 'other';
 
-export type ProviderId = 'hyperliquid' | 'snaptrade' | 'manual' | 'watch';
+export type ProviderId = 'hyperliquid' | 'snaptrade' | 'gocardless' | 'manual' | 'watch';
 
 /** Chains a watch-only wallet can be read from. */
 export type WatchChain = 'btc' | 'eth' | 'sol';

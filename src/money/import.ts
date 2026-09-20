@@ -27,6 +27,51 @@ export interface ParseResult {
   mapping: { date: number; amount?: number; debit?: number; credit?: number; note?: number };
 }
 
+/* ------------------------------------------------------------------ *
+ * Re-import safety, shared by the CSV import and the bank feed
+ * ------------------------------------------------------------------ */
+
+export interface SignableRow {
+  date: string;
+  kind: string;
+  amount: number;
+  note?: string;
+}
+
+/** What makes two transactions "the same": same day, direction, amount and note. */
+export function transactionSignature(t: SignableRow): string {
+  return `${t.date}|${t.kind}|${t.amount}|${(t.note || '').toLowerCase()}`;
+}
+
+/**
+ * A row is a duplicate only while the ledger still holds an unmatched copy
+ * of it, so two real parking charges on the same day both survive but
+ * re-importing last month's file adds nothing.
+ */
+export function splitNewRows<T extends SignableRow>(
+  rows: T[],
+  existing: SignableRow[],
+): { fresh: T[]; skipped: number } {
+  const spare = new Map<string, number>();
+  for (const t of existing) {
+    const sig = transactionSignature(t);
+    spare.set(sig, (spare.get(sig) || 0) + 1);
+  }
+  const fresh: T[] = [];
+  let skipped = 0;
+  for (const row of rows) {
+    const sig = transactionSignature(row);
+    const left = spare.get(sig) || 0;
+    if (left > 0) {
+      spare.set(sig, left - 1);
+      skipped++;
+    } else {
+      fresh.push(row);
+    }
+  }
+  return { fresh, skipped };
+}
+
 const DATE_HEADERS = ['date', 'datum', 'buchung', 'buchungsdatum', 'valuta', 'booking', 'transaction date', 'trade date', 'posted'];
 const AMOUNT_HEADERS = ['amount', 'betrag', 'montant', 'value', 'sum', 'importo'];
 const DEBIT_HEADERS = ['debit', 'soll', 'débit', 'belastung', 'withdrawal', 'out'];

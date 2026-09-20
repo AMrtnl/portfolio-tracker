@@ -12,6 +12,7 @@ export type { MarketQuote, QuoteLookup } from './quotes';
 export {
   assetClassFromQuoteType,
   fxSymbol,
+  isCryptoInstitution,
   isFiat,
   isStablecoin,
   mapSymbol,

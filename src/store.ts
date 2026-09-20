@@ -47,10 +47,12 @@ interface StoredAccountV2 {
   encryptedMnemonic?: string;
   iv?: string;
   tag?: string;
-  // Manual holdings, or the last successful read of a watch-only wallet
+  // Manual holdings, or the last successful read of a watch-only wallet or bank
   holdings?: Holding[];
   // Watch-only wallets
   chain?: WatchChain;
+  // GoCardless: the consent this account came from (consents expire and get renewed)
+  requisitionId?: string;
 }
 
 interface StoreDataV1 {
@@ -148,7 +150,7 @@ function toPublic(acct: StoredAccountV2, live?: boolean): PublicAccount {
     createdAt: acct.createdAt,
     live: live ?? false,
   };
-  if (acct.provider === 'manual' || acct.provider === 'watch') {
+  if (acct.provider === 'manual' || acct.provider === 'watch' || acct.provider === 'gocardless') {
     pub.holdings = acct.holdings || [];
     pub.totalValueUsd = Math.abs(holdingsTotal(acct.holdings));
   }
@@ -377,6 +379,59 @@ export class Store {
       institution: input.institution || 'Brokerage',
       currency: input.currency || 'USD',
       createdAt: new Date().toISOString(),
+    });
+    this.save();
+    return id;
+  }
+
+  /**
+   * Link / upsert a bank account read through GoCardless. Only the GoCardless
+   * account id is kept; the consent lives at GoCardless under the server's keys.
+   */
+  upsertGocardlessAccount(input: {
+    externalId: string;
+    label: string;
+    institution: string;
+    maskedIdentifier?: string;
+    currency: string;
+    holdings: Holding[];
+    requisitionId?: string;
+  }): string {
+    const holdings = input.holdings.map(normalizeHolding);
+    const now = new Date().toISOString();
+    const existing = this.data.accounts.find(
+      (a) => a.provider === 'gocardless' && a.externalId === input.externalId,
+    );
+    if (existing) {
+      existing.label = input.label || existing.label;
+      existing.institution = input.institution || existing.institution;
+      existing.maskedIdentifier = input.maskedIdentifier ?? existing.maskedIdentifier;
+      existing.currency = input.currency || existing.currency || 'USD';
+      existing.holdings = holdings;
+      existing.requisitionId = input.requisitionId ?? existing.requisitionId;
+      existing.status = 'connected';
+      existing.lastError = undefined;
+      existing.lastSyncedAt = now;
+      this.save();
+      return existing.id;
+    }
+    const id = crypto.randomUUID();
+    this.data.accounts.push({
+      id,
+      label: input.label,
+      type: 'bank',
+      provider: 'gocardless',
+      status: 'connected',
+      kind: 'asset',
+      bookClass: 'cash',
+      externalId: input.externalId,
+      maskedIdentifier: input.maskedIdentifier,
+      institution: input.institution,
+      currency: input.currency || 'USD',
+      lastSyncedAt: now,
+      createdAt: now,
+      holdings,
+      requisitionId: input.requisitionId,
     });
     this.save();
     return id;

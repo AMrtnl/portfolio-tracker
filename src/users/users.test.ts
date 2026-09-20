@@ -4,13 +4,17 @@ import path from 'path';
 import { UserStore, defaultNameFor, toPublicUser } from './users';
 
 describe('UserStore', () => {
+  const originalEnv = { ...process.env };
   let dir: string;
 
   beforeEach(() => {
+    // Preview mode would report every user as Plus; these tests read the stored plan.
+    process.env.PREVIEW_MODE = 'false';
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wealth-hub-users-'));
   });
 
   afterEach(() => {
+    process.env = { ...originalEnv };
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
@@ -82,12 +86,63 @@ describe('UserStore', () => {
       name: 'Alexandre',
       createdAt: user.createdAt,
       onboardedAt: first,
+      plan: 'free',
+      planSource: 'manual',
     });
     expect(pub).not.toHaveProperty('passwordHash');
 
     expect(users.remove(user.id)).toBe(true);
     expect(users.remove(user.id)).toBe(false);
     expect(new UserStore(dir).count()).toBe(0);
+  });
+
+  it('starts everyone on Free, records plan changes, and finds users by Stripe customer', () => {
+    const users = new UserStore(dir);
+    const user = users.create({ email: 'a@example.com', password: 'a long password' });
+    expect(user).toMatchObject({ plan: 'free', planSource: 'manual' });
+    expect(users.findByStripeCustomer('cus_1')).toBeNull();
+
+    const updated = users.setPlan(user.id, {
+      plan: 'plus',
+      source: 'stripe',
+      stripeCustomerId: 'cus_1',
+      stripeSubscriptionId: 'sub_1',
+      renewsAt: '2026-10-20T00:00:00.000Z',
+    });
+    expect(updated).toMatchObject({ plan: 'plus', planSource: 'stripe', stripeCustomerId: 'cus_1' });
+    expect(users.findByStripeCustomer('cus_1')?.id).toBe(user.id);
+    expect(toPublicUser(updated!)).toMatchObject({ plan: 'plus', planSource: 'stripe' });
+
+    // A downgrade keeps the customer so the portal still works.
+    users.setPlan(user.id, { plan: 'free', source: 'stripe', stripeSubscriptionId: null, renewsAt: null });
+    const reloaded = new UserStore(dir).findById(user.id)!;
+    expect(reloaded).toMatchObject({ plan: 'free', stripeCustomerId: 'cus_1', planRenewsAt: null });
+    expect(reloaded.stripeSubscriptionId).toBeUndefined();
+    expect(users.setPlan('missing', { plan: 'plus', source: 'manual' })).toBeNull();
+
+    process.env.PREVIEW_MODE = 'true';
+    expect(toPublicUser(reloaded)).toMatchObject({ plan: 'plus', planSource: 'preview' });
+  });
+
+  it('loads a users file written before plans existed', () => {
+    const legacy = {
+      version: 1,
+      users: [
+        {
+          id: 'old-1',
+          email: 'old@example.com',
+          name: 'Old',
+          passwordHash: 'ab',
+          salt: 'cd',
+          sessionVersion: 1,
+          createdAt: '2025-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+    fs.writeFileSync(path.join(dir, 'users.json'), JSON.stringify(legacy), 'utf8');
+    const user = new UserStore(dir).findById('old-1')!;
+    expect(user).toMatchObject({ email: 'old@example.com', plan: 'free', planSource: 'manual' });
+    expect(toPublicUser(user)).toMatchObject({ plan: 'free', planSource: 'manual' });
   });
 
   it('sets aside a corrupt users file instead of overwriting it', () => {

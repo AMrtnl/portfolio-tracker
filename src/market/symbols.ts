@@ -231,11 +231,16 @@ export function isStablecoin(symbol: string): boolean {
   return STABLECOINS.has(normalizeTicker(symbol));
 }
 
+/** "Kraken", "Coinbase Pro", "Binance CH" — an exchange rather than a broker. */
+export function isCryptoInstitution(name: string | undefined | null): boolean {
+  const institution = (name || '').toLowerCase();
+  return CRYPTO_INSTITUTIONS.some((known) => institution.includes(known));
+}
+
 function looksLikeCryptoSource(hint: SymbolHint | undefined): boolean {
   if (!hint) return false;
   if (hint.provider === 'hyperliquid' || hint.provider === 'watch') return true;
-  const institution = (hint.institution || '').toLowerCase();
-  return CRYPTO_INSTITUTIONS.some((name) => institution.includes(name));
+  return isCryptoInstitution(hint.institution);
 }
 
 /**

@@ -17,6 +17,7 @@ import {
   baseCurrency,
   getProfiles,
   getQuotes,
+  isFiat,
   isStablecoin,
   mapSymbol,
   normalizeTicker,
@@ -125,13 +126,18 @@ async function collectViaProvider(
       .map((balance) => {
         const amount = parseFloat(balance.amount || '0');
         const usd = parseFloat(balance.usdValue || '0');
+        // Hyperliquid and manual holdings are valued in USD by their adapters;
+        // a linked bank reports cash in its own currency (see GocardlessProvider).
+        const currency =
+          account.provider === 'gocardless' && isFiat(balance.asset)
+            ? normalizeTicker(balance.asset)
+            : 'USD';
         return {
           symbol: normalizeTicker(balance.asset),
           name: balance.asset,
           units: amount,
           price: amount !== 0 ? usd / amount : null,
-          // Hyperliquid and manual holdings are valued in USD by their adapters.
-          currency: 'USD',
+          currency,
           marketValue: usd,
           averageCost: null,
           isCash: isStablecoin(balance.asset) || account.bookClass === 'cash',

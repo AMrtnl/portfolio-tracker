@@ -11,6 +11,7 @@ import type { Store } from './store';
 import {
   bootHyperliquidAccount,
   getProvider,
+  gocardless,
   hasLiveAdapter,
   listProviders,
   rehydrateHyperliquidAccounts,
@@ -37,6 +38,14 @@ import {
 } from './analytics';
 import { createMoneyRouter } from './money';
 import { createGoalsRouter } from './goals';
+import { createGocardlessConnectRouter, importGocardlessTransactions } from './aggregators';
+import {
+  createBillingRouter,
+  createBillingWebhook,
+  describeBilling,
+  requireLiveConnectionSlot,
+} from './billing';
+import { createCatalogRouter } from './catalog';
 import { FxConverter } from './market/fx';
 import { DISPLAY_CURRENCIES, HEADLINE_METRICS } from './settings';
 import { rootDataDir } from './dataDir';
@@ -73,14 +82,24 @@ app.set('trust proxy', 1);
 if (!IS_PRODUCTION) {
   app.use(cors());
 }
-// Statement imports post a whole CSV as text; the default 100 kB would
-// reject a yearly export before the handler could explain why.
-app.use(express.json({ limit: '2mb' }));
 
 // One user list for the process: auth, the scheduler and sign-up all share it,
 // so a user created after boot is visible everywhere without a restart.
 const users = new UserStore(rootDataDir());
 const auth = createAuth(users);
+
+// Stripe signs the exact bytes it sends, so the webhook must see the raw body
+// and sit ahead of the JSON parser. It is public by design and verifies the
+// signature itself.
+app.post(
+  '/api/billing/webhook',
+  express.raw({ type: 'application/json', limit: '1mb' }),
+  createBillingWebhook(users),
+);
+
+// Statement imports post a whole CSV as text; the default 100 kB would
+// reject a yearly export before the handler could explain why.
+app.use(express.json({ limit: '2mb' }));
 
 /** Records a sync's outcome on the account so the UI can show freshness and errors. */
 function finishSync(tenant: Tenant, id: string, result: SyncResult): void {
@@ -146,6 +165,12 @@ app.use('/api/auth', auth.accountRoutes);
 app.get('/api/providers', (_req: Request, res: Response) => {
   res.json({ providers: listProviders() });
 });
+
+// ---- plans, catalogue, bank links ----
+
+app.use('/api/billing', createBillingRouter(users));
+app.use('/api/catalog', createCatalogRouter());
+app.use('/api/connect/gocardless', createGocardlessConnectRouter());
 
 // ---- export ----
 
@@ -214,6 +239,7 @@ app.post('/api/accounts', (req: Request, res: Response) => {
   }
   const trimmed = mnemonic.trim();
   const accountLabel = (label || '').trim() || 'Hyperliquid';
+  if (requireLiveConnectionSlot(req, res)) return;
 
   try {
     const wc = new WalletCore();
@@ -300,6 +326,7 @@ app.post('/api/accounts/watch', async (req: Request, res: Response) => {
   if (duplicate) {
     return res.status(409).json({ error: `Already tracked as "${duplicate.label}"` });
   }
+  if (requireLiveConnectionSlot(req, res)) return;
 
   const label =
     (body.label || '').trim() ||
@@ -509,6 +536,7 @@ app.post('/api/accounts/snaptrade/connect', async (req: Request, res: Response) 
 app.post('/api/accounts/snaptrade/import', async (req: Request, res: Response) => {
   if (!snaptrade.isConfigured()) return snaptradeUnavailable(res);
   const tenant = tenantFor(req);
+  if (requireLiveConnectionSlot(req, res)) return;
   try {
     const remote = await snaptrade.listRemoteAccounts();
     if (remote.length === 0) {
@@ -532,6 +560,9 @@ app.post('/api/accounts/snaptrade/import', async (req: Request, res: Response) =
     });
   }
 });
+
+/** Bank feed → money ledger: POST { days? } for a GoCardless account. */
+app.post('/api/accounts/:id/transactions/import', importGocardlessTransactions);
 
 app.patch('/api/accounts/:id', (req: Request, res: Response) => {
   const tenant = tenantFor(req);
@@ -563,8 +594,9 @@ app.post('/api/accounts/:id/sync', async (req: Request, res: Response) => {
   const account = store.getAccount(id, hasLiveAdapter(id));
   if (!account) return res.status(404).json({ error: 'Account not found' });
 
-  // An explicit sync should hit the chain, not the provider's read cache.
+  // An explicit sync should hit the chain or the bank, not the provider's read cache.
   if (account.provider === 'watch') watch.forget(id);
+  if (account.provider === 'gocardless') gocardless.forget(id);
   const provider = getProvider(account.provider);
   const result = await provider.sync(account, { store });
   finishSync(tenant, id, result);
@@ -585,6 +617,7 @@ app.delete('/api/accounts/:id', (req: Request, res: Response) => {
   if (!ok) return res.status(404).json({ error: 'Account not found' });
   removeLiveAdapter(id);
   watch.forget(id);
+  gocardless.forget(id);
   invalidatePortfolioSnapshot(tenant.userId);
   console.log(`🗑️  Account ${id} removed.`);
   res.json({ success: true });
@@ -762,6 +795,15 @@ app.listen(PORT, HOST, () => {
   console.log('   POST   /api/accounts/watch           { label?, key }');
   console.log('   POST   /api/accounts/snaptrade/connect');
   console.log('   POST   /api/accounts/snaptrade/import');
+  console.log('   GET    /api/connect/gocardless/institutions?country=CH');
+  console.log('   POST   /api/connect/gocardless/start   { institutionId, redirect? }');
+  console.log('   POST   /api/connect/gocardless/finish  { reference }');
+  console.log('   POST   /api/accounts/:id/transactions/import { days? }');
+  console.log('   GET    /api/catalog?country=CH');
+  console.log('   GET    /api/billing');
+  console.log('   POST   /api/billing/checkout         { plan, interval }');
+  console.log('   POST   /api/billing/portal');
+  console.log('   POST   /api/billing/webhook          (Stripe, public)');
   console.log('   GET    /api/snaptrade/status');
   console.log('   GET    /api/snaptrade/accounts');
   console.log('   GET    /api/snaptrade/accounts/:externalId');
@@ -788,9 +830,10 @@ app.listen(PORT, HOST, () => {
   console.log('');
   for (const p of providers) {
     console.log(
-      `   Provider ${p.id}: ${p.configured ? 'ready' : 'needs API keys'} — ${p.coverage}`,
+      `   Connector ${p.id}: ${p.configured ? 'ready' : 'needs API keys'} — ${p.coverage}`,
     );
   }
+  console.log(`   Billing: ${describeBilling()}`);
   console.log('');
   if (isSessionConfigured()) {
     console.log('🔒 Access gate: ON — accounts at /login');

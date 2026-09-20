@@ -53,6 +53,11 @@ purpose — none of them should ever travel through a chat log.
 | `APP_PASSWORD` | legacy, optional | Still works as the invite code, so an existing deployment stays invite-only. |
 | `SNAPTRADE_CLIENT_ID` | **not set — add when you want brokerage sync** | Absent means SnapTrade is reported as "needs API keys"; the rest of the app works. |
 | `SNAPTRADE_CONSUMER_KEY` | **not set — add when you want brokerage sync** | Never exposed to the browser. |
+| `GOCARDLESS_SECRET_ID` | optional | Bank links through open banking (section 7). |
+| `GOCARDLESS_SECRET_KEY` | optional | Never exposed to the browser. |
+| `PUBLIC_URL` | optional | The deployment's public origin, for bank-link and Stripe return URLs. Defaults to the requesting origin. |
+| `PREVIEW_MODE` | optional | `true` entitles everyone as Plus. Defaults to `true` until `STRIPE_SECRET_KEY` is set (section 8). |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` | optional | Billing (section 8). |
 
 > **`STORE_SECRET` warning.** It is the AES-GCM key for any Hyperliquid recovery
 > phrase saved through the UI. Changing it makes previously saved phrases
@@ -173,3 +178,65 @@ which currently predates all the in-flight work.
 A deploy fails if either typecheck fails, since the Docker build runs `tsc` for
 the server and `tsc && vite build` for the client. Run `npm run typecheck` and
 `npx tsc --noEmit` in `client/` before deploying.
+
+## 7. Aggregators
+
+Two aggregators feed live accounts; both are optional and read-only, and the
+startup log prints one line per connector saying whether it is configured.
+`GET /api/catalog?country=CH` merges the curated institution list with what
+each configured aggregator offers, so the client always knows which
+institutions link live and which are kept by hand.
+
+**SnapTrade — brokers and exchanges.** Sign up at
+[dashboard.snaptrade.com](https://dashboard.snaptrade.com) (Personal plan),
+create a Personal API key and set `SNAPTRADE_CLIENT_ID` and
+`SNAPTRADE_CONSUMER_KEY`. Coverage is strongest in the US, Canada, the UK and
+the EU. The key is one per server, so on a shared deployment every account
+that imports sees the same brokerages.
+
+**GoCardless Bank Account Data — banks.** Create a free account at
+[bankaccountdata.gocardless.com](https://bankaccountdata.gocardless.com),
+open *User secrets*, create a secret and set `GOCARDLESS_SECRET_ID` and
+`GOCARDLESS_SECRET_KEY`. Coverage is EU and UK banks through open banking;
+**Switzerland is only partially covered** (a handful of banks and the
+neobanks), so most Swiss retail banks stay by hand. The flow is
+`POST /api/connect/gocardless/start` → the bank's consent page → back to
+`PUBLIC_URL/app/connect?ref=…` → `POST /api/connect/gocardless/finish`.
+Consents last 90 days and banks allow only a few reads per account per day,
+so balances are cached for six hours and an explicit sync
+(`POST /api/accounts/:id/sync`) is what asks the bank again.
+`POST /api/accounts/:id/transactions/import` pulls booked transactions into
+the money ledger, categorised and deduplicated like a CSV import.
+
+## 8. Billing
+
+Plans are `free` (3 live connections), `plus` (CHF 8, unlimited) and `family`
+(CHF 14, two seats). A live connection is any account whose provider is not
+`manual`. `GET /api/billing` returns the plan in force, its entitlements and
+the current usage.
+
+**Preview mode.** With `PREVIEW_MODE=true` — the default until
+`STRIPE_SECRET_KEY` exists — every account is entitled as Plus with
+`planSource: 'preview'` and nothing is enforced, so a fresh deployment is
+fully usable. Set `PREVIEW_MODE=false` to enforce Free limits; without Stripe
+there is then no way to upgrade except editing `users.json`.
+
+**Stripe.** Create two products (Plus, Family) with monthly and yearly
+recurring prices, then set:
+
+| Variable | Value |
+| --- | --- |
+| `STRIPE_SECRET_KEY` | the restricted or secret key |
+| `STRIPE_PRICE_PLUS_MONTHLY`, `STRIPE_PRICE_PLUS_YEARLY` | `price_…` ids |
+| `STRIPE_PRICE_FAMILY_MONTHLY`, `STRIPE_PRICE_FAMILY_YEARLY` | `price_…` ids |
+| `STRIPE_WEBHOOK_SECRET` | the endpoint's signing secret |
+
+Add a webhook endpoint at `https://<PUBLIC_URL>/api/billing/webhook` for
+`checkout.session.completed`, `customer.subscription.updated` and
+`customer.subscription.deleted`. The endpoint is public, reads the raw body
+and verifies Stripe's `t=…,v1=…` signature (5-minute tolerance) before doing
+anything. `POST /api/billing/checkout` `{ plan, interval }` returns a
+Checkout URL and `POST /api/billing/portal` the customer portal URL; the
+success and cancel pages default to `PUBLIC_URL/app/settings?billing=…`.
+When the limit is reached, the account-adding routes answer
+`402 { error, message, upgrade: true }`.

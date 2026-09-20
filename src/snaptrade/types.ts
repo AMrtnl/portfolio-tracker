@@ -64,6 +64,17 @@ export interface SnapActivityVM {
   institution?: string;
 }
 
+/** A brokerage SnapTrade can connect to, from the reference list. */
+export interface SnapBrokerageVM {
+  slug: string;
+  name: string;
+  logo?: string;
+  /** Website hostname without `www.`, for the client's own logo lookup. */
+  domain?: string;
+  enabled: boolean;
+  maintenance: boolean;
+}
+
 export interface SnapConnectionVM {
   id: string;
   name: string;

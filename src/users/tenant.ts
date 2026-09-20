@@ -8,6 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { Request } from 'express';
+import { LinksStore } from '../aggregators/links';
 import { HistoryStore } from '../analytics/valueHistory';
 import { rootDataDir } from '../dataDir';
 import { GoalsStore } from '../goals/store';
@@ -24,6 +25,8 @@ export interface Tenant {
   settings: SettingsStore;
   goals: GoalsStore;
   history: HistoryStore;
+  /** Bank links (GoCardless requisitions) waiting to be finished. */
+  links: LinksStore;
 }
 
 declare global {
@@ -55,6 +58,7 @@ export function getTenant(userId: string): Tenant {
     settings: new SettingsStore(dir),
     goals: new GoalsStore(dir),
     history: new HistoryStore(dir),
+    links: new LinksStore(dir),
   };
   tenants.set(userId, tenant);
   return tenant;

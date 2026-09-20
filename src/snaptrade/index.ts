@@ -4,10 +4,12 @@ export {
   resetSnaptradeClient,
 } from './client';
 export {
+  clearSnapBrokerageCache,
   fetchBalancesAndPositions,
   fetchSnapAccountDetail,
   fetchSnapAccounts,
   fetchSnapActivities,
+  fetchSnapBrokerages,
   fetchSnapConnections,
   fetchSnapOrders,
   startSnapConnectPortal,
@@ -19,6 +21,7 @@ export {
   normalizeAccountPositions,
   normalizeActivities,
   normalizeBalances,
+  normalizeBrokerages,
   normalizeConnections,
   normalizeLegacyPositions,
   normalizeOrders,

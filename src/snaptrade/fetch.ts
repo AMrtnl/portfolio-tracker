@@ -7,6 +7,7 @@ import {
   normalizeAccount,
   normalizeActivities,
   normalizeBalances,
+  normalizeBrokerages,
   normalizeConnections,
   normalizeOrders,
 } from './normalize';
@@ -14,9 +15,29 @@ import type {
   SnapAccountDetailVM,
   SnapAccountVM,
   SnapActivityVM,
+  SnapBrokerageVM,
   SnapConnectionVM,
   SnapOrderVM,
 } from './types';
+
+/** The brokerage list changes rarely and is a few hundred rows; a day is plenty. */
+const BROKERAGES_TTL_MS = 24 * 60 * 60 * 1000;
+let brokerageCache: { at: number; list: SnapBrokerageVM[] } | null = null;
+
+/** Every brokerage SnapTrade knows, cached for a day. Throws when SnapTrade is down. */
+export async function fetchSnapBrokerages(): Promise<SnapBrokerageVM[]> {
+  if (brokerageCache && Date.now() - brokerageCache.at < BROKERAGES_TTL_MS) return brokerageCache.list;
+  const client = requireClient();
+  const res = await client.referenceData.listAllBrokerages();
+  const list = normalizeBrokerages(res.data);
+  brokerageCache = { at: Date.now(), list };
+  console.log(`📡 SnapTrade: listed ${list.length} brokerage(s)`);
+  return list;
+}
+
+export function clearSnapBrokerageCache(): void {
+  brokerageCache = null;
+}
 
 function requireClient(): PersonalSnaptrade {
   const client = getSnaptradeClient();

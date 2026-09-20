@@ -78,8 +78,10 @@ function Picker({ country, onCountry, onPick }: { country: string; onCountry: (c
   const categories = useMemo(() => catalog.data?.categories ?? [], [catalog.data])
   const current = categories.find((c) => c.id === category) ?? categories[0]
   const rows = useMemo(() => {
+    // The generic entries ("Another bank", "Positions by hand") close the list; the server orders the rest.
+    const generic = (i: CatalogInstitution) => Number(!i.domain && !i.logo)
     const pool = q ? categories.flatMap((c) => c.institutions) : (current?.institutions ?? [])
-    if (!q) return pool
+    if (!q) return [...pool].sort((a, b) => generic(a) - generic(b))
     return pool.filter((i) => i.name.toLowerCase().includes(q)).sort((a, b) => Number(b.name.toLowerCase().startsWith(q)) - Number(a.name.toLowerCase().startsWith(q)))
   }, [categories, current, q])
   const countryName = catalog.data?.countries.find((c) => c.code === country)?.name ?? country
