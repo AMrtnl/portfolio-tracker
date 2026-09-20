@@ -30,6 +30,16 @@ describe('mapSymbol — equities', () => {
     expect(mapSymbol('vusa.l').yahooSymbol).toBe('VUSA.L');
   });
 
+  it('translates the SIX Swiss suffix brokers report into the one Yahoo prices', () => {
+    expect(mapSymbol('NOVN.SE', { provider: 'snaptrade' })).toEqual({
+      raw: 'NOVN.SE',
+      yahooSymbol: 'NOVN.SW',
+      kind: 'equity',
+    });
+    expect(mapSymbol('ABBN.SWX').yahooSymbol).toBe('ABBN.SW');
+    expect(mapSymbol('ENI.MI').yahooSymbol).toBe('ENI.MI');
+  });
+
   it('refuses to guess a ticker for unparseable symbols', () => {
     expect(mapSymbol('AAPL 260116C00150000').yahooSymbol).toBeNull();
     expect(mapSymbol('').yahooSymbol).toBeNull();

@@ -167,10 +167,15 @@ function classify(
   return 'unclassified';
 }
 
+let inflight: Promise<PortfolioSnapshotData> | null = null;
+
 /**
  * Reads every account, enriches it with market data and FX, and returns the
- * shared snapshot. Cached for a minute so a dashboard fanning out to eight
- * analytics endpoints syncs the brokers once.
+ * shared snapshot. Cached for a minute, and built one at a time: a dashboard
+ * fanning out to a dozen endpoints on a cold cache joins the build already in
+ * flight instead of syncing every broker a dozen times over, which is what
+ * had the SnapTrade SDK looping on 429s and requests hanging for half a
+ * minute.
  */
 export async function getPortfolioSnapshot(
   store: Store,
@@ -179,7 +184,15 @@ export async function getPortfolioSnapshot(
   if (!options.force && cached && cached.expiresAt > Date.now()) {
     return cached.data;
   }
+  if (!inflight) {
+    inflight = buildPortfolioSnapshot(store).finally(() => {
+      inflight = null;
+    });
+  }
+  return inflight;
+}
 
+async function buildPortfolioSnapshot(store: Store): Promise<PortfolioSnapshotData> {
   const warnings: string[] = [];
   const liveIds = new Set(
     store

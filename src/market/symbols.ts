@@ -250,10 +250,22 @@ function baseCryptoTicker(ticker: string): string {
 }
 
 /**
+ * Exchange suffixes brokers report that Yahoo spells differently. SnapTrade
+ * lists SIX Swiss Exchange holdings as `NOVN.SE`; Yahoo prices them as
+ * `NOVN.SW`, and has no `.SE` at all, so the lookup failed and Swiss stocks
+ * lost their classification and charts.
+ */
+const EXCHANGE_SUFFIX_ALIASES: Record<string, string> = {
+  SE: 'SW',
+  SWX: 'SW',
+};
+
+/**
  * Maps a reported holding ticker to the Yahoo ticker that prices it.
  *
  * Symbols that already carry an exchange suffix (`NESN.SW`, `VUSA.L`) pass
- * through untouched — Yahoo uses the same convention.
+ * through untouched — Yahoo uses the same convention. A suffix Yahoo spells
+ * differently is translated (`NOVN.SE` → `NOVN.SW`).
  */
 export function mapSymbol(symbol: string, hint: SymbolHint = {}): MappedSymbol {
   const raw = normalizeTicker(symbol);
@@ -297,7 +309,10 @@ export function mapSymbol(symbol: string, hint: SymbolHint = {}): MappedSymbol {
   if (/\s/.test(raw)) return { raw, yahooSymbol: null, kind: 'unknown' };
 
   if (/^[A-Z0-9.\-^]{1,20}$/.test(raw)) {
-    return { raw, yahooSymbol: raw, kind: 'equity' };
+    // Brokers name some exchanges differently from Yahoo; translate the suffix.
+    const dot = raw.lastIndexOf('.');
+    const alias = dot > 0 ? EXCHANGE_SUFFIX_ALIASES[raw.slice(dot + 1)] : undefined;
+    return { raw, yahooSymbol: alias ? `${raw.slice(0, dot)}.${alias}` : raw, kind: 'equity' };
   }
 
   return { raw, yahooSymbol: null, kind: 'unknown' };
